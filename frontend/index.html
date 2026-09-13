@@ -1,10 +1,178 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <title>Desafio Xtremo</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Desafio Xtremo — Un mundo nuevo</title>
+<meta name="description" content="Desafio Xtremo: evento de streaming por equipos en Minecraft. Ruletas, muerte y destierro, revivir en la fogata y transiciones al límite.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Desafio Xtremo — Un mundo nuevo">
+<meta property="og:description" content="Evento de streaming por equipos en Minecraft: ruletas, muerte y destierro, revivir en la fogata y más.">
+<meta property="og:image" content="https://desafioxtremo.site/assets/banner.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/home.css">
 </head>
 <body>
-  <p>Desafio Xtremo — sitio en construcción.</p>
+
+<div id="field"></div>
+<div class="grain"></div>
+
+<div id="account-corner" class="account-corner"></div>
+
+<div class="nav-wrap">
+  <nav class="nav glass">
+    <a href="index.html" class="nav-logo"><img src="assets/banner.png" alt="Desafio Xtremo"></a>
+    <ul class="nav-links">
+      <li><a href="index.html">Inicio</a></li>
+      <li><a href="index.html#mecanicas" data-scroll="#mecanicas">Mecánicas</a></li>
+      <li><a href="https://discord.gg/" target="_blank" rel="noopener">Discord</a></li>
+    </ul>
+    <div class="nav-right">
+      <button class="nav-toggle" aria-label="Abrir menú">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </nav>
+</div>
+
+<div class="mobile-sheet">
+  <a href="index.html">Inicio</a>
+  <a href="index.html#mecanicas" data-scroll="#mecanicas">Mecánicas</a>
+  <a href="https://discord.gg/" target="_blank" rel="noopener">Discord</a>
+</div>
+
+<header class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-inner">
+    <div class="hero-banner"><img src="assets/banner.png" alt="Desafio Xtremo — Un mundo nuevo"></div>
+    <p class="hero-tagline">Un evento de streaming por equipos en Minecraft: ruletas en vivo, muerte con destierro temporal, revivir en la fogata y transiciones al límite. Independiente, con mecánicas propias.</p>
+    <div class="hero-badges">
+      <span class="badge-pill"><span class="status-dot ok"></span>Streaming por equipos</span>
+      <span class="badge-pill">Paper 1.21.1</span>
+      <span class="badge-pill">No afiliado a Mojang ni Microsoft</span>
+    </div>
+    <div class="hero-actions">
+      <a href="https://discord.gg/" target="_blank" rel="noopener" class="btn btn-discord">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0015.6 3l-.3.6a14 14 0 014.1 1.6 17 17 0 00-14.8 0A14 14 0 018.7 3.6L8.4 3a19.7 19.7 0 00-4.7 1.4C1 9 .3 13.5.6 18a20 20 0 006 3l1-1.4a12.8 12.8 0 01-1.9-.9l.5-.4a14.3 14.3 0 0011.6 0l.5.4c-.6.4-1.2.6-1.9.9l1 1.4a20 20 0 006-3c.4-5.2-.9-9.7-3.1-13.6zM8.5 15c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2zm7 0c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2z"/></svg>
+        Unirse al Discord
+      </a>
+      <a href="index.html#mecanicas" class="btn btn-ghost" data-scroll="#mecanicas">Ver mecánicas</a>
+    </div>
+  </div>
+</header>
+
+<div class="ticker">
+  <div class="container">
+    <span class="ticker-item"><span class="status-dot ok"></span><b>Ruletas</b>&nbsp;en vivo para todo el servidor</span>
+    <span class="ticker-item"><span class="status-dot off"></span><b>Muerte</b>&nbsp;= destierro temporal</span>
+    <span class="ticker-item"><span class="status-dot ok"></span><b>Revivir</b>&nbsp;en la fogata con la Cuchara</span>
+  </div>
+</div>
+
+<section class="mech" id="mecanicas">
+  <div class="mech-blob"></div>
+  <div class="container">
+    <div class="mech-row reveal">
+      <div class="mech-text">
+        <span class="mech-num">01 · RULETAS</span>
+        <h2 class="mech-title">Girá tu<br>destino.</h2>
+        <p class="mech-desc">Cada ruleta reproduce una animación propia con sonido para todo el servidor. Las ruletas roja y rosada encadenan un momento bonus sorpresa — nadie mira para otro lado cuando gira la ruleta.</p>
+      </div>
+      <div class="mech-visual">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/><path d="M12 3v4M21 12h-4M12 21v-4M3 12h4"/></svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mech">
+  <div class="mech-blob"></div>
+  <div class="container">
+    <div class="mech-row reveal">
+      <div class="mech-text">
+        <span class="mech-num">02 · MUERTE</span>
+        <h2 class="mech-title">Morir<br>tiene precio.</h2>
+        <p class="mech-desc">Al caer, tu muerte se anuncia a todo el servidor y pasás a modo espectador. Si nadie te revive antes de que se acabe el período de gracia, el destierro es automático.</p>
+      </div>
+      <div class="mech-visual">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 2C7 2 4 5.5 4 10c0 3 1.5 5 3 6.3V19a1 1 0 001 1h1v1h1v-1h4v1h1v-1h1a1 1 0 001-1v-2.7c1.5-1.3 3-3.3 3-6.3 0-4.5-3-8-8-8z"/><circle cx="9" cy="10" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.4" fill="currentColor" stroke="none"/></svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mech">
+  <div class="mech-blob"></div>
+  <div class="container">
+    <div class="mech-row reveal">
+      <div class="mech-text">
+        <span class="mech-num">03 · FOGATA</span>
+        <h2 class="mech-title">Revivir<br>tiene ritual.</h2>
+        <p class="mech-desc">La fogata es un punto protegido del mapa. Con una Cuchara en mano, hacé clic derecho para abrir el menú y elegir a quién traer de vuelta antes de que sea tarde.</p>
+      </div>
+      <div class="mech-visual">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 21c4 0 6-2.5 6-5.5 0-2-1-3.3-2-4.5.2 1.5-.5 2.3-1 2.5.6-2.5-.5-5-3-7 .3 1.8-.6 3-1.5 3.8C9 11 8 12.3 8 14c0 .5.1 1 .3 1.5C7.5 14.7 7 13.5 7 12c-1.3 1.3-2 3-2 5 0 2.5 2 4 4 4"/></svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mech">
+  <div class="mech-blob"></div>
+  <div class="container">
+    <div class="mech-row reveal">
+      <div class="mech-text">
+        <span class="mech-num">04 · TRANSICIONES</span>
+        <h2 class="mech-title">Cada viaje,<br>una escena.</h2>
+        <p class="mech-desc">Los teletransportes pasan por una transición de pantalla en blanco, y consumir un Totem de Inmortalidad se anuncia a todo el servidor. Los detalles también cuentan.</p>
+      </div>
+      <div class="mech-visual">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 2l7 4v6c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6l7-4z"/><path d="M9 12l2 2 4-4"/></svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-card reveal">
+      <h2>¿Listo para el <span class="accent">Desafio Xtremo</span>?</h2>
+      <p>Sumate al Discord para enterarte de fechas, equipos y todo lo que se viene para este mundo nuevo.</p>
+      <div class="cta-actions">
+        <a href="https://discord.gg/" target="_blank" rel="noopener" class="btn btn-discord">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0015.6 3l-.3.6a14 14 0 014.1 1.6 17 17 0 00-14.8 0A14 14 0 018.7 3.6L8.4 3a19.7 19.7 0 00-4.7 1.4C1 9 .3 13.5.6 18a20 20 0 006 3l1-1.4a12.8 12.8 0 01-1.9-.9l.5-.4a14.3 14.3 0 0011.6 0l.5.4c-.6.4-1.2.6-1.9.9l1 1.4a20 20 0 006-3c.4-5.2-.9-9.7-3.1-13.6zM8.5 15c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2zm7 0c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2z"/></svg>
+          Unirse al Discord
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-bar">
+    <div class="container">
+      <span class="footer-ip">IP · próximamente</span>
+      <div class="footer-social">
+        <a href="https://discord.gg/" target="_blank" rel="noopener" aria-label="Discord">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0015.6 3l-.3.6a14 14 0 014.1 1.6 17 17 0 00-14.8 0A14 14 0 018.7 3.6L8.4 3a19.7 19.7 0 00-4.7 1.4C1 9 .3 13.5.6 18a20 20 0 006 3l1-1.4a12.8 12.8 0 01-1.9-.9l.5-.4a14.3 14.3 0 0011.6 0l.5.4c-.6.4-1.2.6-1.9.9l1 1.4a20 20 0 006-3c.4-5.2-.9-9.7-3.1-13.6zM8.5 15c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2zm7 0c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="container">
+      <p>© 2026 Desafio Xtremo</p>
+      <p>Evento independiente. No afiliado ni respaldado por Mojang Studios ni Microsoft.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="js/site.js"></script>
 </body>
 </html>

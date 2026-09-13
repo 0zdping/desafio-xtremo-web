@@ -1,0 +1,187 @@
+(function () {
+  const field = document.getElementById('field');
+  if (!field) return;
+  const count = window.innerWidth < 700 ? 36 : 70;
+  for (let i = 0; i < count; i++) {
+    const m = document.createElement('div');
+    m.className = 'mote';
+    const s = Math.random() * 1.6 + 0.6;
+    m.style.width = s + 'px';
+    m.style.height = s + 'px';
+    m.style.top = Math.random() * 100 + 'vh';
+    m.style.left = Math.random() * 100 + 'vw';
+    m.style.animationDuration = 3 + Math.random() * 5 + 's';
+    m.style.animationDelay = Math.random() * 5 + 's';
+    field.appendChild(m);
+  }
+})();
+
+window.bindReveal = function () {
+  const els = document.querySelectorAll('.reveal:not([data-reveal-bound])');
+  if (!els.length) return;
+  els.forEach((el, idx) => {
+    el.dataset.revealBound = '1';
+    el.style.transitionDelay = idx % 4 * 0.06 + 's';
+  });
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.classList.add('in');
+          io.unobserve(e.target);
+        }
+      });
+    },
+    { threshold: 0.14 }
+  );
+  els.forEach((el) => io.observe(el));
+};
+window.bindReveal();
+
+(function () {
+  const nav = document.querySelector('.nav');
+  const onScroll = () => {
+    if (!nav) return;
+    if (window.scrollY > 40) nav.classList.add('glass');
+    else nav.classList.remove('glass');
+  };
+  document.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  document.querySelectorAll('[data-scroll]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      const sel = el.getAttribute('data-scroll');
+      const target = document.querySelector(sel);
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+      closeSheet();
+    });
+  });
+
+  const toggle = document.querySelector('.nav-toggle');
+  const sheet = document.querySelector('.mobile-sheet');
+  function closeSheet() {
+    if (sheet) sheet.classList.remove('open');
+  }
+  if (toggle && sheet) {
+    toggle.addEventListener('click', () => sheet.classList.toggle('open'));
+    sheet.querySelectorAll('a').forEach((a) => a.addEventListener('click', closeSheet));
+  }
+})();
+
+/* ---------- Discord auth ---------- */
+(function () {
+  const corner = document.getElementById('account-corner');
+  const mobileSheet = document.querySelector('.mobile-sheet');
+
+  fetch('/api/auth/me', { credentials: 'include' })
+    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then((data) => {
+      if (data.user) renderAccountChip(data.user);
+      else renderLoginButton();
+    })
+    .catch(() => {});
+
+  function loginUrl() {
+    return `/api/auth/login?return_to=${encodeURIComponent(location.pathname)}`;
+  }
+
+  const DISCORD_ICON =
+    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0015.6 3l-.3.6a14 14 0 014.1 1.6 17 17 0 00-14.8 0A14 14 0 018.7 3.6L8.4 3a19.7 19.7 0 00-4.7 1.4C1 9 .3 13.5.6 18a20 20 0 006 3l1-1.4a12.8 12.8 0 01-1.9-.9l.5-.4a14.3 14.3 0 0011.6 0l.5.4c-.6.4-1.2.6-1.9.9l1 1.4a20 20 0 006-3c.4-5.2-.9-9.7-3.1-13.6zM8.5 15c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2zm7 0c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2z"/></svg>';
+
+  function renderLoginButton() {
+    const btn = document.createElement('a');
+    btn.href = loginUrl();
+    btn.className = 'nav-login-btn corner-fade-in';
+    btn.innerHTML = `${DISCORD_ICON}Iniciar sesión`;
+    if (corner) corner.appendChild(btn);
+
+    if (mobileSheet) {
+      const mBtn = btn.cloneNode(true);
+      mBtn.classList.remove('nav-login-btn');
+      mBtn.classList.add('btn', 'btn-discord');
+      mBtn.style.marginTop = '18px';
+      mobileSheet.insertBefore(mBtn, mobileSheet.lastElementChild);
+    }
+  }
+
+  function renderAccountChip(user) {
+    const avatarSrc = user.avatar || defaultAvatarSvg();
+
+    if (corner) {
+      const wrap = document.createElement('div');
+      wrap.className = 'account-wrap corner-fade-in';
+      wrap.innerHTML = `
+        <button class="account-chip" id="account-chip-btn">
+          <img class="account-avatar" src="${avatarSrc}" alt="">
+          <span class="account-name">${escapeHtml(user.username)}</span>
+          <span class="account-dot"></span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="account-dropdown">
+          <div class="account-dropdown-head">
+            <img class="account-dropdown-avatar" src="${avatarSrc}" alt="">
+            <div>
+              <p class="account-dropdown-name">${escapeHtml(user.username)}</p>
+              <p class="account-dropdown-role">Miembro</p>
+            </div>
+          </div>
+          <div class="account-dropdown-links">
+            <button id="account-logout-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      `;
+      corner.appendChild(wrap);
+
+      const chipBtn = wrap.querySelector('#account-chip-btn');
+      chipBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        wrap.classList.toggle('open');
+      });
+      document.addEventListener('click', () => wrap.classList.remove('open'));
+      wrap.querySelector('#account-logout-btn').addEventListener('click', logout);
+    }
+
+    if (mobileSheet) {
+      const row = document.createElement('div');
+      row.className = 'mobile-account-row';
+      row.innerHTML = `<img src="${avatarSrc}" alt=""><span>${escapeHtml(user.username)}</span>`;
+      mobileSheet.insertBefore(row, mobileSheet.lastElementChild);
+      const logoutBtn = document.createElement('button');
+      logoutBtn.className = 'mobile-logout';
+      logoutBtn.textContent = 'Cerrar sesión';
+      logoutBtn.addEventListener('click', logout);
+      mobileSheet.appendChild(logoutBtn);
+    }
+  }
+
+  async function logout() {
+    try {
+      const me = await fetch('/api/auth/me', { credentials: 'include' }).then((r) => r.json());
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-CSRF-Token': me.csrfToken || '' },
+      });
+    } catch (err) {}
+    location.reload();
+  }
+
+  function defaultAvatarSvg() {
+    return (
+      'data:image/svg+xml;utf8,' +
+      encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#172038"/><circle cx="12" cy="9.5" r="3.5" fill="#54607f"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" fill="#54607f"/></svg>'
+      )
+    );
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  }
+})();
