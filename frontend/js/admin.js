@@ -249,7 +249,7 @@
     }
 
     if (!users.length) {
-      wrap.innerHTML = '<span class="panel-section-sub">Sin resultados. Probá con el ID de Discord completo para asignarle un rango a alguien que todavía no inició sesión.</span>';
+      wrap.innerHTML = '<span class="panel-section-sub">Sin resultados. Prueba con el ID de Discord completo para asignarle un rango a alguien que todavía no ha iniciado sesión.</span>';
     } else {
       wrap.innerHTML = users.map((u) => renderUserRow(u, allRoles, canManage)).join('');
     }
@@ -356,10 +356,10 @@
     .then((r) => r.json())
     .then((data) => {
       csrfToken = data.csrfToken || '';
-      if (!data.user) return denied('Tenés que iniciar sesión con Discord para ver el panel.', true);
+      if (!data.user) return denied('Tienes que iniciar sesión con Discord para ver el panel.', true);
       me = data.user;
       if (!hasPerm('panel.access')) return denied('Tu cuenta no tiene acceso al panel de administración.', false);
       initShell();
     })
-    .catch(() => denied('No se pudo cargar el panel. Probá de nuevo en un rato.', false));
+    .catch(() => denied('No se pudo cargar el panel. Inténtalo de nuevo en un momento.', false));
 })();
