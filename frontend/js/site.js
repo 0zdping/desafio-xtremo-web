@@ -21,7 +21,20 @@
 (function () {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
+  const STAR_DURATION_MS = 1150;
+  const MAX_CONCURRENT = 3;
+  let liveCount = 0;
+  let pendingTimer = null;
+
+  function purgeAll() {
+    document.querySelectorAll('.shooting-star').forEach((el) => el.remove());
+    liveCount = 0;
+  }
+
   function spawn() {
+    if (liveCount >= MAX_CONCURRENT) return;
+    liveCount++;
+
     const star = document.createElement('div');
     star.className = 'shooting-star';
     // Travel angle in standard screen atan2 terms (0deg = right, 90deg = down):
@@ -37,15 +50,48 @@
     star.style.setProperty('--dx', dx + 'px');
     star.style.setProperty('--dy', dy + 'px');
     document.body.appendChild(star);
-    star.addEventListener('animationend', () => star.remove());
+
+    // Belt-and-suspenders removal: `animationend` doesn't reliably fire while
+    // the tab is hidden/minimized (no rendering happening), which otherwise
+    // lets spawned stars pile up silently and all animate at once the moment
+    // the tab becomes visible again ("un ejército de cometas"). A plain
+    // timer removes it regardless of whether the animation event ever fires.
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      star.remove();
+      liveCount--;
+    };
+    star.addEventListener('animationend', finish);
+    setTimeout(finish, STAR_DURATION_MS + 200);
   }
 
-  function loop() {
-    spawn();
+  function scheduleNext() {
     const next = 4000 + Math.random() * 6000;
-    setTimeout(loop, next);
+    pendingTimer = setTimeout(() => {
+      spawn();
+      scheduleNext();
+    }, next);
   }
-  setTimeout(loop, 2000);
+
+  // While the tab is hidden, timers get throttled rather than paused, so
+  // stop scheduling new spawns entirely and wipe anything left over the
+  // moment the tab is visible again, instead of letting a backlog render.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (pendingTimer) clearTimeout(pendingTimer);
+      pendingTimer = null;
+    } else {
+      purgeAll();
+      scheduleNext();
+    }
+  });
+
+  pendingTimer = setTimeout(() => {
+    spawn();
+    scheduleNext();
+  }, 2000);
 })();
 
 /* ---------- subtle background parallax ---------- */
