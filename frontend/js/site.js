@@ -1,19 +1,56 @@
 (function () {
   const field = document.getElementById('field');
   if (!field) return;
-  const count = window.innerWidth < 700 ? 36 : 70;
+  const count = window.innerWidth < 700 ? 50 : 110;
   for (let i = 0; i < count; i++) {
     const m = document.createElement('div');
-    m.className = 'mote';
-    const s = Math.random() * 1.6 + 0.6;
+    const big = Math.random() < 0.08;
+    m.className = big ? 'mote big' : 'mote';
+    const s = big ? Math.random() * 1.6 + 2.2 : Math.random() * 1.4 + 0.5;
     m.style.width = s + 'px';
     m.style.height = s + 'px';
     m.style.top = Math.random() * 100 + 'vh';
     m.style.left = Math.random() * 100 + 'vw';
-    m.style.animationDuration = 3 + Math.random() * 5 + 's';
-    m.style.animationDelay = Math.random() * 5 + 's';
+    m.style.animationDuration = 2.5 + Math.random() * 6 + 's';
+    m.style.animationDelay = Math.random() * 6 + 's';
     field.appendChild(m);
   }
+})();
+
+/* ---------- shooting stars ---------- */
+(function () {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  function spawn() {
+    const star = document.createElement('div');
+    star.className = 'shooting-star';
+    star.style.top = Math.random() * 50 + 'vh';
+    star.style.left = 60 + Math.random() * 35 + 'vw';
+    document.body.appendChild(star);
+    star.addEventListener('animationend', () => star.remove());
+  }
+
+  function loop() {
+    spawn();
+    const next = 4000 + Math.random() * 6000;
+    setTimeout(loop, next);
+  }
+  setTimeout(loop, 2000);
+})();
+
+/* ---------- subtle background parallax ---------- */
+(function () {
+  if (!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const field = document.getElementById('field');
+  const nebulaField = document.getElementById('nebula-field');
+  if (!field && !nebulaField) return;
+  document.addEventListener('mousemove', (e) => {
+    const x = (e.clientX / window.innerWidth - 0.5) * 2;
+    const y = (e.clientY / window.innerHeight - 0.5) * 2;
+    if (field) field.style.transform = `translate(${x * -10}px, ${y * -10}px)`;
+    if (nebulaField) nebulaField.style.transform = `translate(${x * 14}px, ${y * 14}px)`;
+  });
 })();
 
 window.bindReveal = function () {
