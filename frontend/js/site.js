@@ -202,6 +202,16 @@ window.bindReveal();
 
   function renderAccountChip(user) {
     const avatarSrc = user.avatar || defaultAvatarSvg();
+    const topRole = (user.roles || [])[0] || null;
+    const roleLabel = topRole ? topRole.name : 'Miembro';
+    const roleColor = topRole ? topRole.color : 'var(--accent)';
+    const canPanel = Array.isArray(user.permissions) && user.permissions.includes('panel.access');
+    const panelLink = canPanel
+      ? `<a href="admin.html">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+           Panel de administración
+         </a>`
+      : '';
 
     if (corner) {
       const wrap = document.createElement('div');
@@ -210,7 +220,7 @@ window.bindReveal();
         <button class="account-chip" id="account-chip-btn">
           <img class="account-avatar" src="${avatarSrc}" alt="">
           <span class="account-name">${escapeHtml(user.username)}</span>
-          <span class="account-dot"></span>
+          <span class="account-dot" style="background:${roleColor};box-shadow:0 0 6px ${roleColor}"></span>
           <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <div class="account-dropdown">
@@ -218,10 +228,11 @@ window.bindReveal();
             <img class="account-dropdown-avatar" src="${avatarSrc}" alt="">
             <div>
               <p class="account-dropdown-name">${escapeHtml(user.username)}</p>
-              <p class="account-dropdown-role">Miembro</p>
+              <p class="account-dropdown-role" style="color:${roleColor}">${escapeHtml(roleLabel)}</p>
             </div>
           </div>
           <div class="account-dropdown-links">
+            ${panelLink}
             <button id="account-logout-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
               Cerrar sesión
@@ -245,6 +256,12 @@ window.bindReveal();
       row.className = 'mobile-account-row';
       row.innerHTML = `<img src="${avatarSrc}" alt=""><span>${escapeHtml(user.username)}</span>`;
       mobileSheet.insertBefore(row, mobileSheet.lastElementChild);
+      if (canPanel) {
+        const a = document.createElement('a');
+        a.href = 'admin.html';
+        a.textContent = 'Panel de administración';
+        mobileSheet.insertBefore(a, mobileSheet.lastElementChild);
+      }
       const logoutBtn = document.createElement('button');
       logoutBtn.className = 'mobile-logout';
       logoutBtn.textContent = 'Cerrar sesión';

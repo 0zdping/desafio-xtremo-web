@@ -1,6 +1,8 @@
 import { exchangeCodeForToken, fetchDiscordUser, discordAvatarUrl } from '../../../backend/lib/discord.js';
 import { parseCookie, serializeCookie } from '../../../backend/lib/cookies.js';
 import { rateLimit, clientIp } from '../../../backend/lib/rateLimit.js';
+import { withQuotaHandling } from '../../../backend/lib/http.js';
+import { d1Run } from '../../../backend/lib/db.js';
 import {
   createSession,
   SESSION_COOKIE,
@@ -9,7 +11,7 @@ import {
   sessionMaxAgeSeconds,
 } from '../../../backend/lib/session.js';
 
-export async function onRequestGet(context) {
+export const onRequestGet = withQuotaHandling(async (context) => {
   const { request, env } = context;
   const ip = clientIp(request);
   const { allowed } = await rateLimit(env, `auth-callback:${ip}`, 15, 60);
@@ -36,11 +38,17 @@ export async function onRequestGet(context) {
   try {
     const token = await exchangeCodeForToken(env, code);
     const discordUser = await fetchDiscordUser(token.access_token);
-    const user = {
-      id: discordUser.id,
-      username: discordUser.username,
-      avatar: discordAvatarUrl(discordUser),
-    };
+    const avatar = discordAvatarUrl(discordUser);
+    const user = { id: discordUser.id, username: discordUser.username, avatar };
+
+    // Keep a persistent profile row so roles can be assigned to a Discord ID
+    // even before/independently of the session snapshot below.
+    await d1Run(
+      env,
+      `INSERT INTO users (id, username, avatar, updated_at) VALUES (?, ?, ?, datetime('now'))
+       ON CONFLICT(id) DO UPDATE SET username = excluded.username, avatar = excluded.avatar, updated_at = datetime('now')`,
+      [user.id, user.username, user.avatar]
+    );
 
     const sessionId = await createSession(env, user);
     const returnTo = parseCookie(cookieHeader, OAUTH_RETURN_COOKIE) || '/';
@@ -52,10 +60,11 @@ export async function onRequestGet(context) {
     headers.set('Location', `${returnTo}?authed=1`);
     return new Response(null, { status: 302, headers });
   } catch (err) {
+    if (err && err.resource) throw err; // let withQuotaHandling turn this into a 429
     console.error('discord oauth callback failed', err);
     return new Response(JSON.stringify({ error: 'No se pudo completar el login con Discord.' }), {
       status: 502,
       headers: { 'Content-Type': 'application/json' },
     });
   }
-}
+});

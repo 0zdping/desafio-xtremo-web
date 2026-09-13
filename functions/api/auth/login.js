@@ -2,6 +2,7 @@ import { buildDiscordAuthorizeUrl } from '../../../backend/lib/discord.js';
 import { serializeCookie } from '../../../backend/lib/cookies.js';
 import { rateLimit, clientIp } from '../../../backend/lib/rateLimit.js';
 import { OAUTH_STATE_COOKIE, OAUTH_RETURN_COOKIE } from '../../../backend/lib/session.js';
+import { withQuotaHandling } from '../../../backend/lib/http.js';
 
 /** Solo se permite volver a una ruta relativa dentro del propio sitio —
  *  nunca a una URL absoluta ni a algo tipo "//evil.com" — para evitar un
@@ -14,7 +15,7 @@ function sanitizeReturnTo(raw) {
   return raw;
 }
 
-export async function onRequestGet(context) {
+export const onRequestGet = withQuotaHandling(async (context) => {
   const { request, env } = context;
   const ip = clientIp(request);
   const { allowed } = await rateLimit(env, `auth-login:${ip}`, 10, 60);
@@ -35,4 +36,4 @@ export async function onRequestGet(context) {
   headers.append('Set-Cookie', serializeCookie(OAUTH_RETURN_COOKIE, returnTo, { maxAgeSeconds: 600 }));
   headers.set('Location', authorizeUrl);
   return new Response(null, { status: 302, headers });
-}
+});

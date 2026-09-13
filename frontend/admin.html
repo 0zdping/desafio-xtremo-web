@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel — Desafio Xtremo</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+
+<div id="field"></div>
+<div class="nebula-field" id="nebula-field">
+  <div class="nebula nebula-1"></div>
+  <div class="nebula nebula-2"></div>
+</div>
+<div class="grain"></div>
+
+<div id="panel-root">
+  <div class="panel-denied">
+    <p style="color:var(--text-dim);font-family:var(--f-mono);font-size:13px;">Cargando…</p>
+  </div>
+</div>
+
+<template id="tpl-panel">
+  <div class="panel-shell">
+    <div class="panel-topbar">
+      <a href="index.html" class="panel-brand"><span class="dot"></span>Desafio Xtremo · Panel</a>
+      <div class="panel-topbar-right">
+        <a href="index.html" class="panel-back">← Volver al sitio</a>
+        <div class="panel-user">
+          <img id="panel-user-avatar" src="" alt="">
+          <span class="panel-user-name" id="panel-user-name"></span>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <nav class="panel-sidebar">
+        <button class="panel-nav-btn active" data-section="overview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+          Resumen
+        </button>
+        <button class="panel-nav-btn" data-section="roles" id="nav-roles" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+          Rangos y permisos
+        </button>
+        <button class="panel-nav-btn" data-section="usage" id="nav-usage" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19h16M7 19V9m5 10V5m5 14v-7"/></svg>
+          Uso de recursos
+        </button>
+      </nav>
+
+      <main class="panel-main">
+        <section class="panel-section active" id="section-overview">
+          <h1>Resumen</h1>
+          <p class="panel-section-sub">Bienvenido de vuelta.</p>
+          <div class="panel-card">
+            <h2>Tus rangos</h2>
+            <div class="role-perms" id="overview-roles"></div>
+          </div>
+        </section>
+
+        <section class="panel-section" id="section-roles">
+          <h1>Rangos y permisos</h1>
+          <p class="panel-section-sub">Owner y Co-Owner tienen todos los permisos y no se pueden editar. Los demás rangos se crean con los permisos que necesiten.</p>
+          <div id="roles-msg"></div>
+          <div class="role-grid" id="roles-grid"></div>
+
+          <div class="panel-card" id="role-form-card" hidden>
+            <h2 id="role-form-title">Crear rango</h2>
+            <div class="field-row">
+              <label>Nombre</label>
+              <input type="text" id="role-form-name" maxlength="40" placeholder="Ej: Moderador">
+            </div>
+            <div class="field-row">
+              <label>Color</label>
+              <div class="color-row">
+                <input type="color" id="role-form-color" value="#6fb3ff">
+                <span id="role-form-color-hex">#6fb3ff</span>
+              </div>
+            </div>
+            <div class="field-row">
+              <label>Posición (mayor = más arriba en la jerarquía)</label>
+              <input type="number" id="role-form-position" value="0">
+            </div>
+            <div class="field-row">
+              <label>Permisos</label>
+              <div class="perm-checks" id="role-form-perms"></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-accent btn-sm" id="role-form-save">Guardar</button>
+              <button class="btn btn-ghost btn-sm" id="role-form-cancel">Cancelar</button>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="role-form-open">+ Crear rango</button>
+
+          <div class="panel-card" style="margin-top:24px;">
+            <h2>Asignar rango a un usuario</h2>
+            <div class="user-search-row">
+              <input type="text" id="user-search-input" placeholder="Buscar por username o pegar el ID de Discord…">
+              <button class="btn btn-ghost btn-sm" id="user-search-btn">Buscar</button>
+            </div>
+            <div id="user-results"></div>
+          </div>
+        </section>
+
+        <section class="panel-section" id="section-usage">
+          <h1>Uso de recursos</h1>
+          <p class="panel-section-sub">Contadores propios contra los límites gratuitos de Cloudflare. Si un recurso llega al límite, las solicitudes que lo necesiten se bloquean automáticamente en vez de dejar que empiece a cobrarse.</p>
+          <div class="usage-grid" id="usage-grid"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+</template>
+
+<script src="js/site.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
