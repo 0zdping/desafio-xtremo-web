@@ -222,6 +222,8 @@
     });
   }
 
+  const DISCORD_ID_RE = /^\d{15,25}$/;
+
   async function searchUsers() {
     const q = document.getElementById('user-search-input').value.trim();
     const wrap = document.getElementById('user-results');
@@ -229,17 +231,25 @@
     try {
       const { users } = await api(`/api/admin/users?q=${encodeURIComponent(q)}`);
       const [{ roles: allRoles }] = await Promise.all([api('/api/admin/roles')]);
-      renderUserResults(users, allRoles);
+      renderUserResults(users, allRoles, q);
     } catch (err) {
       wrap.innerHTML = `<div class="panel-msg error">${escapeHtml(err.message)}</div>`;
     }
   }
 
-  function renderUserResults(users, allRoles) {
+  function renderUserResults(users, allRoles, q) {
     const wrap = document.getElementById('user-results');
     const canManage = hasPerm('panel.manage_roles');
+
+    // A search by a not-yet-seen Discord ID returns nothing from `users`,
+    // but you can still assign it a role — synthesize a stub row so there's
+    // actually a control to do that, instead of just saying it's possible.
+    if (!users.length && DISCORD_ID_RE.test(q)) {
+      users = [{ id: q, username: null, avatar: null, roles: [] }];
+    }
+
     if (!users.length) {
-      wrap.innerHTML = '<span class="panel-section-sub">Sin resultados. Si es un ID de Discord válido, igual podés asignarle un rango.</span>';
+      wrap.innerHTML = '<span class="panel-section-sub">Sin resultados. Probá con el ID de Discord completo para asignarle un rango a alguien que todavía no inició sesión.</span>';
     } else {
       wrap.innerHTML = users.map((u) => renderUserRow(u, allRoles, canManage)).join('');
     }
