@@ -24,8 +24,9 @@
   function spawn() {
     const star = document.createElement('div');
     star.className = 'shooting-star';
-    star.style.top = Math.random() * 50 + 'vh';
-    star.style.left = 60 + Math.random() * 35 + 'vw';
+    star.style.top = Math.random() * 45 + 'vh';
+    star.style.left = 55 + Math.random() * 35 + 'vw';
+    star.style.setProperty('--ang', -(18 + Math.random() * 16) + 'deg');
     document.body.appendChild(star);
     star.addEventListener('animationend', () => star.remove());
   }
