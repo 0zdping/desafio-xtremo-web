@@ -154,23 +154,32 @@ h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:-0.02em;lin
 @keyframes driftC{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(30px,-50px) scale(1.1);}}
 @media (max-width:700px){ .nebula{filter:blur(60px);opacity:.7;} }
 
+/* The wrapper only ever translates in a straight line — a plain, unambiguous
+   motion path. The trail (::after) is a *static* (non-animated) rotation on a
+   child, pivoting around the wrapper's origin (where the head sits), so it
+   always points opposite the travel direction regardless of the translate
+   math above it. Keeping motion and rotation on separate elements avoids the
+   composition-order trap of animating rotate+translate together on one node. */
 .shooting-star{
   position:fixed;top:0;left:0;z-index:0;pointer-events:none;
-  width:130px;height:2px;border-radius:2px;
-  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.95));
-  transform-origin:right center;
-  opacity:0;
-  animation:shoot 1.15s linear forwards;
+  width:0;height:0;opacity:0;
+  animation:shootMove 1.15s linear forwards;
+}
+.shooting-star::before{
+  content:'';position:absolute;top:-2.5px;left:-2.5px;width:5px;height:5px;border-radius:50%;
+  background:#fff;box-shadow:0 0 8px 2px rgba(255,255,255,0.85);
 }
 .shooting-star::after{
-  content:'';position:absolute;top:50%;right:0;width:5px;height:5px;border-radius:50%;
-  transform:translate(50%,-50%);background:#fff;box-shadow:0 0 8px 2px rgba(255,255,255,0.85);
+  content:'';position:absolute;top:-1px;right:0;width:130px;height:2px;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.95));
+  transform-origin:right center;
+  transform:rotate(var(--ang,160deg));
 }
-@keyframes shoot{
-  0%{opacity:0;transform:rotate(var(--ang,-25deg)) translateX(60px);}
+@keyframes shootMove{
+  0%{opacity:0;transform:translate(0,0);}
   12%{opacity:1;}
   76%{opacity:1;}
-  100%{opacity:0;transform:rotate(var(--ang,-25deg)) translateX(-460px);}
+  100%{opacity:0;transform:translate(var(--dx,-380px), var(--dy,220px));}
 }
 
 .grain{

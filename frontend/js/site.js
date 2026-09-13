@@ -24,9 +24,18 @@
   function spawn() {
     const star = document.createElement('div');
     star.className = 'shooting-star';
+    // Travel angle in standard screen atan2 terms (0deg = right, 90deg = down):
+    // 148-166deg points down-and-left, matching the trail's own rotation math.
+    const angleDeg = 148 + Math.random() * 18;
+    const dist = 380 + Math.random() * 140;
+    const rad = (angleDeg * Math.PI) / 180;
+    const dx = Math.cos(rad) * dist;
+    const dy = Math.sin(rad) * dist;
     star.style.top = Math.random() * 45 + 'vh';
     star.style.left = 55 + Math.random() * 35 + 'vw';
-    star.style.setProperty('--ang', -(18 + Math.random() * 16) + 'deg');
+    star.style.setProperty('--ang', angleDeg + 'deg');
+    star.style.setProperty('--dx', dx + 'px');
+    star.style.setProperty('--dy', dy + 'px');
     document.body.appendChild(star);
     star.addEventListener('animationend', () => star.remove());
   }
