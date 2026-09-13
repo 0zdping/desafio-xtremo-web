@@ -28,13 +28,13 @@
 @media (prefers-reduced-motion: reduce){ .ticker-track{animation:none;} .ticker{overflow-x:auto;} }
 
 /* ---------- mechanic sections ---------- */
-.mech{padding:130px 0;overflow:hidden;position:relative;}
+.mech{padding:130px 0;position:relative;}
 .mech-blob{
-  position:absolute;width:640px;height:640px;border-radius:50%;filter:blur(120px);opacity:.16;pointer-events:none;z-index:0;
+  position:absolute;width:520px;height:520px;border-radius:50%;filter:blur(120px);opacity:.14;pointer-events:none;z-index:0;
   background:radial-gradient(circle, var(--accent) 0%, transparent 70%);
 }
-.mech:nth-child(odd) .mech-blob{right:-160px;top:10%;}
-.mech:nth-child(even) .mech-blob{left:-160px;bottom:10%;}
+.mech:nth-child(odd) .mech-blob{right:-120px;top:50%;transform:translateY(-50%);}
+.mech:nth-child(even) .mech-blob{left:-120px;top:50%;transform:translateY(-50%);}
 .mech-row{position:relative;z-index:1;display:flex;align-items:center;gap:64px;}
 .mech:nth-child(even) .mech-row{flex-direction:row-reverse;}
 .mech-text{flex:1;min-width:0;}
