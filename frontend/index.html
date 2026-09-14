@@ -36,6 +36,8 @@
     <ul class="nav-links">
       <li><a href="index.html">Inicio</a></li>
       <li><a href="wiki.html">Wiki</a></li>
+      <li><a href="anuncios.html">Anuncios</a></li>
+      <li><a href="#equipo">Equipo</a></li>
       <li><a href="/invite" target="_blank" rel="noopener">Discord</a></li>
     </ul>
     <div class="nav-right">
@@ -49,6 +51,8 @@
 <div class="mobile-sheet">
   <a href="index.html">Inicio</a>
   <a href="wiki.html">Wiki</a>
+  <a href="anuncios.html">Anuncios</a>
+  <a href="#equipo">Equipo</a>
   <a href="/invite" target="_blank" rel="noopener">Discord</a>
 </div>
 
@@ -81,6 +85,30 @@
   </div>
 </section>
 
+<section class="announcements-teaser" id="anuncios" hidden>
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Novedades</span>
+      <h2>Anuncios recientes</h2>
+    </div>
+    <div class="announcements-grid" id="announcements-teaser-grid"></div>
+    <div class="section-more reveal">
+      <a href="anuncios.html" class="btn btn-ghost">Ver todos los anuncios →</a>
+    </div>
+  </div>
+</section>
+
+<section class="team-section" id="equipo" hidden>
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">El equipo</span>
+      <h2>Quién está detrás de <span class="accent">Desafio Xtremo</span></h2>
+      <p class="section-sub">Las personas que organizan, moderan y desarrollan el evento.</p>
+    </div>
+    <div id="team-groups"></div>
+  </div>
+</section>
+
 <footer class="site-footer">
   <div class="footer-bar">
     <div class="container">
@@ -100,5 +128,6 @@
 </footer>
 
 <script src="js/site.js"></script>
+<script src="js/home-sections.js"></script>
 </body>
 </html>
