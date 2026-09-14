@@ -14,20 +14,6 @@
     }
   }
 
-  // Strip markdown roughly for a plain-text teaser excerpt.
-  function plainExcerpt(md, max) {
-    if (!md) return '';
-    const text = String(md)
-      .replace(/```[\s\S]*?```/g, ' ')
-      .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
-      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-      .replace(/[#>*_~`-]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (text.length <= max) return text;
-    return text.slice(0, max).replace(/\s+\S*$/, '') + '…';
-  }
-
   const PIN_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L20 8l-4.6 4 1.4 6-4.8-3.4L7.2 18l1.4-6L4 8l6.2-.4z"/></svg>';
 
   /* ---------- announcements teaser ---------- */
@@ -45,15 +31,27 @@
         grid.innerHTML = top
           .map((a) => {
             const pinned = !!a.pinned;
+            const href = a.slug ? `anuncios/${encodeURIComponent(a.slug)}` : '';
+            const tag = href ? 'a' : 'article';
+            const hrefAttr = href ? ` href="${escapeHtml(href)}"` : '';
+            const imageInner = a.hero_image_url
+              ? `<img src="${escapeHtml(a.hero_image_url)}" alt="" loading="lazy">`
+              : '';
             return `
-              <article class="announcement-card reveal${pinned ? ' pinned' : ''}">
-                <div class="announcement-card-head">
+              <${tag} class="post-card reveal${pinned ? ' pinned' : ''}"${hrefAttr}>
+                <div class="post-card-image">
+                  ${imageInner}
                   ${pinned ? `<span class="pin-badge">${PIN_ICON}Fijado</span>` : ''}
-                  <time class="announcement-date">${escapeHtml(formatDate(a.created_at))}</time>
                 </div>
-                <h3>${escapeHtml(a.title)}</h3>
-                <p>${escapeHtml(plainExcerpt(a.body, 140))}</p>
-              </article>
+                <div class="post-card-body">
+                  <div class="post-card-meta">
+                    ${a.category ? `<span class="category-pill">${escapeHtml(a.category)}</span>` : ''}
+                    <time>${escapeHtml(formatDate(a.created_at))}</time>
+                  </div>
+                  <h3 class="post-card-title">${escapeHtml(a.title)}</h3>
+                  <p class="post-card-excerpt">${escapeHtml(a.excerpt || '')}</p>
+                </div>
+              </${tag}>
             `;
           })
           .join('');

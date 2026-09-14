@@ -14,6 +14,8 @@
 <link rel="stylesheet" href="css/panel.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/quill/2.0.2/quill.snow.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quill/2.0.2/quill.min.js"></script>
 </head>
 <body>
 
@@ -186,16 +188,32 @@
               <label>Título</label>
               <input type="text" id="ann-form-title" maxlength="120" placeholder="Ej: Cambio de horario">
             </div>
+            <div class="field-row">
+              <label>Slug (URL)</label>
+              <input type="text" id="ann-form-slug" maxlength="120" placeholder="se genera solo si lo dejas en blanco">
+            </div>
+            <div class="field-row">
+              <label>Categoría</label>
+              <input type="text" id="ann-form-category" maxlength="60" placeholder="Ej: Actualización">
+            </div>
+            <div class="field-row">
+              <label>Extracto</label>
+              <textarea id="ann-form-excerpt" rows="2" maxlength="220" placeholder="Resumen corto para la lista..."></textarea>
+            </div>
+            <div class="field-row">
+              <label>Imagen de portada</label>
+              <div class="hero-upload-row">
+                <img id="ann-form-hero-preview" class="hero-upload-preview" hidden alt="Portada">
+                <input type="file" id="ann-form-hero-input" accept="image/png,image/jpeg,image/webp,image/gif">
+                <span class="hero-upload-status" id="ann-form-hero-status"></span>
+              </div>
+            </div>
             <div class="field-row checkbox-row">
               <label class="checkbox-inline"><input type="checkbox" id="ann-form-pinned"> Fijado (destacado arriba)</label>
             </div>
             <div class="field-row">
-              <label>Cuerpo (Markdown)</label>
-              <textarea id="ann-form-body" rows="8" placeholder="Escribe el anuncio en Markdown…"></textarea>
-            </div>
-            <div class="field-row">
-              <label>Vista previa</label>
-              <div class="md-preview" id="ann-form-preview"></div>
+              <label>Cuerpo</label>
+              <div id="ann-form-quill"></div>
             </div>
             <div class="form-actions">
               <button class="btn btn-accent btn-sm" id="ann-form-save">Guardar</button>

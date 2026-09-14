@@ -18,16 +18,36 @@
     }
   }
 
-  function renderMarkdown(md) {
-    try {
-      if (window.marked && window.DOMPurify) {
-        return window.DOMPurify.sanitize(window.marked.parse(md || ''));
-      }
-    } catch (err) {}
-    return `<p>${escapeHtml(md || '')}</p>`;
-  }
-
   const PIN_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L20 8l-4.6 4 1.4 6-4.8-3.4L7.2 18l1.4-6L4 8l6.2-.4z"/></svg>';
+  const EYE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+
+  function renderCard(a) {
+    const pinned = !!a.pinned;
+    const date = formatDate(a.created_at);
+    const href = a.slug ? `anuncios/${encodeURIComponent(a.slug)}` : '';
+    const tag = href ? 'a' : 'article';
+    const hrefAttr = href ? ` href="${escapeHtml(href)}"` : '';
+    const imageInner = a.hero_image_url
+      ? `<img src="${escapeHtml(a.hero_image_url)}" alt="" loading="lazy">`
+      : '';
+    return `
+      <${tag} class="post-card reveal${pinned ? ' pinned' : ''}"${hrefAttr}>
+        <div class="post-card-image">
+          ${imageInner}
+          ${pinned ? `<span class="pin-badge">${PIN_ICON}Fijado</span>` : ''}
+        </div>
+        <div class="post-card-body">
+          <div class="post-card-meta">
+            ${a.category ? `<span class="category-pill">${escapeHtml(a.category)}</span>` : ''}
+            <time>${escapeHtml(date)}</time>
+          </div>
+          <h3 class="post-card-title">${escapeHtml(a.title)}</h3>
+          <p class="post-card-excerpt">${escapeHtml(a.excerpt || '')}</p>
+          <div class="post-card-stats">${EYE_ICON}${escapeHtml(String(a.views || 0))}</div>
+        </div>
+      </${tag}>
+    `;
+  }
 
   fetch('/api/announcements')
     .then((r) => (r.ok ? r.json() : Promise.reject()))
@@ -37,22 +57,7 @@
         if (empty) empty.hidden = false;
         return;
       }
-      feed.innerHTML = items
-        .map((a) => {
-          const pinned = !!a.pinned;
-          const date = formatDate(a.created_at);
-          return `
-            <article class="announcement-full-card reveal${pinned ? ' pinned' : ''}">
-              <div class="announcement-full-head">
-                ${pinned ? `<span class="pin-badge">${PIN_ICON}Fijado</span>` : ''}
-                <time class="announcement-date">${escapeHtml(date)}</time>
-              </div>
-              <h2>${escapeHtml(a.title)}</h2>
-              <div class="md-content">${renderMarkdown(a.body)}</div>
-            </article>
-          `;
-        })
-        .join('');
+      feed.innerHTML = items.map(renderCard).join('');
       window.bindReveal && window.bindReveal();
     })
     .catch(() => {

@@ -108,15 +108,47 @@ body{background:var(--bg);}
 }
 
 .pin-badge{
+  display:inline-flex;align-items:center;gap:5px;
   font-family:var(--f-mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;
   color:var(--pin, #ffb84d);border:1px solid var(--pin, #ffb84d);border-radius:var(--radius-pill);
   padding:2px 7px;flex-shrink:0;box-shadow:0 0 8px var(--pin-glow, rgba(255,184,77,0.35));
 }
+.pin-badge svg{width:9px;height:9px;}
 
 .team-skin-thumb{width:22px;height:22px;border-radius:5px;image-rendering:pixelated;flex-shrink:0;}
 .team-form-nick-row{display:flex;align-items:flex-end;gap:14px;}
 .team-form-nick-fields{flex:1;}
 .team-skin-preview{width:56px;height:56px;border-radius:8px;image-rendering:pixelated;border:1px solid var(--border);background:var(--bg-alt);flex-shrink:0;}
+
+.category-pill{
+  font-family:var(--f-mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--accent-strong);border:1px solid var(--accent-border);border-radius:var(--radius-pill);
+  padding:2px 8px;flex-shrink:0;background:var(--accent-soft);
+}
+.ann-thumb{width:64px;height:40px;border-radius:6px;object-fit:cover;border:1px solid var(--border-hair);background:var(--bg-alt);flex-shrink:0;}
+.hero-upload-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.hero-upload-preview{width:130px;height:80px;object-fit:cover;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-alt);flex-shrink:0;}
+.hero-upload-status{font-size:12.5px;color:var(--text-dim);}
+
+/* Quill editor, restyled to match the panel's dark glass look. */
+#ann-form-quill{min-height:280px;}
+.ql-toolbar.ql-snow{
+  background:var(--bg-alt);border:1px solid var(--border);border-radius:var(--radius-sm) var(--radius-sm) 0 0;
+}
+.ql-container.ql-snow{
+  background:var(--surface-2);border:1px solid var(--border);border-top:none;
+  border-radius:0 0 var(--radius-sm) var(--radius-sm);min-height:280px;font-size:14px;color:var(--text);
+}
+.ql-snow .ql-stroke{stroke:var(--text-soft);}
+.ql-snow .ql-fill{fill:var(--text-soft);}
+.ql-snow .ql-picker{color:var(--text-soft);}
+.ql-editor.ql-blank::before{color:var(--text-faint);font-style:normal;}
+.ql-snow .ql-tooltip{
+  background:var(--surface-3);border:1px solid var(--border-strong);color:var(--text);box-shadow:var(--shadow-md);
+}
+.ql-snow .ql-tooltip input[type="text"]{
+  background:var(--bg-alt);border:1px solid var(--border);color:var(--text);border-radius:6px;
+}
 
 .sanction-list{display:flex;flex-direction:column;gap:14px;}
 .sanction-card{
