@@ -659,8 +659,8 @@
     const grid = document.getElementById('team-grid');
     grid.innerHTML = '<span class="panel-section-sub">Cargando…</span>';
     try {
-      const { team } = await api('/api/admin/team');
-      renderTeam(team || []);
+      const { members } = await api('/api/admin/team');
+      renderTeam(members || []);
     } catch (err) {
       grid.innerHTML = '';
       teamMsg(err.message, 'error');

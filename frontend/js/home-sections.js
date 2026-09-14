@@ -74,7 +74,7 @@
     fetch('/api/team')
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data) => {
-        const members = Array.isArray(data && data.team) ? data.team : [];
+        const members = Array.isArray(data && data.members) ? data.members : [];
         if (!members.length) return; // leave section hidden
 
         const staff = members.filter((m) => m.team === 'staff');
