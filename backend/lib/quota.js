@@ -42,22 +42,39 @@ function periodTtl(resource) {
 export const todayKey = periodKey;
 
 /** Check whether `resource` still has headroom. Does not consume anything —
- *  call addUsage() after the real operation completes with its actual cost. */
+ *  call addUsage() after the real operation completes with its actual cost.
+ *
+ *  This bookkeeping itself rides on KV, which has its own real Cloudflare
+ *  quota (1000 writes/day free tier) shared across every resource we track
+ *  here. If KV itself is erroring (e.g. that real write quota is already
+ *  exhausted from today's traffic), we must fail OPEN rather than let the
+ *  advisory check take down the actual request it's only meant to guard. */
 export async function checkQuota(env, resource) {
   const limit = QUOTA_LIMITS[resource];
   if (!limit) return { allowed: true, current: 0, limit: null };
-  const raw = await env.SESSIONS.get(periodKey(resource));
-  const current = parseInt(raw || '0', 10);
-  return { allowed: current < limit - 1, current, limit };
+  try {
+    const raw = await env.SESSIONS.get(periodKey(resource));
+    const current = parseInt(raw || '0', 10);
+    return { allowed: current < limit - 1, current, limit };
+  } catch (err) {
+    console.error('checkQuota read failed, failing open', resource, err);
+    return { allowed: true, current: 0, limit };
+  }
 }
 
+/** Same fail-open rule as checkQuota: recording usage must never be able to
+ *  fail the operation it's just trying to measure after the fact. */
 export async function addUsage(env, resource, amount) {
   const limit = QUOTA_LIMITS[resource];
   if (!limit || !amount) return;
-  const key = periodKey(resource);
-  const raw = await env.SESSIONS.get(key);
-  const current = parseInt(raw || '0', 10);
-  await env.SESSIONS.put(key, String(current + amount), { expirationTtl: periodTtl(resource) });
+  try {
+    const key = periodKey(resource);
+    const raw = await env.SESSIONS.get(key);
+    const current = parseInt(raw || '0', 10);
+    await env.SESSIONS.put(key, String(current + amount), { expirationTtl: periodTtl(resource) });
+  } catch (err) {
+    console.error('addUsage write failed, ignoring', resource, err);
+  }
 }
 
 export async function getUsageSnapshot(env) {
