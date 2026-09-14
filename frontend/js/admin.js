@@ -60,6 +60,10 @@
 
     if (hasPerm('panel.access')) document.getElementById('nav-roles').hidden = false;
     if (hasPerm('panel.view_usage')) document.getElementById('nav-usage').hidden = false;
+    if (hasPerm('panel.access')) document.getElementById('nav-wiki').hidden = false;
+    if (hasPerm('panel.access')) document.getElementById('nav-announcements').hidden = false;
+    if (hasPerm('panel.access')) document.getElementById('nav-team').hidden = false;
+    if (hasPerm('sanctions.access')) document.getElementById('nav-sanctions').hidden = false;
 
     document.querySelectorAll('.panel-nav-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -70,11 +74,29 @@
         section.classList.add('active');
         if (btn.dataset.section === 'roles') loadRoles();
         if (btn.dataset.section === 'usage') loadUsage();
+        if (btn.dataset.section === 'wiki') loadWiki();
+        if (btn.dataset.section === 'announcements') loadAnnouncements();
+        if (btn.dataset.section === 'team') loadTeam();
+        if (btn.dataset.section === 'sanctions') loadSanctions();
       });
     });
 
     wireRoleForm();
     wireUserSearch();
+    wireWikiForm();
+    wireAnnouncementForm();
+    wireTeamForm();
+    wireSanctionForm();
+  }
+
+  function renderMarkdownPreview(el, content) {
+    if (!el) return;
+    try {
+      const raw = typeof marked !== 'undefined' ? marked.parse(content || '') : escapeHtml(content || '');
+      el.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(raw) : escapeHtml(content || '');
+    } catch (err) {
+      el.textContent = content || '';
+    }
   }
 
   /* ---------- Roles & permissions ---------- */
@@ -347,6 +369,583 @@
         .join('');
     } catch (err) {
       grid.innerHTML = `<div class="panel-msg error">${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  /* ---------- Wiki ---------- */
+
+  let editingWikiId = null;
+
+  function wikiMsg(text, type) {
+    const el = document.getElementById('wiki-msg');
+    el.innerHTML = text ? `<div class="panel-msg ${type}">${escapeHtml(text)}</div>` : '';
+  }
+
+  async function loadWiki() {
+    const grid = document.getElementById('wiki-grid');
+    grid.innerHTML = '<span class="panel-section-sub">Cargando…</span>';
+    try {
+      const { pages } = await api('/api/admin/wiki');
+      renderWiki(pages || []);
+    } catch (err) {
+      grid.innerHTML = '';
+      wikiMsg(err.message, 'error');
+    }
+  }
+
+  function renderWiki(pages) {
+    const grid = document.getElementById('wiki-grid');
+    const canManage = hasPerm('wiki.manage');
+    document.getElementById('wiki-form-open').style.display = canManage ? '' : 'none';
+
+    if (!pages.length) {
+      grid.innerHTML = '<span class="panel-section-sub">Todavía no hay páginas.</span>';
+      return;
+    }
+
+    const byCategory = new Map();
+    pages
+      .slice()
+      .sort((a, b) => (a.position || 0) - (b.position || 0))
+      .forEach((p) => {
+        const cat = p.category || 'Sin categoría';
+        if (!byCategory.has(cat)) byCategory.set(cat, []);
+        byCategory.get(cat).push(p);
+      });
+
+    grid.innerHTML = Array.from(byCategory.entries())
+      .map(
+        ([cat, list]) => `
+        <div class="wiki-category-block">
+          <h3 class="wiki-category-title">${escapeHtml(cat)}</h3>
+          <div class="role-grid">
+            ${list
+              .map(
+                (p) => `
+              <div class="role-card">
+                <div class="role-card-head">
+                  <span class="role-card-name">${escapeHtml(p.title)}</span>
+                  <span class="role-locked-badge">${escapeHtml(p.slug)}</span>
+                </div>
+                ${
+                  canManage
+                    ? `<div class="role-card-actions">
+                         <button class="btn btn-ghost btn-sm" data-edit="${p.id}">Editar</button>
+                         <button class="btn btn-ghost btn-sm" data-delete="${p.id}">Eliminar</button>
+                       </div>`
+                    : ''
+                }
+              </div>`
+              )
+              .join('')}
+          </div>
+        </div>`
+      )
+      .join('');
+
+    grid.querySelectorAll('[data-edit]').forEach((btn) =>
+      btn.addEventListener('click', () => openWikiForm(pages.find((p) => p.id === Number(btn.dataset.edit))))
+    );
+    grid.querySelectorAll('[data-delete]').forEach((btn) =>
+      btn.addEventListener('click', () => deleteWiki(Number(btn.dataset.delete)))
+    );
+  }
+
+  function wireWikiForm() {
+    document.getElementById('wiki-form-open').addEventListener('click', () => openWikiForm(null));
+    document.getElementById('wiki-form-cancel').addEventListener('click', closeWikiForm);
+    document.getElementById('wiki-form-save').addEventListener('click', saveWiki);
+    document.getElementById('wiki-form-content').addEventListener('input', (e) => {
+      renderMarkdownPreview(document.getElementById('wiki-form-preview'), e.target.value);
+    });
+  }
+
+  function openWikiForm(page) {
+    editingWikiId = page ? page.id : null;
+    document.getElementById('wiki-form-heading').textContent = page ? `Editar ${page.title}` : 'Crear página';
+    document.getElementById('wiki-form-slug').value = page ? page.slug : '';
+    document.getElementById('wiki-form-title').value = page ? page.title : '';
+    document.getElementById('wiki-form-category').value = page ? page.category || '' : '';
+    document.getElementById('wiki-form-position').value = page ? page.position : 0;
+    document.getElementById('wiki-form-content').value = page ? page.content || '' : '';
+    renderMarkdownPreview(document.getElementById('wiki-form-preview'), page ? page.content : '');
+    document.getElementById('wiki-form-card').hidden = false;
+  }
+
+  function closeWikiForm() {
+    document.getElementById('wiki-form-card').hidden = true;
+    editingWikiId = null;
+  }
+
+  async function saveWiki() {
+    const slug = document.getElementById('wiki-form-slug').value.trim();
+    const title = document.getElementById('wiki-form-title').value.trim();
+    const category = document.getElementById('wiki-form-category').value.trim();
+    const position = Number(document.getElementById('wiki-form-position').value) || 0;
+    const content = document.getElementById('wiki-form-content').value;
+
+    try {
+      if (editingWikiId) {
+        await api(`/api/admin/wiki/${editingWikiId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ slug, title, category, content, position }),
+        });
+        wikiMsg('Página actualizada.', 'ok');
+      } else {
+        await api('/api/admin/wiki', {
+          method: 'POST',
+          body: JSON.stringify({ slug, title, category, content, position }),
+        });
+        wikiMsg('Página creada.', 'ok');
+      }
+      closeWikiForm();
+      loadWiki();
+    } catch (err) {
+      wikiMsg(err.message, 'error');
+    }
+  }
+
+  async function deleteWiki(id) {
+    const ok = window.zdConfirm
+      ? await window.zdConfirm('¿Eliminar esta página? Esta acción no se puede deshacer.')
+      : confirm('¿Eliminar esta página?');
+    if (!ok) return;
+    try {
+      await api(`/api/admin/wiki/${id}`, { method: 'DELETE' });
+      wikiMsg('Página eliminada.', 'ok');
+      loadWiki();
+    } catch (err) {
+      wikiMsg(err.message, 'error');
+    }
+  }
+
+  /* ---------- Announcements ---------- */
+
+  let editingAnnId = null;
+
+  function annMsg(text, type) {
+    const el = document.getElementById('ann-msg');
+    el.innerHTML = text ? `<div class="panel-msg ${type}">${escapeHtml(text)}</div>` : '';
+  }
+
+  async function loadAnnouncements() {
+    const grid = document.getElementById('ann-grid');
+    grid.innerHTML = '<span class="panel-section-sub">Cargando…</span>';
+    try {
+      const { announcements } = await api('/api/admin/announcements');
+      renderAnnouncements(announcements || []);
+    } catch (err) {
+      grid.innerHTML = '';
+      annMsg(err.message, 'error');
+    }
+  }
+
+  function renderAnnouncements(list) {
+    const grid = document.getElementById('ann-grid');
+    const canManage = hasPerm('announcements.manage');
+    document.getElementById('ann-form-open').style.display = canManage ? '' : 'none';
+
+    if (!list.length) {
+      grid.innerHTML = '<span class="panel-section-sub">Todavía no hay anuncios.</span>';
+      return;
+    }
+
+    const sorted = list.slice().sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+
+    grid.innerHTML = sorted
+      .map(
+        (a) => `
+        <div class="role-card">
+          <div class="role-card-head">
+            <span class="role-card-name">${escapeHtml(a.title)}</span>
+            ${a.pinned ? '<span class="pin-badge">Fijado</span>' : ''}
+          </div>
+          <div class="panel-section-sub" style="margin:0;">${escapeHtml(a.created_at ? new Date(a.created_at).toLocaleString('es') : '')}</div>
+          ${
+            canManage
+              ? `<div class="role-card-actions">
+                   <button class="btn btn-ghost btn-sm" data-edit="${a.id}">Editar</button>
+                   <button class="btn btn-ghost btn-sm" data-delete="${a.id}">Eliminar</button>
+                 </div>`
+              : ''
+          }
+        </div>`
+      )
+      .join('');
+
+    grid.querySelectorAll('[data-edit]').forEach((btn) =>
+      btn.addEventListener('click', () => openAnnouncementForm(list.find((a) => a.id === Number(btn.dataset.edit))))
+    );
+    grid.querySelectorAll('[data-delete]').forEach((btn) =>
+      btn.addEventListener('click', () => deleteAnnouncement(Number(btn.dataset.delete)))
+    );
+  }
+
+  function wireAnnouncementForm() {
+    document.getElementById('ann-form-open').addEventListener('click', () => openAnnouncementForm(null));
+    document.getElementById('ann-form-cancel').addEventListener('click', closeAnnouncementForm);
+    document.getElementById('ann-form-save').addEventListener('click', saveAnnouncement);
+    document.getElementById('ann-form-body').addEventListener('input', (e) => {
+      renderMarkdownPreview(document.getElementById('ann-form-preview'), e.target.value);
+    });
+  }
+
+  function openAnnouncementForm(a) {
+    editingAnnId = a ? a.id : null;
+    document.getElementById('ann-form-heading').textContent = a ? `Editar ${a.title}` : 'Crear anuncio';
+    document.getElementById('ann-form-title').value = a ? a.title : '';
+    document.getElementById('ann-form-pinned').checked = a ? !!a.pinned : false;
+    document.getElementById('ann-form-body').value = a ? a.body || '' : '';
+    renderMarkdownPreview(document.getElementById('ann-form-preview'), a ? a.body : '');
+    document.getElementById('ann-form-card').hidden = false;
+  }
+
+  function closeAnnouncementForm() {
+    document.getElementById('ann-form-card').hidden = true;
+    editingAnnId = null;
+  }
+
+  async function saveAnnouncement() {
+    const title = document.getElementById('ann-form-title').value.trim();
+    const pinned = document.getElementById('ann-form-pinned').checked;
+    const body = document.getElementById('ann-form-body').value;
+
+    try {
+      if (editingAnnId) {
+        await api(`/api/admin/announcements/${editingAnnId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ title, body, pinned }),
+        });
+        annMsg('Anuncio actualizado.', 'ok');
+      } else {
+        await api('/api/admin/announcements', {
+          method: 'POST',
+          body: JSON.stringify({ title, body, pinned }),
+        });
+        annMsg('Anuncio creado.', 'ok');
+      }
+      closeAnnouncementForm();
+      loadAnnouncements();
+    } catch (err) {
+      annMsg(err.message, 'error');
+    }
+  }
+
+  async function deleteAnnouncement(id) {
+    const ok = window.zdConfirm
+      ? await window.zdConfirm('¿Eliminar este anuncio? Esta acción no se puede deshacer.')
+      : confirm('¿Eliminar este anuncio?');
+    if (!ok) return;
+    try {
+      await api(`/api/admin/announcements/${id}`, { method: 'DELETE' });
+      annMsg('Anuncio eliminado.', 'ok');
+      loadAnnouncements();
+    } catch (err) {
+      annMsg(err.message, 'error');
+    }
+  }
+
+  /* ---------- Team ---------- */
+
+  let editingTeamId = null;
+  const TEAM_LABELS = { staff: 'Staff', dev: 'Desarrollo' };
+
+  function teamMsg(text, type) {
+    const el = document.getElementById('team-msg');
+    el.innerHTML = text ? `<div class="panel-msg ${type}">${escapeHtml(text)}</div>` : '';
+  }
+
+  async function loadTeam() {
+    const grid = document.getElementById('team-grid');
+    grid.innerHTML = '<span class="panel-section-sub">Cargando…</span>';
+    try {
+      const { team } = await api('/api/admin/team');
+      renderTeam(team || []);
+    } catch (err) {
+      grid.innerHTML = '';
+      teamMsg(err.message, 'error');
+    }
+  }
+
+  function renderTeam(members) {
+    const grid = document.getElementById('team-grid');
+    const canManage = hasPerm('team.manage');
+    document.getElementById('team-form-open').style.display = canManage ? '' : 'none';
+
+    if (!members.length) {
+      grid.innerHTML = '<span class="panel-section-sub">Todavía no hay miembros.</span>';
+      return;
+    }
+
+    grid.innerHTML = members
+      .slice()
+      .sort((a, b) => (a.position || 0) - (b.position || 0))
+      .map((m) => {
+        const nick = m.mc_nick || '';
+        const color = m.rank_color || '#6fb3ff';
+        return `
+        <div class="role-card">
+          <div class="role-card-head">
+            <img class="team-skin-thumb" src="https://mc-heads.net/avatar/${encodeURIComponent(nick)}/32" alt="">
+            <span class="role-card-name">${escapeHtml(nick)}</span>
+            <span class="role-locked-badge">${escapeHtml(TEAM_LABELS[m.team] || m.team || '')}</span>
+          </div>
+          <div class="role-perms">
+            <span class="perm-chip" style="border-color:${escapeHtml(color)}55;color:${escapeHtml(color)}">${escapeHtml(m.rank_label || '')}</span>
+          </div>
+          <div class="panel-section-sub" style="margin:0;">${escapeHtml(m.function_text || '')}</div>
+          ${
+            canManage
+              ? `<div class="role-card-actions">
+                   <button class="btn btn-ghost btn-sm" data-edit="${m.id}">Editar</button>
+                   <button class="btn btn-ghost btn-sm" data-delete="${m.id}">Eliminar</button>
+                 </div>`
+              : ''
+          }
+        </div>`;
+      })
+      .join('');
+
+    grid.querySelectorAll('[data-edit]').forEach((btn) =>
+      btn.addEventListener('click', () => openTeamForm(members.find((m) => m.id === Number(btn.dataset.edit))))
+    );
+    grid.querySelectorAll('[data-delete]').forEach((btn) =>
+      btn.addEventListener('click', () => deleteTeamMember(Number(btn.dataset.delete)))
+    );
+  }
+
+  function wireTeamForm() {
+    document.getElementById('team-form-open').addEventListener('click', () => openTeamForm(null));
+    document.getElementById('team-form-cancel').addEventListener('click', closeTeamForm);
+    document.getElementById('team-form-save').addEventListener('click', saveTeamMember);
+    document.getElementById('team-form-color').addEventListener('input', (e) => {
+      document.getElementById('team-form-color-hex').textContent = e.target.value;
+    });
+    document.getElementById('team-form-nick').addEventListener('input', (e) => {
+      const img = document.getElementById('team-form-skin');
+      const nick = e.target.value.trim();
+      if (nick) {
+        img.src = `https://mc-heads.net/avatar/${encodeURIComponent(nick)}/64`;
+        img.hidden = false;
+      } else {
+        img.hidden = true;
+      }
+    });
+  }
+
+  function openTeamForm(member) {
+    editingTeamId = member ? member.id : null;
+    document.getElementById('team-form-heading').textContent = member ? `Editar ${member.mc_nick}` : 'Añadir miembro';
+    document.getElementById('team-form-nick').value = member ? member.mc_nick : '';
+    document.getElementById('team-form-rank').value = member ? member.rank_label || '' : '';
+    document.getElementById('team-form-color').value = member ? member.rank_color || '#6fb3ff' : '#6fb3ff';
+    document.getElementById('team-form-color-hex').textContent = member ? member.rank_color || '#6fb3ff' : '#6fb3ff';
+    document.getElementById('team-form-function').value = member ? member.function_text || '' : '';
+    document.getElementById('team-form-team').value = member ? member.team || 'staff' : 'staff';
+    document.getElementById('team-form-position').value = member ? member.position : 0;
+
+    const img = document.getElementById('team-form-skin');
+    if (member && member.mc_nick) {
+      img.src = `https://mc-heads.net/avatar/${encodeURIComponent(member.mc_nick)}/64`;
+      img.hidden = false;
+    } else {
+      img.hidden = true;
+    }
+
+    document.getElementById('team-form-card').hidden = false;
+  }
+
+  function closeTeamForm() {
+    document.getElementById('team-form-card').hidden = true;
+    editingTeamId = null;
+  }
+
+  async function saveTeamMember() {
+    const mc_nick = document.getElementById('team-form-nick').value.trim();
+    const rank_label = document.getElementById('team-form-rank').value.trim();
+    const rank_color = document.getElementById('team-form-color').value;
+    const function_text = document.getElementById('team-form-function').value.trim();
+    const team = document.getElementById('team-form-team').value;
+    const position = Number(document.getElementById('team-form-position').value) || 0;
+
+    try {
+      if (editingTeamId) {
+        await api(`/api/admin/team/${editingTeamId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ mc_nick, rank_label, rank_color, function_text, team, position }),
+        });
+        teamMsg('Miembro actualizado.', 'ok');
+      } else {
+        await api('/api/admin/team', {
+          method: 'POST',
+          body: JSON.stringify({ mc_nick, rank_label, rank_color, function_text, team, position }),
+        });
+        teamMsg('Miembro añadido.', 'ok');
+      }
+      closeTeamForm();
+      loadTeam();
+    } catch (err) {
+      teamMsg(err.message, 'error');
+    }
+  }
+
+  async function deleteTeamMember(id) {
+    const ok = window.zdConfirm
+      ? await window.zdConfirm('¿Eliminar este miembro del equipo? Esta acción no se puede deshacer.')
+      : confirm('¿Eliminar este miembro?');
+    if (!ok) return;
+    try {
+      await api(`/api/admin/team/${id}`, { method: 'DELETE' });
+      teamMsg('Miembro eliminado.', 'ok');
+      loadTeam();
+    } catch (err) {
+      teamMsg(err.message, 'error');
+    }
+  }
+
+  /* ---------- Sanctions ---------- */
+
+  const SANCTION_TYPE_LABELS = { ban: 'Ban', mute: 'Mute', kick: 'Kick', warn: 'Warn', other: 'Otro' };
+
+  function sanctionsMsg(text, type) {
+    const el = document.getElementById('sanctions-msg');
+    el.innerHTML = text ? `<div class="panel-msg ${type}">${escapeHtml(text)}</div>` : '';
+  }
+
+  function sanctionFormMsg(text, type) {
+    const el = document.getElementById('sanction-form-msg');
+    el.innerHTML = text ? `<div class="panel-msg ${type}">${escapeHtml(text)}</div>` : '';
+  }
+
+  async function loadSanctions() {
+    const list = document.getElementById('sanctions-list');
+    list.innerHTML = '<span class="panel-section-sub">Cargando…</span>';
+    try {
+      const data = await api('/api/staff/sanctions');
+      renderSanctions(data.sanctions || []);
+    } catch (err) {
+      list.innerHTML = '';
+      sanctionsMsg(err.message, 'error');
+    }
+  }
+
+  function evidenceMarkup(ev) {
+    const url = `/api/staff/evidence/${ev.id}`;
+    const type = ev.content_type || '';
+    const label = ev.filename ? escapeHtml(ev.filename) : 'evidencia';
+    if (type.startsWith('image/')) {
+      return `<a href="${url}" target="_blank" class="evidence-thumb"><img src="${url}" alt="${label}" loading="lazy"></a>`;
+    }
+    if (type.startsWith('video/')) {
+      return `<video class="evidence-thumb" controls src="${url}"></video>`;
+    }
+    return `<a href="${url}" target="_blank" class="evidence-file-link">Ver archivo${ev.filename ? ': ' + label : ''}</a>`;
+  }
+
+  function renderSanctions(sanctions) {
+    const list = document.getElementById('sanctions-list');
+    const canManage = hasPerm('sanctions.manage');
+
+    if (!sanctions.length) {
+      list.innerHTML = '<span class="panel-section-sub">Todavía no hay sanciones registradas.</span>';
+      return;
+    }
+
+    list.innerHTML = sanctions
+      .map((s) => {
+        const evidence = Array.isArray(s.evidence) ? s.evidence : [];
+        return `
+        <div class="sanction-card">
+          <div class="sanction-card-head">
+            <span class="sanction-nick">${escapeHtml(s.target_nick)}</span>
+            <span class="sanction-type">${escapeHtml(SANCTION_TYPE_LABELS[s.type] || s.type)}</span>
+            ${canManage ? `<button class="btn btn-ghost btn-sm sanction-delete" data-delete="${s.id}">Eliminar</button>` : ''}
+          </div>
+          <p class="sanction-reason">${escapeHtml(s.reason || '')}</p>
+          <div class="panel-section-sub" style="margin:0 0 10px;">
+            Aplicada por ${escapeHtml(s.staff_name || s.staff_id || 'desconocido')}${s.created_at ? ' · ' + escapeHtml(new Date(s.created_at).toLocaleString('es')) : ''}
+          </div>
+          ${evidence.length ? `<div class="evidence-grid">${evidence.map(evidenceMarkup).join('')}</div>` : ''}
+        </div>`;
+      })
+      .join('');
+
+    list.querySelectorAll('[data-delete]').forEach((btn) =>
+      btn.addEventListener('click', () => deleteSanction(Number(btn.dataset.delete)))
+    );
+  }
+
+  async function deleteSanction(id) {
+    const ok = window.zdConfirm
+      ? await window.zdConfirm('¿Eliminar esta sanción? Esta acción no se puede deshacer.')
+      : confirm('¿Eliminar esta sanción?');
+    if (!ok) return;
+    try {
+      await api(`/api/staff/sanctions/${id}`, { method: 'DELETE' });
+      sanctionsMsg('Sanción eliminada.', 'ok');
+      loadSanctions();
+    } catch (err) {
+      sanctionsMsg(err.message, 'error');
+    }
+  }
+
+  function wireSanctionForm() {
+    document.getElementById('sanction-form-save').addEventListener('click', saveSanction);
+  }
+
+  async function saveSanction() {
+    const target_nick = document.getElementById('sanction-form-nick').value.trim();
+    const type = document.getElementById('sanction-form-type').value;
+    const reason = document.getElementById('sanction-form-reason').value.trim();
+    const filesInput = document.getElementById('sanction-form-files');
+    const files = filesInput.files ? Array.from(filesInput.files) : [];
+
+    if (!target_nick || !reason) {
+      sanctionFormMsg('Rellena el nick y el motivo.', 'error');
+      return;
+    }
+    if (files.length > 6) {
+      sanctionFormMsg('Puedes adjuntar como máximo 6 archivos.', 'error');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('target_nick', target_nick);
+    formData.append('type', type);
+    formData.append('reason', reason);
+    files.forEach((f) => formData.append('files', f));
+
+    const saveBtn = document.getElementById('sanction-form-save');
+    saveBtn.disabled = true;
+    sanctionFormMsg('Guardando…', 'ok');
+    try {
+      // Multipart upload: build the request by hand instead of using api(),
+      // which always forces a JSON Content-Type. Leave Content-Type unset so
+      // the browser attaches the multipart boundary itself.
+      const res = await fetch('/api/staff/sanctions', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-CSRF-Token': csrfToken },
+        body: formData,
+      });
+      const isJson = res.headers.get('content-type')?.includes('application/json');
+      const body = isJson ? await res.json().catch(() => null) : null;
+      if (!res.ok) {
+        throw new Error((body && body.error) || `Error ${res.status}`);
+      }
+      if (body && Array.isArray(body.fileErrors) && body.fileErrors.length) {
+        sanctionFormMsg(`Sanción registrada, pero hubo avisos con algunos archivos: ${body.fileErrors.join(', ')}`, 'error');
+      } else {
+        sanctionFormMsg('Sanción registrada.', 'ok');
+      }
+      document.getElementById('sanction-form-nick').value = '';
+      document.getElementById('sanction-form-reason').value = '';
+      filesInput.value = '';
+      loadSanctions();
+    } catch (err) {
+      sanctionFormMsg(err.message, 'error');
+    } finally {
+      saveBtn.disabled = false;
     }
   }
 
