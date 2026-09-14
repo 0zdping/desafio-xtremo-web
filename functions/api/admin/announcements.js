@@ -6,15 +6,53 @@ import {
 } from '../../../backend/lib/adminGuard.js';
 import { d1Select, d1Run, d1First } from '../../../backend/lib/db.js';
 
+const SLUG_RE = /^[a-z0-9-]+$/;
+
+function slugify(title) {
+  return (title || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // quita acentos
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+}
+
 function validateAnnouncement(body) {
   const title = (body?.title || '').trim();
   const text = (body?.body || '').trim();
   const pinned = body?.pinned ? 1 : 0;
+  const category = (body?.category || '').trim() || 'Anuncio';
+  const excerpt = (body?.excerpt || '').trim();
+  const heroImageUrl = (body?.hero_image_url || '').trim();
 
   if (!title || title.length > 140) return { error: 'Título inválido.' };
-  if (!text || text.length > 8000) return { error: 'Contenido inválido.' };
+  if (!text || text.length > 50000) return { error: 'Contenido inválido.' };
+  if (category.length > 40) return { error: 'Categoría inválida.' };
+  if (excerpt.length > 220) return { error: 'Extracto demasiado largo.' };
+  if (heroImageUrl && !heroImageUrl.startsWith('http')) {
+    return { error: 'La imagen de portada debe ser una URL válida.' };
+  }
 
-  return { value: { title, body: text, pinned } };
+  let slug = (body?.slug || '').trim();
+  if (slug) {
+    if (!SLUG_RE.test(slug)) {
+      return { error: 'Slug inválido (usa minúsculas, números y guiones).' };
+    }
+  } else {
+    slug = slugify(title);
+  }
+
+  return {
+    value: {
+      title,
+      body: text,
+      pinned,
+      category,
+      excerpt,
+      hero_image_url: heroImageUrl,
+      slug,
+    },
+  };
 }
 
 export const onRequestGet = withQuotaHandling(async (context) => {
@@ -37,12 +75,18 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   const body = await request.json().catch(() => null);
   const parsed = validateAnnouncement(body);
   if (parsed.error) return jsonResponse({ error: parsed.error }, 400);
-  const { title, body: text, pinned } = parsed.value;
+  const { title, body: text, pinned, category, excerpt, hero_image_url, slug } = parsed.value;
+
+  if (slug) {
+    const dupe = await d1First(env, `SELECT id FROM announcements WHERE slug = ?`, [slug]);
+    if (dupe) return jsonResponse({ error: 'Ya existe un anuncio con ese slug.' }, 409);
+  }
 
   const insert = await d1Run(
     env,
-    `INSERT INTO announcements (title, body, pinned, author_id) VALUES (?, ?, ?, ?)`,
-    [title, text, pinned, guard.user.id]
+    `INSERT INTO announcements (title, body, pinned, author_id, slug, excerpt, hero_image_url, category)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [title, text, pinned, guard.user.id, slug || null, excerpt, hero_image_url || null, category]
   );
 
   const announcement = await d1First(env, `SELECT * FROM announcements WHERE id = ?`, [insert.meta.last_row_id]);
