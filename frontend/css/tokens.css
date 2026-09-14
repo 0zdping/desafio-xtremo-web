@@ -59,6 +59,12 @@
 }
 
 *{margin:0;padding:0;box-sizing:border-box;}
+/* `img{display:block}` below (an author-origin rule) otherwise beats the
+   UA stylesheet's `[hidden]{display:none}` regardless of selector
+   specificity, since author styles always win over UA defaults — so any
+   <img hidden> (skin/avatar previews toggled from JS) rendered as a
+   visible broken-image box instead of actually disappearing. */
+[hidden]{display:none!important;}
 /* Tells the browser to render native form chrome (select dropdown popups,
    checkboxes/radios, the color-picker swatch, number-input spinners, the
    file-input "choose file" button, scrollbars) in its dark variant instead
