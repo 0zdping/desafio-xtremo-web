@@ -63,7 +63,10 @@ INSERT INTO permissions (key, label, description) VALUES
   ('sanctions.manage', 'Gestionar sanciones', 'Editar/eliminar sanciones de cualquier staff');
 
 UPDATE roles SET team = 'staff' WHERE name IN ('Owner', 'Co-Owner');
-INSERT INTO role_permissions (role_id, permission_id)
+-- OR IGNORE: Owner/Co-Owner already hold the permissions seeded by 0001 (they
+-- were CROSS JOINed against every permission that existed back then), so this
+-- only needs to fill in the 5 new permission keys added just above.
+INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p WHERE r.name IN ('Owner','Co-Owner');
 
 INSERT INTO roles (name, color, position, is_locked, team) VALUES
