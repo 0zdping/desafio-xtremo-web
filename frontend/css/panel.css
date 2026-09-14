@@ -7,8 +7,10 @@ body{background:var(--bg);}
   padding:16px 28px;border-bottom:1px solid var(--border-hair);background:var(--glass);
   backdrop-filter:blur(18px) saturate(140%);position:sticky;top:0;z-index:20;
 }
-.panel-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);font-family:var(--f-display);font-weight:700;font-size:15px;}
-.panel-brand .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent-glow);}
+.panel-brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text);font-family:var(--f-display);font-weight:700;font-size:14px;}
+.panel-brand img{height:17px;width:auto;display:block;filter:drop-shadow(0 0 0 transparent);transition:filter .25s ease;}
+.panel-brand:hover img{filter:drop-shadow(0 0 8px var(--accent-glow));}
+.panel-brand .divider-dot{width:4px;height:4px;border-radius:50%;background:var(--text-faint);}
 .panel-topbar-right{display:flex;align-items:center;gap:14px;}
 .panel-back{font-size:13px;color:var(--text-soft);text-decoration:none;transition:color .2s ease;}
 .panel-back:hover{color:var(--text);}

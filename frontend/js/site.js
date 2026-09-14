@@ -131,6 +131,70 @@ window.bindReveal = function () {
 };
 window.bindReveal();
 
+/* ---------- scroll progress bar ---------- */
+(function () {
+  const bar = document.getElementById('scroll-progress');
+  if (!bar) return;
+  const onScroll = () => {
+    const doc = document.documentElement;
+    const max = doc.scrollHeight - doc.clientHeight;
+    const pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    bar.style.width = pct + '%';
+  };
+  document.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  onScroll();
+})();
+
+/* ---------- active nav link ---------- */
+(function () {
+  const path = location.pathname.replace(/\/+$/, '') || '/index';
+  const here = path.endsWith('/') || path === '' ? 'index' : path.split('/').pop().replace('.html', '') || 'index';
+  document.querySelectorAll('.nav-links a, .mobile-sheet a').forEach((a) => {
+    const href = a.getAttribute('href') || '';
+    if (!href || href.startsWith('#') || href.startsWith('/invite')) return;
+    const target = href.replace('.html', '') || 'index';
+    if (target === here) a.classList.add('active');
+  });
+})();
+
+/* ---------- 3D tilt on cards ---------- */
+(function () {
+  if (!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const SEL = '.post-card, .team-card';
+  let current = null;
+
+  function release(card) {
+    card.style.transition = '';
+    card.style.transform = '';
+  }
+
+  document.addEventListener('mousemove', (e) => {
+    const card = e.target.closest(SEL);
+    if (card !== current) {
+      if (current) release(current);
+      current = card;
+      if (card) card.style.transition = 'none';
+    }
+    if (!card) return;
+    const r = card.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width - 0.5;
+    const py = (e.clientY - r.top) / r.height - 0.5;
+    card.style.transform = `perspective(800px) rotateX(${(-py * 6).toFixed(2)}deg) rotateY(${(px * 8).toFixed(2)}deg) translateY(-4px)`;
+  });
+  document.addEventListener(
+    'mouseleave',
+    (e) => {
+      if (current && (e.target === current || e.target === document)) {
+        release(current);
+        current = null;
+      }
+    },
+    true
+  );
+})();
+
 (function () {
   const nav = document.querySelector('.nav');
   const onScroll = () => {
