@@ -4,6 +4,7 @@ import {
   withQuotaHandling,
 } from '../../../../backend/lib/adminGuard.js';
 import { d1Run, d1First } from '../../../../backend/lib/db.js';
+import { resolveMinecraftUuid } from '../../../../backend/lib/mojang.js';
 
 const NICK_RE = /^[A-Za-z0-9_]+$/;
 const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
@@ -36,7 +37,7 @@ export const onRequestPatch = withQuotaHandling(async (context) => {
   const memberId = Number(params.id);
   if (!Number.isInteger(memberId)) return jsonResponse({ error: 'Miembro inválido.' }, 400);
 
-  const existing = await d1First(env, `SELECT id FROM team_members WHERE id = ?`, [memberId]);
+  const existing = await d1First(env, `SELECT id, mc_nick, mc_uuid FROM team_members WHERE id = ?`, [memberId]);
   if (!existing) return jsonResponse({ error: 'Miembro no encontrado.' }, 404);
 
   const body = await request.json().catch(() => null);
@@ -44,10 +45,14 @@ export const onRequestPatch = withQuotaHandling(async (context) => {
   if (parsed.error) return jsonResponse({ error: parsed.error }, 400);
   const { mc_nick, rank_label, rank_color, function_text, team, position } = parsed.value;
 
+  // Only hit Mojang again if the nick actually changed — no need to
+  // re-resolve on every unrelated edit (color, función, posición, ...).
+  const mc_uuid = mc_nick === existing.mc_nick ? existing.mc_uuid : await resolveMinecraftUuid(mc_nick);
+
   await d1Run(
     env,
-    `UPDATE team_members SET mc_nick = ?, rank_label = ?, rank_color = ?, function_text = ?, team = ?, position = ? WHERE id = ?`,
-    [mc_nick, rank_label, rank_color, function_text, team, position, memberId]
+    `UPDATE team_members SET mc_nick = ?, mc_uuid = ?, rank_label = ?, rank_color = ?, function_text = ?, team = ?, position = ? WHERE id = ?`,
+    [mc_nick, mc_uuid, rank_label, rank_color, function_text, team, position, memberId]
   );
 
   const member = await d1First(env, `SELECT * FROM team_members WHERE id = ?`, [memberId]);

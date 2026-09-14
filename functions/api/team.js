@@ -7,7 +7,7 @@ export const onRequestGet = withQuotaHandling(async (context) => {
   return cachedPublicJson(context, request.url, 120, async () => {
     const members = await d1Select(
       env,
-      `SELECT id, mc_nick, rank_label, rank_color, function_text, team, position FROM team_members ORDER BY team, position DESC`
+      `SELECT id, mc_nick, mc_uuid, rank_label, rank_color, function_text, team, position FROM team_members ORDER BY team, position DESC`
     );
     return { members };
   });

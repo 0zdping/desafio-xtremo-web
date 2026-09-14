@@ -110,7 +110,13 @@
       const color = /^#[0-9a-fA-F]{3,8}$/.test(m.rank_color || '') ? m.rank_color : '#6fb3ff';
       const rankLabel = m.rank_label || '';
       const fn = m.function_text || '';
-      const skinUrl = `https://mc-heads.net/body/${encodeURIComponent(nick)}/300`;
+      // Prefer the UUID resolved server-side at save time: it's a fast,
+      // non-ratelimited lookup and always reflects the player's *current*
+      // skin. Falling back to the raw nick still works, but third-party
+      // renderers that key their own cache off username can serve a stale
+      // (sometimes never-populated) skin for accounts they rarely see.
+      const subject = m.mc_uuid ? encodeURIComponent(m.mc_uuid) : encodeURIComponent(nick);
+      const skinUrl = `https://vzge.me/full/300/${subject}`;
       return `
         <article class="team-card reveal">
           <div class="team-card-img">

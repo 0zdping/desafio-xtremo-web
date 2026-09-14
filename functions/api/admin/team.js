@@ -5,6 +5,7 @@ import {
   withQuotaHandling,
 } from '../../../backend/lib/adminGuard.js';
 import { d1Select, d1Run, d1First } from '../../../backend/lib/db.js';
+import { resolveMinecraftUuid } from '../../../backend/lib/mojang.js';
 
 const NICK_RE = /^[A-Za-z0-9_]+$/;
 const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
@@ -47,11 +48,12 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   const parsed = validateMember(body);
   if (parsed.error) return jsonResponse({ error: parsed.error }, 400);
   const { mc_nick, rank_label, rank_color, function_text, team, position } = parsed.value;
+  const mc_uuid = await resolveMinecraftUuid(mc_nick);
 
   const insert = await d1Run(
     env,
-    `INSERT INTO team_members (mc_nick, rank_label, rank_color, function_text, team, position) VALUES (?, ?, ?, ?, ?, ?)`,
-    [mc_nick, rank_label, rank_color, function_text, team, position]
+    `INSERT INTO team_members (mc_nick, mc_uuid, rank_label, rank_color, function_text, team, position) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [mc_nick, mc_uuid, rank_label, rank_color, function_text, team, position]
   );
 
   const member = await d1First(env, `SELECT * FROM team_members WHERE id = ?`, [insert.meta.last_row_id]);

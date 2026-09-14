@@ -721,10 +721,11 @@
       .map((m) => {
         const nick = m.mc_nick || '';
         const color = m.rank_color || '#6fb3ff';
+        const skinSubject = m.mc_uuid ? encodeURIComponent(m.mc_uuid) : encodeURIComponent(nick);
         return `
         <div class="role-card">
           <div class="role-card-head">
-            <img class="team-skin-thumb" src="https://mc-heads.net/avatar/${encodeURIComponent(nick)}/32" alt="">
+            <img class="team-skin-thumb" src="https://vzge.me/face/32/${skinSubject}" alt="">
             <span class="role-card-name">${escapeHtml(nick)}</span>
             <span class="role-locked-badge">${escapeHtml(TEAM_LABELS[m.team] || m.team || '')}</span>
           </div>
@@ -763,7 +764,7 @@
       const img = document.getElementById('team-form-skin');
       const nick = e.target.value.trim();
       if (nick) {
-        img.src = `https://mc-heads.net/avatar/${encodeURIComponent(nick)}/64`;
+        img.src = `https://vzge.me/face/64/${encodeURIComponent(nick)}`;
         img.hidden = false;
       } else {
         img.hidden = true;
@@ -784,7 +785,8 @@
 
     const img = document.getElementById('team-form-skin');
     if (member && member.mc_nick) {
-      img.src = `https://mc-heads.net/avatar/${encodeURIComponent(member.mc_nick)}/64`;
+      const skinSubject = member.mc_uuid ? encodeURIComponent(member.mc_uuid) : encodeURIComponent(member.mc_nick);
+      img.src = `https://vzge.me/face/64/${skinSubject}`;
       img.hidden = false;
     } else {
       img.hidden = true;
