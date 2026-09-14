@@ -7,7 +7,7 @@ export const onRequestGet = withQuotaHandling(async (context) => {
   return cachedPublicJson(context, request.url, 120, async () => {
     const announcements = await d1Select(
       env,
-      `SELECT id, title, body, pinned, created_at, updated_at FROM announcements ORDER BY pinned DESC, created_at DESC LIMIT 50`
+      `SELECT id, title, body, pinned, created_at, updated_at, slug, excerpt, hero_image_url, category, views FROM announcements ORDER BY pinned DESC, created_at DESC LIMIT 50`
     );
     return { announcements };
   });
