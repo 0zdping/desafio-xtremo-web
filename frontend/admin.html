@@ -12,6 +12,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/panel.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js"></script>
 </head>
 <body>
 
@@ -53,6 +55,22 @@
         <button class="panel-nav-btn" data-section="usage" id="nav-usage" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19h16M7 19V9m5 10V5m5 14v-7"/></svg>
           Uso de recursos
+        </button>
+        <button class="panel-nav-btn" data-section="wiki" id="nav-wiki" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4.5C4 3.7 4.7 3 5.5 3H12v18H5.5c-.8 0-1.5-.7-1.5-1.5v-15z"/><path d="M20 4.5c0-.8-.7-1.5-1.5-1.5H12v18h6.5c.8 0 1.5-.7 1.5-1.5v-15z"/></svg>
+          Wiki
+        </button>
+        <button class="panel-nav-btn" data-section="announcements" id="nav-announcements" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 10v4a1 1 0 001 1h2l8 4V5L6 9H4a1 1 0 00-1 1z"/><path d="M17 9a4 4 0 010 6"/></svg>
+          Anuncios
+        </button>
+        <button class="panel-nav-btn" data-section="team" id="nav-team" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.3 2.9-6 6.5-6s6.5 2.7 6.5 6"/><circle cx="17" cy="8.5" r="2.6"/><path d="M16 14.2c2.6.5 4.5 2.6 4.5 5.3"/></svg>
+          Equipo
+        </button>
+        <button class="panel-nav-btn" data-section="sanctions" id="nav-sanctions" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v6c0 5-3.2 8-7 9-3.8-1-7-4-7-9V6l7-3z"/><path d="M12 8.5v4.2M12 16v.3"/></svg>
+          Sanciones
         </button>
       </nav>
 
@@ -114,6 +132,164 @@
           <h1>Uso de recursos</h1>
           <p class="panel-section-sub">Contadores propios contra los límites gratuitos de Cloudflare. Si un recurso llega al límite, las solicitudes que lo necesiten se bloquean automáticamente en vez de dejar que empiece a cobrarse.</p>
           <div class="usage-grid" id="usage-grid"></div>
+        </section>
+
+        <section class="panel-section" id="section-wiki">
+          <h1>Wiki</h1>
+          <p class="panel-section-sub">Páginas de la wiki pública del evento, organizadas por categoría.</p>
+          <div id="wiki-msg"></div>
+          <div class="role-grid" id="wiki-grid"></div>
+
+          <div class="panel-card" id="wiki-form-card" hidden>
+            <h2 id="wiki-form-heading">Crear página</h2>
+            <div class="field-row">
+              <label>Slug (identificador en la URL)</label>
+              <input type="text" id="wiki-form-slug" maxlength="80" placeholder="Ej: reglas-generales">
+            </div>
+            <div class="field-row">
+              <label>Título</label>
+              <input type="text" id="wiki-form-title" maxlength="120" placeholder="Ej: Reglas generales">
+            </div>
+            <div class="field-row">
+              <label>Categoría</label>
+              <input type="text" id="wiki-form-category" maxlength="60" placeholder="Ej: Normas">
+            </div>
+            <div class="field-row">
+              <label>Posición (orden dentro de la categoría)</label>
+              <input type="number" id="wiki-form-position" value="0">
+            </div>
+            <div class="field-row">
+              <label>Contenido (Markdown)</label>
+              <textarea id="wiki-form-content" rows="10" placeholder="Escribe el contenido en Markdown…"></textarea>
+            </div>
+            <div class="field-row">
+              <label>Vista previa</label>
+              <div class="md-preview" id="wiki-form-preview"></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-accent btn-sm" id="wiki-form-save">Guardar</button>
+              <button class="btn btn-ghost btn-sm" id="wiki-form-cancel">Cancelar</button>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="wiki-form-open">+ Crear página</button>
+        </section>
+
+        <section class="panel-section" id="section-announcements">
+          <h1>Anuncios</h1>
+          <p class="panel-section-sub">Anuncios mostrados en el sitio público. Los fijados aparecen destacados arriba.</p>
+          <div id="ann-msg"></div>
+          <div class="role-grid" id="ann-grid"></div>
+
+          <div class="panel-card" id="ann-form-card" hidden>
+            <h2 id="ann-form-heading">Crear anuncio</h2>
+            <div class="field-row">
+              <label>Título</label>
+              <input type="text" id="ann-form-title" maxlength="120" placeholder="Ej: Cambio de horario">
+            </div>
+            <div class="field-row checkbox-row">
+              <label class="checkbox-inline"><input type="checkbox" id="ann-form-pinned"> Fijado (destacado arriba)</label>
+            </div>
+            <div class="field-row">
+              <label>Cuerpo (Markdown)</label>
+              <textarea id="ann-form-body" rows="8" placeholder="Escribe el anuncio en Markdown…"></textarea>
+            </div>
+            <div class="field-row">
+              <label>Vista previa</label>
+              <div class="md-preview" id="ann-form-preview"></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-accent btn-sm" id="ann-form-save">Guardar</button>
+              <button class="btn btn-ghost btn-sm" id="ann-form-cancel">Cancelar</button>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="ann-form-open">+ Crear anuncio</button>
+        </section>
+
+        <section class="panel-section" id="section-team">
+          <h1>Equipo</h1>
+          <p class="panel-section-sub">Miembros de staff y desarrollo mostrados en el sitio público.</p>
+          <div id="team-msg"></div>
+          <div class="role-grid" id="team-grid"></div>
+
+          <div class="panel-card" id="team-form-card" hidden>
+            <h2 id="team-form-heading">Añadir miembro</h2>
+            <div class="field-row team-form-nick-row">
+              <div class="team-form-nick-fields">
+                <label>Nick de Minecraft</label>
+                <input type="text" id="team-form-nick" maxlength="32" placeholder="Ej: Steve123">
+              </div>
+              <img id="team-form-skin" class="team-skin-preview" src="" alt="Skin" hidden>
+            </div>
+            <div class="field-row">
+              <label>Rango</label>
+              <input type="text" id="team-form-rank" maxlength="40" placeholder="Ej: Administrador">
+            </div>
+            <div class="field-row">
+              <label>Color del rango</label>
+              <div class="color-row">
+                <input type="color" id="team-form-color" value="#6fb3ff">
+                <span id="team-form-color-hex">#6fb3ff</span>
+              </div>
+            </div>
+            <div class="field-row">
+              <label>Función</label>
+              <input type="text" id="team-form-function" maxlength="80" placeholder="Ej: Organización general">
+            </div>
+            <div class="field-row">
+              <label>Equipo</label>
+              <select id="team-form-team">
+                <option value="staff">Staff</option>
+                <option value="dev">Desarrollo</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <label>Posición (orden dentro del equipo)</label>
+              <input type="number" id="team-form-position" value="0">
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-accent btn-sm" id="team-form-save">Guardar</button>
+              <button class="btn btn-ghost btn-sm" id="team-form-cancel">Cancelar</button>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="team-form-open">+ Añadir miembro</button>
+        </section>
+
+        <section class="panel-section" id="section-sanctions">
+          <h1>Sanciones</h1>
+          <p class="panel-section-sub">Registro de sanciones aplicadas a jugadores, con pruebas adjuntas.</p>
+
+          <div class="panel-card" id="sanction-form-card">
+            <h2>Registrar sanción</h2>
+            <div id="sanction-form-msg"></div>
+            <div class="field-row">
+              <label>Nick del jugador</label>
+              <input type="text" id="sanction-form-nick" maxlength="32" placeholder="Ej: Steve123">
+            </div>
+            <div class="field-row">
+              <label>Tipo</label>
+              <select id="sanction-form-type">
+                <option value="ban">Ban</option>
+                <option value="mute">Mute</option>
+                <option value="kick">Kick</option>
+                <option value="warn">Warn</option>
+                <option value="other">Otro</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <label>Motivo</label>
+              <textarea id="sanction-form-reason" rows="4" placeholder="Describe el motivo de la sanción…"></textarea>
+            </div>
+            <div class="field-row">
+              <label>Pruebas (opcional, hasta 6 archivos — imágenes o vídeo)</label>
+              <input type="file" id="sanction-form-files" multiple accept="image/*,video/mp4,video/webm">
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-accent btn-sm" id="sanction-form-save">Registrar sanción</button>
+            </div>
+          </div>
+
+          <div id="sanctions-msg"></div>
+          <div class="sanction-list" id="sanctions-list"></div>
         </section>
       </main>
     </div>
