@@ -560,6 +560,85 @@
   /* ---------- Announcements ---------- */
 
   let editingAnnId = null;
+  let heroImageUrl = null;
+  let quillEditor = null;
+  const PIN_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L20 8l-4.6 4 1.4 6-4.8-3.4L7.2 18l1.4-6L4 8l6.2-.4z"/></svg>';
+
+  function getQuillEditor() {
+    if (quillEditor) return quillEditor;
+    quillEditor = new Quill('#ann-form-quill', {
+      theme: 'snow',
+      modules: {
+        toolbar: {
+          container: [
+            [{ header: [2, 3, false] }],
+            ['bold', 'italic', 'underline'],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            ['blockquote', 'link', 'image'],
+            ['clean'],
+          ],
+          handlers: { image: handleQuillImageUpload },
+        },
+      },
+    });
+    return quillEditor;
+  }
+
+  function handleQuillImageUpload() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+    input.addEventListener('change', async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/admin/media', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'X-CSRF-Token': csrfToken },
+          body: formData,
+        });
+        const isJson = res.headers.get('content-type')?.includes('application/json');
+        const body = isJson ? await res.json().catch(() => null) : null;
+        if (!res.ok) throw new Error((body && body.error) || `Error ${res.status}`);
+        const editor = getQuillEditor();
+        const range = editor.getSelection(true);
+        editor.insertEmbed(range.index, 'image', body.url);
+        editor.setSelection(range.index + 1);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+    input.click();
+  }
+
+  async function uploadHeroImage(file) {
+    const statusEl = document.getElementById('ann-form-hero-status');
+    const preview = document.getElementById('ann-form-hero-preview');
+    statusEl.textContent = 'Subiendo…';
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/admin/media', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-CSRF-Token': csrfToken },
+        body: formData,
+      });
+      const isJson = res.headers.get('content-type')?.includes('application/json');
+      const body = isJson ? await res.json().catch(() => null) : null;
+      if (!res.ok) throw new Error((body && body.error) || `Error ${res.status}`);
+      heroImageUrl = body.url;
+      preview.src = heroImageUrl;
+      preview.hidden = false;
+      statusEl.textContent = 'Imagen subida.';
+    } catch (err) {
+      statusEl.textContent = '';
+      annMsg(err.message, 'error');
+    }
+  }
 
   function annMsg(text, type) {
     const el = document.getElementById('ann-msg');
@@ -595,8 +674,10 @@
         (a) => `
         <div class="role-card">
           <div class="role-card-head">
+            ${a.hero_image_url ? `<img class="ann-thumb" src="${escapeHtml(a.hero_image_url)}" alt="">` : ''}
             <span class="role-card-name">${escapeHtml(a.title)}</span>
-            ${a.pinned ? '<span class="pin-badge">Fijado</span>' : ''}
+            ${a.category ? `<span class="category-pill">${escapeHtml(a.category)}</span>` : ''}
+            ${a.pinned ? `<span class="pin-badge">${PIN_ICON}Fijado</span>` : ''}
           </div>
           <div class="panel-section-sub" style="margin:0;">${escapeHtml(a.created_at ? new Date(a.created_at).toLocaleString('es') : '')}</div>
           ${
@@ -623,8 +704,9 @@
     document.getElementById('ann-form-open').addEventListener('click', () => openAnnouncementForm(null));
     document.getElementById('ann-form-cancel').addEventListener('click', closeAnnouncementForm);
     document.getElementById('ann-form-save').addEventListener('click', saveAnnouncement);
-    document.getElementById('ann-form-body').addEventListener('input', (e) => {
-      renderMarkdownPreview(document.getElementById('ann-form-preview'), e.target.value);
+    document.getElementById('ann-form-hero-input').addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) uploadHeroImage(file);
     });
   }
 
@@ -632,33 +714,61 @@
     editingAnnId = a ? a.id : null;
     document.getElementById('ann-form-heading').textContent = a ? `Editar ${a.title}` : 'Crear anuncio';
     document.getElementById('ann-form-title').value = a ? a.title : '';
+    document.getElementById('ann-form-slug').value = a ? a.slug || '' : '';
+    document.getElementById('ann-form-category').value = a ? a.category || '' : '';
+    document.getElementById('ann-form-excerpt').value = a ? a.excerpt || '' : '';
     document.getElementById('ann-form-pinned').checked = a ? !!a.pinned : false;
-    document.getElementById('ann-form-body').value = a ? a.body || '' : '';
-    renderMarkdownPreview(document.getElementById('ann-form-preview'), a ? a.body : '');
+    document.getElementById('ann-form-hero-input').value = '';
+    document.getElementById('ann-form-hero-status').textContent = '';
+
+    heroImageUrl = a && a.hero_image_url ? a.hero_image_url : null;
+    const preview = document.getElementById('ann-form-hero-preview');
+    if (heroImageUrl) {
+      preview.src = heroImageUrl;
+      preview.hidden = false;
+    } else {
+      preview.hidden = true;
+      preview.src = '';
+    }
+
+    const editor = getQuillEditor();
+    if (a) {
+      editor.root.innerHTML = a.body || '';
+    } else {
+      editor.setText('');
+    }
+
     document.getElementById('ann-form-card').hidden = false;
   }
 
   function closeAnnouncementForm() {
     document.getElementById('ann-form-card').hidden = true;
     editingAnnId = null;
+    heroImageUrl = null;
   }
 
   async function saveAnnouncement() {
     const title = document.getElementById('ann-form-title').value.trim();
+    const slug = document.getElementById('ann-form-slug').value.trim();
+    const category = document.getElementById('ann-form-category').value.trim();
+    const excerpt = document.getElementById('ann-form-excerpt').value.trim();
     const pinned = document.getElementById('ann-form-pinned').checked;
-    const body = document.getElementById('ann-form-body').value;
+    const rawHtml = getQuillEditor().root.innerHTML;
+    const body = window.DOMPurify ? DOMPurify.sanitize(rawHtml) : rawHtml;
+
+    const payload = { title, body, pinned, slug, excerpt, hero_image_url: heroImageUrl, category };
 
     try {
       if (editingAnnId) {
         await api(`/api/admin/announcements/${editingAnnId}`, {
           method: 'PATCH',
-          body: JSON.stringify({ title, body, pinned }),
+          body: JSON.stringify(payload),
         });
         annMsg('Anuncio actualizado.', 'ok');
       } else {
         await api('/api/admin/announcements', {
           method: 'POST',
-          body: JSON.stringify({ title, body, pinned }),
+          body: JSON.stringify(payload),
         });
         annMsg('Anuncio creado.', 'ok');
       }
