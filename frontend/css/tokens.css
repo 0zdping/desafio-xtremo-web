@@ -34,6 +34,11 @@
   --ok: #3ecf7e;
   --ok-glow: rgba(62,207,126,0.4);
   --warn: #e8a33d;
+  --danger: #ff5c5c;
+  --danger-glow: rgba(255,92,92,0.4);
+  --danger-soft: rgba(255,92,92,0.1);
+  --pin: #facc15;
+  --pin-glow: rgba(250,204,21,0.35);
 
   --f-display: 'Sora', 'Segoe UI', sans-serif;
   --f-body: 'Inter', 'Segoe UI', sans-serif;
