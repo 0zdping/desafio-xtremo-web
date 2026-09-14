@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wiki — Desafio Xtremo</title>
-<meta name="description" content="Wiki de Desafio Xtremo. Se irá completando a medida que el servidor avance.">
+<title>Anuncios — Desafio Xtremo</title>
+<meta name="description" content="Todos los anuncios y novedades de Desafio Xtremo.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Wiki — Desafio Xtremo">
-<meta property="og:description" content="Wiki de Desafio Xtremo. Se irá completando a medida que el servidor avance.">
+<meta property="og:title" content="Anuncios — Desafio Xtremo">
+<meta property="og:description" content="Todos los anuncios y novedades de Desafio Xtremo.">
 <meta property="og:image" content="https://desafioxtremo.site/assets/banner.png">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
@@ -37,8 +37,8 @@
     <a href="index.html" class="nav-logo"><span class="dot"></span>Desafio Xtremo</a>
     <ul class="nav-links">
       <li><a href="index.html">Inicio</a></li>
-      <li><a href="wiki.html" class="active">Wiki</a></li>
-      <li><a href="anuncios.html">Anuncios</a></li>
+      <li><a href="wiki.html">Wiki</a></li>
+      <li><a href="anuncios.html" class="active">Anuncios</a></li>
       <li><a href="index.html#equipo">Equipo</a></li>
       <li><a href="/invite" target="_blank" rel="noopener">Discord</a></li>
     </ul>
@@ -58,22 +58,20 @@
   <a href="/invite" target="_blank" rel="noopener">Discord</a>
 </div>
 
-<section class="wiki-section" id="wiki-section">
-  <div class="container wiki-layout">
-    <aside class="wiki-sidebar glass" id="wiki-sidebar"></aside>
-    <div class="wiki-content" id="wiki-content">
-      <p class="wiki-content-msg">Cargando…</p>
-    </div>
-  </div>
-</section>
-
-<section class="placeholder-section" id="wiki-empty" hidden>
+<section class="announcements-feed">
   <div class="container">
-    <div class="placeholder-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3-7 3V5z"/></svg>
+    <div class="section-head reveal">
+      <span class="eyebrow">Novedades</span>
+      <h2>Anuncios</h2>
     </div>
-    <h1 class="reveal">Wiki en construcción</h1>
-    <p class="reveal">Todavía no hay nada confirmado para mostrar aquí. A medida que el servidor avance, se irá completando con información real.</p>
+    <div id="announcements-feed-list"></div>
+    <div class="placeholder-section" id="announcements-empty" hidden style="padding:60px 0;">
+      <div class="placeholder-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3-7 3V5z"/></svg>
+      </div>
+      <h1 class="reveal">Todavía no hay anuncios</h1>
+      <p class="reveal">En cuanto haya novedades del evento, aparecerán aquí.</p>
+    </div>
   </div>
 </section>
 
@@ -96,6 +94,6 @@
 </footer>
 
 <script src="js/site.js"></script>
-<script src="js/wiki.js"></script>
+<script src="js/anuncios.js"></script>
 </body>
 </html>
