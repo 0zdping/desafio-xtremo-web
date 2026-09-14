@@ -194,3 +194,14 @@ body{background:var(--bg);}
   .panel-sidebar{flex-direction:row;flex-wrap:wrap;flex:0 0 auto;}
   .panel-nav-btn{width:auto;}
 }
+
+.zd-confirm-overlay{
+  position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;
+  background:rgba(2,3,8,0.65);backdrop-filter:blur(4px);padding:20px;
+}
+.zd-confirm-box{
+  width:100%;max-width:380px;background:linear-gradient(155deg, var(--surface-2), var(--surface));
+  border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:24px;box-shadow:var(--shadow-lg);
+}
+.zd-confirm-box p{font-size:14.5px;color:var(--text);line-height:1.5;margin-bottom:20px;}
+.zd-confirm-actions{display:flex;justify-content:flex-end;gap:10px;}

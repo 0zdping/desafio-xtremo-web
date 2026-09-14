@@ -1,3 +1,41 @@
+/* Dark, in-page replacement for window.confirm() — the native dialog is an
+ * unstyled OS-chrome white box that also freezes the tab for any outside
+ * automation, unlike this one. */
+(function () {
+  const overlay = document.getElementById('zd-confirm-overlay');
+  if (!overlay) return;
+  const messageEl = document.getElementById('zd-confirm-message');
+  const okBtn = document.getElementById('zd-confirm-ok');
+  const cancelBtn = document.getElementById('zd-confirm-cancel');
+  let pendingResolve = null;
+
+  function close(result) {
+    overlay.hidden = true;
+    if (pendingResolve) {
+      const resolve = pendingResolve;
+      pendingResolve = null;
+      resolve(result);
+    }
+  }
+
+  okBtn.addEventListener('click', () => close(true));
+  cancelBtn.addEventListener('click', () => close(false));
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.hidden) close(false);
+  });
+
+  window.zdConfirm = function (message) {
+    messageEl.textContent = message;
+    overlay.hidden = false;
+    return new Promise((resolve) => {
+      pendingResolve = resolve;
+    });
+  };
+})();
+
 (function () {
   const root = document.getElementById('panel-root');
   let csrfToken = '';
