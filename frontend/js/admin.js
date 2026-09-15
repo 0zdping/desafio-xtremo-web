@@ -97,6 +97,7 @@
       .join('') || '<span class="panel-section-sub">Sin rangos asignados.</span>';
 
     if (hasPerm('panel.access')) document.getElementById('nav-roles').hidden = false;
+    if (hasPerm('panel.view_stats')) document.getElementById('nav-stats').hidden = false;
     if (hasPerm('panel.view_usage')) document.getElementById('nav-usage').hidden = false;
     if (hasPerm('panel.access')) document.getElementById('nav-wiki').hidden = false;
     if (hasPerm('panel.access')) document.getElementById('nav-announcements').hidden = false;
@@ -111,6 +112,7 @@
         const section = document.getElementById('section-' + btn.dataset.section);
         section.classList.add('active');
         if (btn.dataset.section === 'roles') loadRoles();
+        if (btn.dataset.section === 'stats') loadStats();
         if (btn.dataset.section === 'usage') loadUsage();
         if (btn.dataset.section === 'wiki') loadWiki();
         if (btn.dataset.section === 'announcements') loadAnnouncements();
@@ -120,6 +122,7 @@
     });
 
     wireRoleForm();
+    wireStatsRange();
     wireUserSearch();
     wireWikiForm();
     wireAnnouncementForm();
@@ -372,6 +375,160 @@
              </div>`
           : ''
       }`;
+  }
+
+  /* ---------- Stats (page views, unique visitors, clicks) ---------- */
+
+  let currentStatsRange = '7d';
+
+  function wireStatsRange() {
+    const wrap = document.getElementById('stats-range');
+    wrap.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-range]');
+      if (!btn) return;
+      loadStats(btn.dataset.range);
+    });
+  }
+
+  function statsMsg(text, type) {
+    const el = document.getElementById('stats-msg');
+    el.innerHTML = text ? `<div class="panel-msg ${type}">${escapeHtml(text)}</div>` : '';
+  }
+
+  async function loadStats(range) {
+    if (range) currentStatsRange = range;
+    document.querySelectorAll('#stats-range button').forEach((b) => b.classList.toggle('active', b.dataset.range === currentStatsRange));
+    statsMsg('', 'ok');
+    document.getElementById('stats-kpis').innerHTML = '<span class="panel-section-sub">Cargando…</span>';
+    try {
+      const data = await api(`/api/admin/stats?range=${encodeURIComponent(currentStatsRange)}`);
+      renderStats(data);
+    } catch (err) {
+      document.getElementById('stats-kpis').innerHTML = '';
+      statsMsg(err.message, 'error');
+    }
+  }
+
+  function pctDelta(curr, prev) {
+    curr = Number(curr) || 0;
+    prev = Number(prev) || 0;
+    if (!prev) return curr > 0 ? { text: 'Nuevo', cls: 'up' } : null;
+    const delta = ((curr - prev) / prev) * 100;
+    const cls = delta > 0.5 ? 'up' : delta < -0.5 ? 'down' : '';
+    const sign = delta > 0 ? '+' : '';
+    return { text: `${sign}${delta.toFixed(1)}%`, cls };
+  }
+
+  function kpiCard(label, value, delta) {
+    return `
+      <div class="stat-kpi">
+        <span class="stat-kpi-label">${label}</span>
+        <span class="stat-kpi-value">${(Number(value) || 0).toLocaleString('es')}</span>
+        ${delta ? `<span class="stat-kpi-delta ${delta.cls}">${delta.text}<span class="stat-kpi-delta-sub">vs. periodo anterior</span></span>` : '<span class="stat-kpi-delta-sub">sin datos del periodo anterior</span>'}
+      </div>`;
+  }
+
+  function renderChart(daily) {
+    const wrap = document.getElementById('stats-chart');
+    if (!daily || !daily.length) {
+      wrap.innerHTML = '<span class="panel-section-sub" style="margin:0;">Todavía no hay datos suficientes en este periodo.</span>';
+      return;
+    }
+    const W = 760, H = 220, PAD = 10;
+    const maxVal = Math.max(1, ...daily.map((d) => Number(d.views) || 0));
+    const stepX = daily.length > 1 ? (W - PAD * 2) / (daily.length - 1) : 0;
+    const plot = (key) =>
+      daily.map((d, i) => {
+        const x = PAD + i * stepX;
+        const y = H - PAD - ((Number(d[key]) || 0) / maxVal) * (H - PAD * 2);
+        return [x, y];
+      });
+    const pointsViews = plot('views');
+    const pointsUniques = plot('uniques');
+    const line = (pts) => pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+    const area = (pts) => `${line(pts)} L${pts[pts.length - 1][0].toFixed(1)},${H - PAD} L${pts[0][0].toFixed(1)},${H - PAD} Z`;
+
+    const labelEvery = Math.max(1, Math.ceil(daily.length / 7));
+    const labels = daily.map((d, i) => {
+      if (i % labelEvery !== 0 && i !== daily.length - 1) return '';
+      try {
+        return new Date(d.day + 'T00:00:00Z').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+      } catch (err) {
+        return d.day;
+      }
+    });
+
+    wrap.innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" class="stats-svg" preserveAspectRatio="none">
+        <path d="${area(pointsViews)}" class="stats-area"></path>
+        <path d="${line(pointsViews)}" class="stats-line stats-line-views"></path>
+        <path d="${line(pointsUniques)}" class="stats-line stats-line-uniques"></path>
+      </svg>
+      <div class="stats-chart-labels">${labels.map((l) => `<span>${escapeHtml(l)}</span>`).join('')}</div>
+      <div class="stats-chart-legend">
+        <span><i class="stats-legend-dot views"></i>Visitas</span>
+        <span><i class="stats-legend-dot uniques"></i>Únicos</span>
+      </div>`;
+  }
+
+  function flagEmoji(code) {
+    if (!code || code.length !== 2) return '';
+    try {
+      return String.fromCodePoint(...[...code.toUpperCase()].map((c) => 127397 + c.charCodeAt(0)));
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function renderBarList(elId, rows, opts) {
+    const el = document.getElementById(elId);
+    if (!rows || !rows.length) {
+      el.innerHTML = '<span class="panel-section-sub" style="margin:0;">Sin datos en este periodo.</span>';
+      return;
+    }
+    const max = Math.max(1, ...rows.map((r) => Number(r[opts.valueKey]) || 0));
+    el.innerHTML = rows
+      .map((r) => {
+        const val = Number(r[opts.valueKey]) || 0;
+        const pct = (val / max) * 100;
+        const label = opts.formatLabel ? opts.formatLabel(r[opts.labelKey]) : escapeHtml(r[opts.labelKey] || '—');
+        return `
+        <div class="stats-bar-row">
+          <span class="stats-bar-label" title="${escapeHtml(String(r[opts.labelKey] || ''))}">${label}</span>
+          <div class="stats-bar-track"><div class="stats-bar-fill" style="width:${pct}%"></div></div>
+          <span class="stats-bar-value">${val.toLocaleString('es')}</span>
+        </div>`;
+      })
+      .join('');
+  }
+
+  function renderStats(data) {
+    const t = data.totals || {};
+    const p = data.previous || {};
+    document.getElementById('stats-kpis').innerHTML = [
+      kpiCard('Visitas totales', t.pageviews, pctDelta(t.pageviews, p.pageviews)),
+      kpiCard('Visitantes únicos', t.uniques, pctDelta(t.uniques, p.uniques)),
+      kpiCard('Clics registrados', t.clicks, pctDelta(t.clicks, p.clicks)),
+    ].join('');
+
+    renderChart(data.daily || []);
+    renderBarList('stats-top-pages', data.topPages, { valueKey: 'views', labelKey: 'path' });
+    renderBarList('stats-top-clicks', data.topClicks, { valueKey: 'clicks', labelKey: 'target' });
+    renderBarList('stats-referrers', data.referrers, {
+      valueKey: 'views',
+      labelKey: 'referrer',
+      formatLabel: (v) => escapeHtml(v === 'direct' ? 'Directo / interno' : v),
+    });
+    renderBarList('stats-devices', data.devices, {
+      valueKey: 'views',
+      labelKey: 'device',
+      formatLabel: (v) => escapeHtml(v === 'mobile' ? 'Móvil' : 'Escritorio'),
+    });
+    renderBarList('stats-countries', data.countries, {
+      valueKey: 'views',
+      labelKey: 'country',
+      formatLabel: (v) => `${flagEmoji(v)} ${escapeHtml(v || '—')}`,
+    });
   }
 
   /* ---------- Usage monitor ---------- */

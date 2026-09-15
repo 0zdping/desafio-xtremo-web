@@ -52,7 +52,7 @@
 @media (max-width:600px){ .cta-section{padding:70px 0;} .cta-card{padding:44px 24px;} }
 
 /* ---------- footer ---------- */
-.site-footer{position:relative;z-index:1;}
+.site-footer{position:relative;z-index:1;margin-top:auto;}
 .footer-bar{
   background:linear-gradient(120deg, var(--accent-dim), var(--accent), var(--accent-2));
   background-size:200% 200%;

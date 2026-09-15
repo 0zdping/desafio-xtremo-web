@@ -101,6 +101,7 @@ ${heroUrl ? `<meta property="og:image" content="${heroUrl}">` : ''}
   <div class="footer-bottom"><div class="container"><p>© 2026 Desafio Xtremo</p></div></div>
 </footer>
 <script src="/js/site.js"></script>
+<script src="/js/analytics.js"></script>
 </body>
 </html>`;
 
