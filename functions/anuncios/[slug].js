@@ -81,7 +81,7 @@ ${heroUrl ? `<meta property="og:image" content="${heroUrl}">` : ''}
 
 <section class="post-detail">
   <div class="container post-detail-container">
-    ${heroUrl ? `<div class="post-detail-hero"><img src="${heroUrl}" alt=""></div>` : ''}
+    ${heroUrl ? `<div class="post-detail-hero"><img src="${heroUrl}" alt="${title}"></div>` : ''}
     <h1 class="post-detail-title">${title}</h1>
     <div class="post-detail-meta">
       <span class="category-pill">${category}</span>
