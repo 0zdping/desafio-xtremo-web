@@ -229,8 +229,9 @@
   color:var(--text-soft);font-size:14px;line-height:1.6;flex:1;margin:0;
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
 }
-.post-card-stats{display:flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:11.5px;color:var(--text-dim);}
+.post-card-stats{display:flex;align-items:center;justify-content:space-between;gap:6px;font-family:var(--f-mono);font-size:11.5px;color:var(--text-dim);}
 .post-card-stats svg{width:14px;height:14px;}
+.post-card-views{display:inline-flex;align-items:center;gap:6px;}
 
 /* compact variant used in the home teaser grid */
 .announcements-grid .post-card-body{padding:18px 20px 22px;}
@@ -262,11 +263,30 @@
 .post-detail-title{font-size:clamp(26px,4vw,38px);margin-bottom:16px;line-height:1.2;text-align:center;}
 .post-detail-date{font-family:var(--f-mono);font-size:12.5px;color:var(--text-dim);}
 .post-detail-stats{
-  display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--f-mono);
+  display:flex;align-items:center;justify-content:center;gap:20px;font-family:var(--f-mono);
   font-size:12.5px;color:var(--text-dim);margin-bottom:36px;
 }
 .post-detail-stats svg{width:14px;height:14px;}
+.stat-item{display:inline-flex;align-items:center;gap:6px;}
 .post-detail-body{margin-top:10px;}
+
+/* ---------- like button (post detail + card grid) ---------- */
+.like-btn{
+  display:inline-flex;align-items:center;gap:6px;background:none;border:none;padding:0;cursor:pointer;
+  font-family:var(--f-mono);color:var(--text-dim);transition:color .15s ease,transform .15s ease;
+}
+.like-btn svg{transition:fill .15s ease,transform .15s ease;}
+@media (hover:hover) and (pointer:fine){
+  .like-btn:hover{color:var(--like);}
+  .like-btn:hover svg{transform:scale(1.12);}
+}
+.like-btn.liked{color:var(--like);}
+.like-btn.liked svg{fill:var(--like);}
+.like-btn:active svg{transform:scale(0.9);}
+.like-btn:disabled{opacity:.6;cursor:default;}
+.post-detail-stats .like-btn{font-size:12.5px;}
+.post-card-stats .like-btn{font-size:11.5px;position:relative;z-index:1;}
+.post-card-stats .like-btn svg{width:14px;height:14px;}
 @media (max-width:700px){
   .post-detail{padding:120px 0 80px;}
   .post-detail-hero{height:220px;}

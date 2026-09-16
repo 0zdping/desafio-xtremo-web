@@ -17,7 +17,12 @@ export const onRequestGet = withQuotaHandling(async (context) => {
   const { request, env, params } = context;
 
   const { post } = await cachedPublicJson(context, request.url, 120, async () => {
-    const post = await d1First(env, 'SELECT * FROM announcements WHERE slug = ?', [params.slug]);
+    const post = await d1First(
+      env,
+      `SELECT a.*, (SELECT COUNT(*) FROM announcement_likes l WHERE l.announcement_id = a.id) AS likes
+       FROM announcements a WHERE a.slug = ?`,
+      [params.slug]
+    );
     return { post };
   }).then((res) => res.clone().json());
 
@@ -88,8 +93,14 @@ ${heroUrl ? `<meta property="og:image" content="${heroUrl}">` : ''}
       <span class="post-detail-date">${escapeHtml(dateStr)}</span>
     </div>
     <div class="post-detail-stats">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-      ${post.views}
+      <span class="stat-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        ${post.views}
+      </span>
+      <button type="button" class="like-btn" id="post-like-btn" data-post-id="${post.id}" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>
+        <span class="like-count">${post.likes || 0}</span>
+      </button>
     </div>
     <div class="md-content post-detail-body">${post.body || ''}</div>
     <a href="/anuncios.html" class="post-detail-back">← Volver a los anuncios</a>
@@ -102,6 +113,7 @@ ${heroUrl ? `<meta property="og:image" content="${heroUrl}">` : ''}
 </footer>
 <script src="/js/site.js"></script>
 <script src="/js/analytics.js"></script>
+<script src="/js/post-like.js"></script>
 </body>
 </html>`;
 

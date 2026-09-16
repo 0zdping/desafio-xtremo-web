@@ -271,7 +271,7 @@ window.bindReveal();
     const roleColor = topRole ? topRole.color : 'var(--accent)';
     const canPanel = Array.isArray(user.permissions) && user.permissions.includes('panel.access');
     const panelLink = canPanel
-      ? `<a href="admin.html">
+      ? `<a href="/admin.html">
            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
            Panel de administración
          </a>`
@@ -323,7 +323,7 @@ window.bindReveal();
       mobileSheet.insertBefore(row, mobileSheet.lastElementChild);
       if (canPanel) {
         const a = document.createElement('a');
-        a.href = 'admin.html';
+        a.href = '/admin.html';
         a.textContent = 'Panel de administración';
         mobileSheet.insertBefore(a, mobileSheet.lastElementChild);
       }

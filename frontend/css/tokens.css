@@ -39,6 +39,8 @@
   --danger-soft: rgba(255,92,92,0.1);
   --pin: #facc15;
   --pin-glow: rgba(250,204,21,0.35);
+  --like: #f2547a;
+  --like-glow: rgba(242,84,122,0.35);
 
   --f-display: 'Sora', 'Segoe UI', sans-serif;
   --f-body: 'Inter', 'Segoe UI', sans-serif;
