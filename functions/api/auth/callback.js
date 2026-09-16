@@ -57,7 +57,10 @@ export const onRequestGet = withQuotaHandling(async (context) => {
     headers.append('Set-Cookie', serializeCookie(SESSION_COOKIE, sessionId, { maxAgeSeconds: sessionMaxAgeSeconds() }));
     headers.append('Set-Cookie', serializeCookie(OAUTH_STATE_COOKIE, '', { maxAgeSeconds: 0 }));
     headers.append('Set-Cookie', serializeCookie(OAUTH_RETURN_COOKIE, '', { maxAgeSeconds: 0 }));
-    headers.set('Location', `${returnTo}?authed=1`);
+    // No query string here: cachedPublicJson keys the edge cache by exact
+    // URL, and an unused `?authed=1` would split the cache for e.g.
+    // /anuncios/<slug> into two entries that never both get purged together.
+    headers.set('Location', returnTo);
     return new Response(null, { status: 302, headers });
   } catch (err) {
     if (err && err.resource) throw err; // let withQuotaHandling turn this into a 429

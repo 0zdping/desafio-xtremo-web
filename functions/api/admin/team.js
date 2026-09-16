@@ -6,6 +6,7 @@ import {
 } from '../../../backend/lib/adminGuard.js';
 import { d1Select, d1Run, d1First } from '../../../backend/lib/db.js';
 import { resolveMinecraftUuid } from '../../../backend/lib/mojang.js';
+import { purgeEdgeCache } from '../../../backend/lib/edgeCache.js';
 
 const NICK_RE = /^[A-Za-z0-9_]+$/;
 const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
@@ -57,5 +58,9 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   );
 
   const member = await d1First(env, `SELECT * FROM team_members WHERE id = ?`, [insert.meta.last_row_id]);
+
+  const origin = new URL(request.url).origin;
+  await purgeEdgeCache(context, [`${origin}/api/team`]);
+
   return jsonResponse({ member }, 201);
 });

@@ -5,6 +5,7 @@ import {
   withQuotaHandling,
 } from '../../../backend/lib/adminGuard.js';
 import { d1Select, d1Run, d1First } from '../../../backend/lib/db.js';
+import { purgeEdgeCache } from '../../../backend/lib/edgeCache.js';
 
 const SLUG_RE = /^[a-z0-9-]+$/;
 
@@ -93,5 +94,11 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   );
 
   const announcement = await d1First(env, `SELECT * FROM announcements WHERE id = ?`, [insert.meta.last_row_id]);
+
+  const origin = new URL(request.url).origin;
+  const purgeUrls = [`${origin}/api/announcements`];
+  if (slug) purgeUrls.push(`${origin}/anuncios/${slug}`);
+  await purgeEdgeCache(context, purgeUrls);
+
   return jsonResponse({ announcement }, 201);
 });

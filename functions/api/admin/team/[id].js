@@ -5,6 +5,7 @@ import {
 } from '../../../../backend/lib/adminGuard.js';
 import { d1Run, d1First } from '../../../../backend/lib/db.js';
 import { resolveMinecraftUuid } from '../../../../backend/lib/mojang.js';
+import { purgeEdgeCache } from '../../../../backend/lib/edgeCache.js';
 
 const NICK_RE = /^[A-Za-z0-9_]+$/;
 const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
@@ -56,6 +57,10 @@ export const onRequestPatch = withQuotaHandling(async (context) => {
   );
 
   const member = await d1First(env, `SELECT * FROM team_members WHERE id = ?`, [memberId]);
+
+  const origin = new URL(request.url).origin;
+  await purgeEdgeCache(context, [`${origin}/api/team`]);
+
   return jsonResponse({ member });
 });
 
@@ -71,5 +76,9 @@ export const onRequestDelete = withQuotaHandling(async (context) => {
   if (!existing) return jsonResponse({ error: 'Miembro no encontrado.' }, 404);
 
   await d1Run(env, `DELETE FROM team_members WHERE id = ?`, [memberId]);
+
+  const origin = new URL(request.url).origin;
+  await purgeEdgeCache(context, [`${origin}/api/team`]);
+
   return jsonResponse({ ok: true });
 });

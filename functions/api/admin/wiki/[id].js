@@ -4,6 +4,7 @@ import {
   withQuotaHandling,
 } from '../../../../backend/lib/adminGuard.js';
 import { d1Run, d1First } from '../../../../backend/lib/db.js';
+import { purgeEdgeCache } from '../../../../backend/lib/edgeCache.js';
 
 const SLUG_RE = /^[a-z0-9-]+$/;
 
@@ -31,7 +32,7 @@ export const onRequestPatch = withQuotaHandling(async (context) => {
   const pageId = Number(params.id);
   if (!Number.isInteger(pageId)) return jsonResponse({ error: 'Página inválida.' }, 400);
 
-  const existing = await d1First(env, `SELECT id FROM wiki_pages WHERE id = ?`, [pageId]);
+  const existing = await d1First(env, `SELECT id, slug FROM wiki_pages WHERE id = ?`, [pageId]);
   if (!existing) return jsonResponse({ error: 'Página no encontrada.' }, 404);
 
   const body = await request.json().catch(() => null);
@@ -49,6 +50,12 @@ export const onRequestPatch = withQuotaHandling(async (context) => {
   );
 
   const page = await d1First(env, `SELECT * FROM wiki_pages WHERE id = ?`, [pageId]);
+
+  const origin = new URL(request.url).origin;
+  const purgeUrls = new Set([`${origin}/api/wiki`, `${origin}/api/wiki/${slug}`]);
+  if (existing.slug) purgeUrls.add(`${origin}/api/wiki/${existing.slug}`);
+  await purgeEdgeCache(context, [...purgeUrls]);
+
   return jsonResponse({ page });
 });
 
@@ -60,9 +67,15 @@ export const onRequestDelete = withQuotaHandling(async (context) => {
   const pageId = Number(params.id);
   if (!Number.isInteger(pageId)) return jsonResponse({ error: 'Página inválida.' }, 400);
 
-  const existing = await d1First(env, `SELECT id FROM wiki_pages WHERE id = ?`, [pageId]);
+  const existing = await d1First(env, `SELECT id, slug FROM wiki_pages WHERE id = ?`, [pageId]);
   if (!existing) return jsonResponse({ error: 'Página no encontrada.' }, 404);
 
   await d1Run(env, `DELETE FROM wiki_pages WHERE id = ?`, [pageId]);
+
+  const origin = new URL(request.url).origin;
+  const purgeUrls = [`${origin}/api/wiki`];
+  if (existing.slug) purgeUrls.push(`${origin}/api/wiki/${existing.slug}`);
+  await purgeEdgeCache(context, purgeUrls);
+
   return jsonResponse({ ok: true });
 });

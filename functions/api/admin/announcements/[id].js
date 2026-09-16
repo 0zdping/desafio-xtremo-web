@@ -4,6 +4,7 @@ import {
   withQuotaHandling,
 } from '../../../../backend/lib/adminGuard.js';
 import { d1Run, d1First } from '../../../../backend/lib/db.js';
+import { purgeEdgeCache } from '../../../../backend/lib/edgeCache.js';
 
 const SLUG_RE = /^[a-z0-9-]+$/;
 
@@ -65,7 +66,7 @@ export const onRequestPatch = withQuotaHandling(async (context) => {
   const announcementId = Number(params.id);
   if (!Number.isInteger(announcementId)) return jsonResponse({ error: 'Anuncio inválido.' }, 400);
 
-  const existing = await d1First(env, `SELECT id FROM announcements WHERE id = ?`, [announcementId]);
+  const existing = await d1First(env, `SELECT id, slug FROM announcements WHERE id = ?`, [announcementId]);
   if (!existing) return jsonResponse({ error: 'Anuncio no encontrado.' }, 404);
 
   const body = await request.json().catch(() => null);
@@ -91,6 +92,13 @@ export const onRequestPatch = withQuotaHandling(async (context) => {
   );
 
   const announcement = await d1First(env, `SELECT * FROM announcements WHERE id = ?`, [announcementId]);
+
+  const origin = new URL(request.url).origin;
+  const purgeUrls = new Set([`${origin}/api/announcements`]);
+  if (existing.slug) purgeUrls.add(`${origin}/anuncios/${existing.slug}`);
+  if (slug) purgeUrls.add(`${origin}/anuncios/${slug}`);
+  await purgeEdgeCache(context, [...purgeUrls]);
+
   return jsonResponse({ announcement });
 });
 
@@ -102,9 +110,15 @@ export const onRequestDelete = withQuotaHandling(async (context) => {
   const announcementId = Number(params.id);
   if (!Number.isInteger(announcementId)) return jsonResponse({ error: 'Anuncio inválido.' }, 400);
 
-  const existing = await d1First(env, `SELECT id FROM announcements WHERE id = ?`, [announcementId]);
+  const existing = await d1First(env, `SELECT id, slug FROM announcements WHERE id = ?`, [announcementId]);
   if (!existing) return jsonResponse({ error: 'Anuncio no encontrado.' }, 404);
 
   await d1Run(env, `DELETE FROM announcements WHERE id = ?`, [announcementId]);
+
+  const origin = new URL(request.url).origin;
+  const purgeUrls = [`${origin}/api/announcements`];
+  if (existing.slug) purgeUrls.push(`${origin}/anuncios/${existing.slug}`);
+  await purgeEdgeCache(context, purgeUrls);
+
   return jsonResponse({ ok: true });
 });

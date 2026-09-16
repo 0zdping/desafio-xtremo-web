@@ -24,14 +24,22 @@ export const onRequestPost = withQuotaHandling(async (context) => {
     [announcementId, guard.user.id]
   );
 
+  let liked = !existing;
   if (existing) {
     await d1Run(env, `DELETE FROM announcement_likes WHERE announcement_id = ? AND user_id = ?`, [announcementId, guard.user.id]);
   } else {
-    await d1Run(
-      env,
-      `INSERT INTO announcement_likes (announcement_id, user_id) VALUES (?, ?)`,
-      [announcementId, guard.user.id]
-    );
+    try {
+      await d1Run(
+        env,
+        `INSERT INTO announcement_likes (announcement_id, user_id) VALUES (?, ?)`,
+        [announcementId, guard.user.id]
+      );
+    } catch (err) {
+      // A concurrent request (double-click, duplicate tab) already inserted
+      // the same (announcement_id, user_id) row — that's still a "liked"
+      // outcome for this request, not a real error.
+      liked = true;
+    }
   }
 
   const likes = await countLikes(env, announcementId);
@@ -41,5 +49,5 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   if (post.slug) purgeUrls.push(`${origin}/anuncios/${post.slug}`);
   await purgeEdgeCache(context, purgeUrls);
 
-  return jsonResponse({ liked: !existing, likes });
+  return jsonResponse({ liked, likes });
 });

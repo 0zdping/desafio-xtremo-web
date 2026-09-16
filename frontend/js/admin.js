@@ -1263,7 +1263,8 @@
         throw new Error((body && body.error) || `Error ${res.status}`);
       }
       if (body && Array.isArray(body.fileErrors) && body.fileErrors.length) {
-        sanctionFormMsg(`Sanción registrada, pero hubo avisos con algunos archivos: ${body.fileErrors.join(', ')}`, 'error');
+        const details = body.fileErrors.map((e) => `${e.filename}: ${e.error}`).join(', ');
+        sanctionFormMsg(`Sanción registrada, pero hubo avisos con algunos archivos: ${details}`, 'error');
       } else {
         sanctionFormMsg('Sanción registrada.', 'ok');
       }

@@ -5,6 +5,7 @@ import {
   withQuotaHandling,
 } from '../../../backend/lib/adminGuard.js';
 import { d1Select, d1Run, d1First } from '../../../backend/lib/db.js';
+import { purgeEdgeCache } from '../../../backend/lib/edgeCache.js';
 
 const SLUG_RE = /^[a-z0-9-]+$/;
 
@@ -53,5 +54,9 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   );
 
   const page = await d1First(env, `SELECT * FROM wiki_pages WHERE id = ?`, [insert.meta.last_row_id]);
+
+  const origin = new URL(request.url).origin;
+  await purgeEdgeCache(context, [`${origin}/api/wiki`, `${origin}/api/wiki/${slug}`]);
+
   return jsonResponse({ page }, 201);
 });
