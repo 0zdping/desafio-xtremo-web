@@ -28,3 +28,16 @@ export async function cachedPublicJson(context, cacheKeyUrl, ttlSeconds, compute
   }
   return res;
 }
+
+/** Evicts one or more cachedPublicJson/HTML entries by their exact URL, so a
+ *  write that changes what they'd return (a like, an edit) is visible right
+ *  away instead of waiting out the TTL. Never lets a purge failure break the
+ *  request that triggered it. */
+export async function purgeEdgeCache(context, urls) {
+  try {
+    const cache = caches.default;
+    await Promise.all(urls.map((url) => cache.delete(new Request(url, context.request))));
+  } catch (err) {
+    // Best-effort — the TTL still bounds the staleness.
+  }
+}

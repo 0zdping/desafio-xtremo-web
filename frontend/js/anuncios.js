@@ -104,7 +104,7 @@
   Promise.all([
     fetch('/api/auth/me', { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
     fetch('/api/announcements/liked', { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-    fetch('/api/announcements').then((r) => (r.ok ? r.json() : Promise.reject())),
+    fetch('/api/announcements', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : Promise.reject())),
   ])
     .then(([me, liked, data]) => {
       if (me) {

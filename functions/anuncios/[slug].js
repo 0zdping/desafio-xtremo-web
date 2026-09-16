@@ -65,7 +65,7 @@ ${heroUrl ? `<meta property="og:image" content="${heroUrl}">` : ''}
 <div id="account-corner" class="account-corner"></div>
 <div class="nav-wrap">
   <nav class="nav glass">
-    <a href="/index.html" class="nav-logo"><span class="dot"></span>Desafio Xtremo</a>
+    <a href="/index.html" class="nav-logo"><img src="/assets/wordmark.png" alt="Desafio Xtremo"></a>
     <ul class="nav-links">
       <li><a href="/index.html">Inicio</a></li>
       <li><a href="/wiki.html">Wiki</a></li>

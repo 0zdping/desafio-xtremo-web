@@ -22,7 +22,7 @@
     const grid = document.getElementById('announcements-teaser-grid');
     if (!section || !grid) return;
 
-    fetch('/api/announcements')
+    fetch('/api/announcements', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data) => {
         const items = Array.isArray(data && data.announcements) ? data.announcements : [];
