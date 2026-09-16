@@ -25,7 +25,10 @@ function validateAnnouncement(body) {
   const heroImageUrl = (body?.hero_image_url || '').trim();
 
   if (!title || title.length > 140) return { error: 'Título inválido.' };
-  if (!text || text.length > 50000) return { error: 'Contenido inválido.' };
+  if (!text) return { error: 'El contenido no puede estar vacío.' };
+  if (text.length > 50000) {
+    return { error: `El contenido es demasiado largo (${text.length} caracteres, máx. 50000). Si pegaste una imagen directamente, quítala y súbela con el botón de imagen.` };
+  }
   if (category.length > 40) return { error: 'Categoría inválida.' };
   if (excerpt.length > 220) return { error: 'Extracto demasiado largo.' };
   if (heroImageUrl && !heroImageUrl.startsWith('http')) {

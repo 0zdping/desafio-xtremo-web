@@ -721,6 +721,21 @@
   let quillEditor = null;
   const PIN_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L20 8l-4.6 4 1.4 6-4.8-3.4L7.2 18l1.4-6L4 8l6.2-.4z"/></svg>';
 
+  async function uploadMediaFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/admin/media', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'X-CSRF-Token': csrfToken },
+      body: formData,
+    });
+    const isJson = res.headers.get('content-type')?.includes('application/json');
+    const body = isJson ? await res.json().catch(() => null) : null;
+    if (!res.ok) throw new Error((body && body.error) || `Error ${res.status}`);
+    return body.url;
+  }
+
   function getQuillEditor() {
     if (quillEditor) return quillEditor;
     quillEditor = new Quill('#ann-form-quill', {
@@ -738,35 +753,43 @@
         },
       },
     });
+    // Quill embeds pasted/dropped images as base64 data: URIs by default,
+    // which can blow the 50k-char body limit from a single screenshot.
+    // Intercept those and route them through the R2 upload instead, same
+    // as the toolbar button.
+    quillEditor.root.addEventListener('paste', handleEditorImageDrop, true);
+    quillEditor.root.addEventListener('drop', handleEditorImageDrop, true);
     return quillEditor;
+  }
+
+  async function insertUploadedImage(file) {
+    try {
+      const editor = getQuillEditor();
+      const range = editor.getSelection(true) || { index: editor.getLength() };
+      const url = await uploadMediaFile(file);
+      editor.insertEmbed(range.index, 'image', url);
+      editor.setSelection(range.index + 1);
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  function handleEditorImageDrop(e) {
+    const files = e.clipboardData ? e.clipboardData.files : e.dataTransfer ? e.dataTransfer.files : null;
+    const file = files && Array.from(files).find((f) => f.type.startsWith('image/'));
+    if (!file) return;
+    e.preventDefault();
+    e.stopPropagation();
+    insertUploadedImage(file);
   }
 
   function handleQuillImageUpload() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/png,image/jpeg,image/webp,image/gif';
-    input.addEventListener('change', async () => {
+    input.addEventListener('change', () => {
       const file = input.files && input.files[0];
-      if (!file) return;
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await fetch('/api/admin/media', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'X-CSRF-Token': csrfToken },
-          body: formData,
-        });
-        const isJson = res.headers.get('content-type')?.includes('application/json');
-        const body = isJson ? await res.json().catch(() => null) : null;
-        if (!res.ok) throw new Error((body && body.error) || `Error ${res.status}`);
-        const editor = getQuillEditor();
-        const range = editor.getSelection(true);
-        editor.insertEmbed(range.index, 'image', body.url);
-        editor.setSelection(range.index + 1);
-      } catch (err) {
-        alert(err.message);
-      }
+      if (file) insertUploadedImage(file);
     });
     input.click();
   }
@@ -776,18 +799,7 @@
     const preview = document.getElementById('ann-form-hero-preview');
     statusEl.textContent = 'Subiendo…';
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/admin/media', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'X-CSRF-Token': csrfToken },
-        body: formData,
-      });
-      const isJson = res.headers.get('content-type')?.includes('application/json');
-      const body = isJson ? await res.json().catch(() => null) : null;
-      if (!res.ok) throw new Error((body && body.error) || `Error ${res.status}`);
-      heroImageUrl = body.url;
+      heroImageUrl = await uploadMediaFile(file);
       preview.src = heroImageUrl;
       preview.hidden = false;
       statusEl.textContent = 'Imagen subida.';
@@ -912,6 +924,16 @@
     const pinned = document.getElementById('ann-form-pinned').checked;
     const rawHtml = getQuillEditor().root.innerHTML;
     const body = window.DOMPurify ? DOMPurify.sanitize(rawHtml) : rawHtml;
+
+    if (body.length > 50000) {
+      annMsg(
+        `El contenido es demasiado largo (${body.length.toLocaleString('es')} caracteres, máx. 50.000). ` +
+          'Si pegaste una imagen directamente en el texto puede haberse incrustado como base64: bórrala y ' +
+          'vuelve a añadirla con el botón de imagen de la barra de herramientas.',
+        'error'
+      );
+      return;
+    }
 
     const payload = { title, body, pinned, slug, excerpt, hero_image_url: heroImageUrl, category };
 
