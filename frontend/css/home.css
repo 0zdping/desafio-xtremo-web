@@ -8,10 +8,34 @@
 .hero-banner img{width:100%;height:auto;filter:drop-shadow(0 18px 44px var(--accent-glow));}
 @keyframes heroFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
 .hero-tagline{
-  font-size:clamp(15px,2vw,18px);color:var(--text-soft);line-height:1.6;max-width:620px;margin:22px 0 34px;
+  font-size:clamp(15px,2vw,18px);color:var(--text-soft);line-height:1.6;max-width:620px;margin:22px 0 26px;
 }
+.hero-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:32px;}
+.hero-badges .badge-pill svg{width:13px;height:13px;color:var(--ok);flex-shrink:0;}
 .hero-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;}
 @media (prefers-reduced-motion: reduce){ .hero-banner{animation:none;} }
+@media (max-width:600px){ .hero-badges{gap:8px;} .hero-badges .badge-pill{font-size:11px;padding:7px 13px;} }
+
+/* ---------- mechanics section (home) ---------- */
+.mechanics-section{padding:20px 0 90px;}
+.mechanics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px;}
+.mechanic-card{
+  padding:28px 24px;border-radius:var(--radius-md);
+  background:linear-gradient(155deg, var(--surface-2), var(--surface));border:1px solid var(--border);
+  transition:transform .25s var(--ease), border-color .2s ease, box-shadow .25s ease;
+}
+@media (hover:hover) and (pointer:fine){
+  .mechanic-card:hover{transform:translateY(-6px);border-color:var(--accent-border);box-shadow:0 16px 36px var(--accent-glow);}
+}
+.mechanic-icon{
+  width:46px;height:46px;border-radius:var(--radius-sm);margin-bottom:18px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--accent-soft);border:1px solid var(--accent-border);
+}
+.mechanic-icon svg{width:22px;height:22px;color:var(--accent);}
+.mechanic-card h3{font-family:var(--f-display);font-size:16.5px;font-weight:700;margin-bottom:8px;}
+.mechanic-card p{color:var(--text-soft);font-size:14px;line-height:1.6;}
+@media (max-width:600px){ .mechanics-section{padding:10px 0 60px;} }
 
 /* ---------- placeholder / coming-soon block (wiki, etc.) ---------- */
 .placeholder-section{padding:160px 0 140px;text-align:center;position:relative;z-index:1;min-height:60vh;}
