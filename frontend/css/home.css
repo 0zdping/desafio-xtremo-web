@@ -20,12 +20,12 @@
 .mechanics-section{padding:20px 0 90px;}
 .mechanics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px;}
 .mechanic-card{
-  padding:28px 24px;border-radius:var(--radius-md);
-  background:var(--card-bg);border:1px solid var(--border);
-  transition:transform .25s var(--ease), border-color .2s ease, box-shadow .25s ease;
+  position:relative;padding:28px 24px;border-radius:var(--radius-md);
+  background:var(--card-bg);
+  transition:transform .25s var(--ease), box-shadow .25s ease;
 }
 @media (hover:hover) and (pointer:fine){
-  .mechanic-card:hover{transform:translateY(-6px);border-color:var(--accent-border);box-shadow:0 16px 36px var(--accent-glow);}
+  .mechanic-card:hover{transform:translateY(-6px);box-shadow:0 16px 36px var(--accent-glow);}
 }
 .mechanic-icon{
   width:46px;height:46px;border-radius:var(--radius-sm);margin-bottom:18px;
@@ -41,7 +41,7 @@
 .placeholder-section{padding:160px 0 140px;text-align:center;position:relative;z-index:1;min-height:60vh;}
 .placeholder-icon{
   width:88px;height:88px;border-radius:var(--radius-lg);margin:0 auto 28px;
-  background:var(--card-bg);border:1px solid var(--border);
+  background:var(--card-bg);
   display:flex;align-items:center;justify-content:center;position:relative;
 }
 .placeholder-icon::after{
@@ -57,19 +57,10 @@
 .cta-section{padding:100px 0;text-align:center;position:relative;z-index:1;}
 .cta-card{
   position:relative;max-width:760px;margin:0 auto;padding:64px 40px;border-radius:var(--radius-lg);
-  background:var(--card-bg);border:1px solid var(--border-strong);
+  background:var(--card-bg);
   box-shadow:var(--shadow-lg);overflow:hidden;
 }
-.cta-card::before{
-  content:'';position:absolute;inset:-2px;z-index:0;border-radius:inherit;padding:1px;opacity:.6;
-  background:var(--accent-gradient);
-  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite:xor;mask-composite:exclude;
-  animation:ctaBorder 6s ease-in-out infinite;
-}
-@keyframes ctaBorder{0%,100%{opacity:.35;}50%{opacity:.75;}}
 .cta-card > *{position:relative;z-index:1;}
-@media (prefers-reduced-motion: reduce){ .cta-card::before{animation:none;opacity:.5;} }
 .cta-card h2{font-size:clamp(30px,4vw,44px);margin-bottom:16px;}
 .cta-card p{color:var(--text-soft);font-size:15.5px;max-width:480px;margin:0 auto 30px;line-height:1.6;}
 .cta-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;}
@@ -132,16 +123,16 @@
 .team-group-title::after{content:'';flex:1;height:1px;background:var(--border-hair);}
 .team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:20px;}
 .team-card{
-  border-radius:var(--radius-md);overflow:hidden;text-align:center;
-  background:var(--card-bg);border:1px solid var(--border);
-  transition:transform .25s var(--ease), border-color .2s ease, box-shadow .25s ease;
+  position:relative;border-radius:var(--radius-md);overflow:hidden;text-align:center;
+  background:var(--card-bg);
+  transition:transform .25s var(--ease), box-shadow .25s ease;
 }
 @media (hover:hover) and (pointer:fine){
-  .team-card:hover{transform:translateY(-6px);border-color:var(--accent-border);box-shadow:0 16px 36px var(--accent-glow);}
+  .team-card:hover{transform:translateY(-6px);box-shadow:0 16px 36px var(--accent-glow);}
 }
 .team-card-img{
-  height:210px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;
-  background:linear-gradient(180deg, var(--surface-3), var(--surface-2));
+  height:210px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;position:relative;
+  background:radial-gradient(ellipse 80% 90% at 50% 78%, var(--surface-3) 0%, var(--bg-alt) 82%);
 }
 .team-card-img img{height:100%;width:auto;image-rendering:pixelated;filter:drop-shadow(0 10px 16px rgba(0,0,0,.45));}
 .team-card-fallback{width:64px;height:64px;margin:auto;color:var(--text-faint);}
@@ -177,8 +168,8 @@
 .wiki-page-link:hover{background:var(--glass-strong);color:var(--text);}
 .wiki-page-link.active{background:var(--accent-soft);color:var(--accent-strong);font-weight:600;}
 .wiki-content{
-  flex:1;min-width:0;border-radius:var(--radius-md);padding:38px 42px;
-  background:var(--card-bg);border:1px solid var(--border);
+  position:relative;flex:1;min-width:0;border-radius:var(--radius-md);padding:38px 42px;
+  background:var(--card-bg);
 }
 .wiki-content h1{font-size:clamp(24px,3vw,30px);margin-bottom:6px;}
 .wiki-content-meta{font-family:var(--f-mono);font-size:12px;color:var(--text-dim);margin-bottom:26px;}
@@ -232,14 +223,14 @@
   border-radius:var(--radius-pill);padding:4px 11px;
 }
 .post-card{
-  display:flex;flex-direction:column;border-radius:var(--radius-md);overflow:hidden;text-decoration:none;color:inherit;
-  background:var(--card-bg);border:1px solid var(--border);
-  transition:transform .25s var(--ease), border-color .2s ease, box-shadow .25s ease;
+  position:relative;display:flex;flex-direction:column;border-radius:var(--radius-md);overflow:hidden;text-decoration:none;color:inherit;
+  background:var(--card-bg);
+  transition:transform .25s var(--ease), box-shadow .25s ease;
 }
 @media (hover:hover) and (pointer:fine){
-  a.post-card:hover{transform:translateY(-5px);border-color:var(--border-strong);box-shadow:var(--shadow-md);}
+  a.post-card:hover{transform:translateY(-5px);box-shadow:var(--shadow-md);}
 }
-.post-card.pinned{border-color:var(--pin,#f2b544);box-shadow:0 0 0 1px var(--pin,#f2b544) inset;}
+.post-card.pinned{box-shadow:0 0 0 1.5px var(--pin,#f2b544) inset;}
 .post-card-image{
   position:relative;aspect-ratio:16/10;width:100%;overflow:hidden;
   background:var(--card-bg);
