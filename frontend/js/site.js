@@ -129,11 +129,19 @@
   const field = document.getElementById('field');
   const nebulaField = document.getElementById('nebula-field');
   if (!field && !nebulaField) return;
+  // Coalesce to one style write per animation frame instead of one per
+  // mousemove event (which can fire far faster than the screen repaints) --
+  // same visual result, far fewer forced style/composite passes.
+  let raf = null, lastX = 0, lastY = 0;
+  function apply() {
+    raf = null;
+    if (field) field.style.transform = `translate(${lastX * -10}px, ${lastY * -10}px)`;
+    if (nebulaField) nebulaField.style.transform = `translate(${lastX * 14}px, ${lastY * 14}px)`;
+  }
   document.addEventListener('mousemove', (e) => {
-    const x = (e.clientX / window.innerWidth - 0.5) * 2;
-    const y = (e.clientY / window.innerHeight - 0.5) * 2;
-    if (field) field.style.transform = `translate(${x * -10}px, ${y * -10}px)`;
-    if (nebulaField) nebulaField.style.transform = `translate(${x * 14}px, ${y * 14}px)`;
+    lastX = (e.clientX / window.innerWidth - 0.5) * 2;
+    lastY = (e.clientY / window.innerHeight - 0.5) * 2;
+    if (raf == null) raf = requestAnimationFrame(apply);
   });
 })();
 
