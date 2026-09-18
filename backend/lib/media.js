@@ -1,4 +1,5 @@
 import { checkQuota, addUsage, QuotaExceededError } from './quota.js';
+import { verifyFileType } from './fileSignature.js';
 
 export const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 export const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -19,6 +20,14 @@ export async function putMediaImage(env, file) {
   }
   if (file.size > MAX_IMAGE_SIZE) {
     throw new Error('La imagen supera el tamaño máximo permitido (5 MB).');
+  }
+  // Don't trust the declared Content-Type alone — a request built outside
+  // the browser (curl/fetch with a stolen session) can label any bytes as
+  // "image/png". This is a public bucket served straight from R2 under a
+  // browser-facing domain, so confirm the file's own magic bytes actually
+  // match before it's stored and republished.
+  if (!(await verifyFileType(file, ALLOWED_IMAGE_TYPES))) {
+    throw new Error('El archivo no es una imagen válida del tipo declarado.');
   }
   if (!env.MEDIA) {
     throw new Error('El almacenamiento de imágenes no está configurado todavía.');

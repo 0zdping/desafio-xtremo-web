@@ -5,6 +5,7 @@ import {
 } from '../../../../backend/lib/adminGuard.js';
 import { d1Run, d1First } from '../../../../backend/lib/db.js';
 import { purgeEdgeCache } from '../../../../backend/lib/edgeCache.js';
+import { sanitizeHtml } from '../../../../backend/lib/sanitizeHtml.js';
 
 const SLUG_RE = /^[a-z0-9-]+$/;
 
@@ -17,16 +18,24 @@ function slugify(title) {
     .slice(0, 80);
 }
 
-function validateAnnouncement(body) {
+async function validateAnnouncement(body) {
   const title = (body?.title || '').trim();
-  const text = (body?.body || '').trim();
+  const rawText = (body?.body || '').trim();
   const pinned = body?.pinned ? 1 : 0;
   const category = (body?.category || '').trim() || 'Anuncio';
   const excerpt = (body?.excerpt || '').trim();
   const heroImageUrl = (body?.hero_image_url || '').trim();
 
   if (!title || title.length > 140) return { error: 'Título inválido.' };
-  if (!text) return { error: 'El contenido no puede estar vacío.' };
+  if (!rawText) return { error: 'El contenido no puede estar vacío.' };
+
+  // Server-side sanitization is the real security boundary here — see
+  // backend/lib/sanitizeHtml.js for why the client-side DOMPurify pass
+  // alone isn't enough.
+  const text = await sanitizeHtml(rawText);
+  if (!text || !text.replace(/<[^>]*>/g, '').trim()) {
+    return { error: 'El contenido no puede estar vacío.' };
+  }
   if (text.length > 50000) {
     return { error: `El contenido es demasiado largo (${text.length} caracteres, máx. 50000). Si pegaste una imagen directamente, quítala y súbela con el botón de imagen.` };
   }
@@ -70,7 +79,7 @@ export const onRequestPatch = withQuotaHandling(async (context) => {
   if (!existing) return jsonResponse({ error: 'Anuncio no encontrado.' }, 404);
 
   const body = await request.json().catch(() => null);
-  const parsed = validateAnnouncement(body);
+  const parsed = await validateAnnouncement(body);
   if (parsed.error) return jsonResponse({ error: parsed.error }, 400);
   const { title, body: text, pinned, category, excerpt, hero_image_url, slug } = parsed.value;
 

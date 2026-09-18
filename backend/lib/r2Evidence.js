@@ -1,4 +1,5 @@
 import { checkQuota, addUsage, QuotaExceededError } from './quota.js';
+import { verifyFileType } from './fileSignature.js';
 
 export const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'video/mp4', 'video/webm'];
 export const MAX_SIZE = 8 * 1024 * 1024; // 8 MB
@@ -16,6 +17,11 @@ export async function putEvidence(env, sanctionId, file) {
   }
   if (file.size > MAX_SIZE) {
     throw new Error('El archivo supera el tamaño máximo permitido (8 MB).');
+  }
+  // Same reasoning as media.js: don't trust the declared Content-Type for
+  // evidence files either — verify the real magic bytes before storing.
+  if (!(await verifyFileType(file, ALLOWED_TYPES))) {
+    throw new Error('El archivo no coincide con el tipo declarado.');
   }
   if (!env.EVIDENCE) {
     throw new Error('El almacenamiento de pruebas no está configurado todavía.');

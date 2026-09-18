@@ -265,7 +265,13 @@ window.bindReveal();
   }
 
   function renderAccountChip(user) {
-    const avatarSrc = user.avatar || defaultAvatarSvg();
+    // user.avatar is built server-side from Discord's own id/avatar-hash
+    // fields (see discordAvatarUrl() in backend/lib/discord.js), which are
+    // never expected to contain HTML metacharacters — but it still goes
+    // into an unquoted-safe attribute below via a template string, so
+    // escape it as cheap defense in depth rather than trust an upstream
+    // API's format forever.
+    const avatarSrc = escapeHtml(user.avatar || defaultAvatarSvg());
     const topRole = (user.roles || [])[0] || null;
     const roleLabel = topRole ? topRole.name : 'Miembro';
     const roleColor = topRole ? topRole.color : 'var(--accent)';

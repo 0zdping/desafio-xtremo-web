@@ -1,3 +1,28 @@
+# Security headers applied to every response on the site — both static
+# assets and Pages Functions (/api/*, /anuncios/<slug>, /wiki/<slug>).
+# Content-Security-Policy allowlist reflects the exact external origins the
+# site actually loads (Google Fonts, cdnjs.cloudflare.com for
+# marked/DOMPurify/Quill in admin.html and wiki.html, cdn.discordapp.com for
+# Discord avatars, vzge.me for skin renders, and the MEDIA R2 bucket's
+# public custom domain for post images). No inline <script> blocks exist
+# anywhere in frontend/ (checked), so script-src doesn't need
+# 'unsafe-inline'; style-src does, because avatar/role/rank colors are set
+# as inline `style="..."` attributes from validated #RRGGBB values at
+# render time (frontend/js/site.js, admin.js, home-sections.js) — that's
+# presentation-only and not worth reworking into a nonce/hash scheme here.
+#
+# NOTE: if MEDIA_PUBLIC_URL (env var, see backend/lib/media.js) is ever
+# repointed to a different domain than media.desafioxtremo.site, update the
+# img-src/media-src origins below to match, or post cover/inline images
+# will silently stop loading.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://cdn.discordapp.com https://vzge.me https://media.desafioxtremo.site; media-src 'self' https://media.desafioxtremo.site; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; frame-src 'none'
+
 /*.html
   Cache-Control: no-cache, must-revalidate
 

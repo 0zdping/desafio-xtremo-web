@@ -345,10 +345,14 @@
   }
 
   function renderUserRow(u, allRoles, canManage) {
-    const avatar =
+    // u.avatar is another user's stored avatar URL (see comment on
+    // avatarSrc in site.js) — escape it here too since this renders other
+    // people's data in a privileged staff view.
+    const avatar = escapeHtml(
       u.avatar ||
       'data:image/svg+xml;utf8,' +
-        encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#172038"/><circle cx="12" cy="9.5" r="3.5" fill="#54607f"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" fill="#54607f"/></svg>');
+        encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#172038"/><circle cx="12" cy="9.5" r="3.5" fill="#54607f"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" fill="#54607f"/></svg>')
+    );
     const roles = (u.roles || [])
       .map(
         (r) => `

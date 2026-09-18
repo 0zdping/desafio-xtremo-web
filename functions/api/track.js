@@ -1,9 +1,18 @@
 import { withQuotaHandling } from '../../backend/lib/http.js';
 import { d1Run } from '../../backend/lib/db.js';
 import { visitorHash, parseDevice, normalizeReferrer, sanitizePath, sanitizeTarget } from '../../backend/lib/analytics.js';
+import { rateLimit, clientIp } from '../../backend/lib/rateLimit.js';
 
 const MAX_EVENTS_PER_BATCH = 15;
 const TYPES = new Set(['pageview', 'click']);
+// This beacon is intentionally public/unauthenticated (every visitor needs
+// to reach it), which also means it's the one write endpoint on the site
+// with no session or CSRF gate at all. Without a rate limit, a single
+// anonymous client could hammer it to burn through the self-tracked D1
+// write quota (backend/lib/quota.js) well before the real Cloudflare free
+// tier limit — tripping the 429 "quota exceeded" guard for every other
+// visitor and every staff action for the rest of the day. 40 requests/min/IP
+// comfortably covers real multi-tab browsing (each batches up to 15 events).
 
 // Analytics beacon: no auth, so every visitor can reach it. Batched client-side
 // (frontend/js/analytics.js) into one request per flush instead of one per
@@ -14,6 +23,10 @@ const TYPES = new Set(['pageview', 'click']);
 // keeps that shared budget mostly for the rest of the site.
 export const onRequestPost = withQuotaHandling(async (context) => {
   const { request, env } = context;
+
+  const ip = clientIp(request);
+  const { allowed } = await rateLimit(env, `track:${ip}`, 40, 60);
+  if (!allowed) return new Response(null, { status: 204 });
 
   const origin = request.headers.get('origin');
   if (origin) {

@@ -5,14 +5,15 @@ import {
 } from '../../../../backend/lib/adminGuard.js';
 import { d1Run, d1First } from '../../../../backend/lib/db.js';
 import { purgeEdgeCache } from '../../../../backend/lib/edgeCache.js';
+import { stripDangerousHtml } from '../../../../backend/lib/sanitizeHtml.js';
 
 const SLUG_RE = /^[a-z0-9-]+$/;
 
-function validatePage(body) {
+async function validatePage(body) {
   const slug = (body?.slug || '').trim();
   const title = (body?.title || '').trim();
   const category = (body?.category || '').trim() || 'General';
-  const content = typeof body?.content === 'string' ? body.content : '';
+  const rawContent = typeof body?.content === 'string' ? body.content : '';
   const position = Number.isFinite(body?.position) ? Math.trunc(body.position) : 0;
 
   if (!slug || slug.length > 60 || !SLUG_RE.test(slug)) {
@@ -20,6 +21,10 @@ function validatePage(body) {
   }
   if (!title || title.length > 120) return { error: 'Título inválido.' };
   if (category.length > 60) return { error: 'Categoría inválida.' };
+
+  // Server-side backstop for embedded raw HTML in the Markdown source — see
+  // backend/lib/sanitizeHtml.js.
+  const content = await stripDangerousHtml(rawContent);
 
   return { value: { slug, title, category, content, position } };
 }
@@ -36,7 +41,7 @@ export const onRequestPatch = withQuotaHandling(async (context) => {
   if (!existing) return jsonResponse({ error: 'Página no encontrada.' }, 404);
 
   const body = await request.json().catch(() => null);
-  const parsed = validatePage(body);
+  const parsed = await validatePage(body);
   if (parsed.error) return jsonResponse({ error: parsed.error }, 400);
   const { slug, title, category, content, position } = parsed.value;
 

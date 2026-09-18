@@ -6,14 +6,15 @@ import {
 } from '../../../backend/lib/adminGuard.js';
 import { d1Select, d1Run, d1First } from '../../../backend/lib/db.js';
 import { purgeEdgeCache } from '../../../backend/lib/edgeCache.js';
+import { stripDangerousHtml } from '../../../backend/lib/sanitizeHtml.js';
 
 const SLUG_RE = /^[a-z0-9-]+$/;
 
-function validatePage(body) {
+async function validatePage(body) {
   const slug = (body?.slug || '').trim();
   const title = (body?.title || '').trim();
   const category = (body?.category || '').trim() || 'General';
-  const content = typeof body?.content === 'string' ? body.content : '';
+  const rawContent = typeof body?.content === 'string' ? body.content : '';
   const position = Number.isFinite(body?.position) ? Math.trunc(body.position) : 0;
 
   if (!slug || slug.length > 60 || !SLUG_RE.test(slug)) {
@@ -21,6 +22,14 @@ function validatePage(body) {
   }
   if (!title || title.length > 120) return { error: 'Título inválido.' };
   if (category.length > 60) return { error: 'Categoría inválida.' };
+
+  // Content is Markdown, rendered client-side with marked()+DOMPurify (see
+  // frontend/js/wiki.js) — but `marked` passes raw inline HTML straight
+  // through by default, and that client-side DOMPurify pass is advisory
+  // only (skipped entirely if the CDN script fails to load). Strip any
+  // embedded HTML down to the same safe allowlist used for announcements
+  // as a server-side backstop; plain Markdown syntax is untouched by this.
+  const content = await stripDangerousHtml(rawContent);
 
   return { value: { slug, title, category, content, position } };
 }
@@ -40,7 +49,7 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   if (!guard.ok) return jsonResponse(guard.body, guard.status);
 
   const body = await request.json().catch(() => null);
-  const parsed = validatePage(body);
+  const parsed = await validatePage(body);
   if (parsed.error) return jsonResponse({ error: parsed.error }, 400);
   const { slug, title, category, content, position } = parsed.value;
 
