@@ -128,8 +128,8 @@ h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:-0.02em;lin
 .mechanic-card, .placeholder-icon, .cta-card, .team-card, .wiki-content,
 .post-card, .post-card-image, .panel-card, .stat-kpi, .zd-confirm-box,
 .account-dropdown, .role-card, .sanction-card, .usage-card{
-  backdrop-filter:blur(12px) saturate(150%);
-  -webkit-backdrop-filter:blur(12px) saturate(150%);
+  backdrop-filter:blur(16px) saturate(150%);
+  -webkit-backdrop-filter:blur(16px) saturate(150%);
 }
 .mechanic-card::before, .placeholder-icon::before, .cta-card::before, .team-card::before,
 .wiki-content::before, .post-card::before, .post-card-image::before, .panel-card::before,
