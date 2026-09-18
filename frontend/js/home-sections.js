@@ -97,6 +97,24 @@
           )
           .join('');
         section.hidden = false;
+        // vzge.me is a third-party renderer outside our control: on failure
+        // (nick with no resolved UUID, its own hiccup) swap the broken-image
+        // icon for a neutral placeholder instead of leaving a visibly broken
+        // card in a public "who we are" section.
+        groupsWrap.querySelectorAll('.team-card-img img').forEach((img) => {
+          img.addEventListener(
+            'error',
+            () => {
+              const wrap = img.closest('.team-card-img');
+              img.remove();
+              if (wrap) {
+                wrap.innerHTML =
+                  '<svg class="team-card-fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 3.5-7 8-7s8 3 8 7"/></svg>';
+              }
+            },
+            { once: true }
+          );
+        });
         window.bindReveal && window.bindReveal();
       })
       .catch(() => {

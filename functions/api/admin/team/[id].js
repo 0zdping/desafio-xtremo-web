@@ -46,9 +46,13 @@ export const onRequestPatch = withQuotaHandling(async (context) => {
   if (parsed.error) return jsonResponse({ error: parsed.error }, 400);
   const { mc_nick, rank_label, rank_color, function_text, team, position } = parsed.value;
 
-  // Only hit Mojang again if the nick actually changed: no need to
-  // re-resolve on every unrelated edit (color, función, posición, ...).
-  const mc_uuid = mc_nick === existing.mc_nick ? existing.mc_uuid : await resolveMinecraftUuid(mc_nick);
+  // Only hit Mojang again if the nick actually changed, or if we never
+  // managed to resolve one for this member before (mc_uuid still null from
+  // a past API failure, or a row created before migration 0003 added the
+  // column): no need to re-resolve on every unrelated edit otherwise.
+  const mc_uuid = (mc_nick === existing.mc_nick && existing.mc_uuid)
+    ? existing.mc_uuid
+    : await resolveMinecraftUuid(mc_nick);
 
   await d1Run(
     env,
