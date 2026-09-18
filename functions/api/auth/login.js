@@ -4,8 +4,8 @@ import { rateLimit, clientIp } from '../../../backend/lib/rateLimit.js';
 import { OAUTH_STATE_COOKIE, OAUTH_RETURN_COOKIE } from '../../../backend/lib/session.js';
 import { withQuotaHandling } from '../../../backend/lib/http.js';
 
-/** Solo se permite volver a una ruta relativa dentro del propio sitio —
- *  nunca a una URL absoluta ni a algo tipo "//evil.com" — para evitar un
+/** Solo se permite volver a una ruta relativa dentro del propio sitio,
+ *  nunca a una URL absoluta ni a algo tipo "//evil.com", para evitar un
  *  open redirect a través de este parámetro. */
 function sanitizeReturnTo(raw) {
   const fallback = '/';

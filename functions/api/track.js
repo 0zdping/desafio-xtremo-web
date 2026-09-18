@@ -10,13 +10,13 @@ const TYPES = new Set(['pageview', 'click']);
 // with no session or CSRF gate at all. Without a rate limit, a single
 // anonymous client could hammer it to burn through the self-tracked D1
 // write quota (backend/lib/quota.js) well before the real Cloudflare free
-// tier limit — tripping the 429 "quota exceeded" guard for every other
+// tier limit, tripping the 429 "quota exceeded" guard for every other
 // visitor and every staff action for the rest of the day. 40 requests/min/IP
 // comfortably covers real multi-tab browsing (each batches up to 15 events).
 
 // Analytics beacon: no auth, so every visitor can reach it. Batched client-side
 // (frontend/js/analytics.js) into one request per flush instead of one per
-// pageview/click — each request here is a single d1Run() call regardless of
+// pageview/click: each request here is a single d1Run() call regardless of
 // how many events it carries, which matters because every D1 operation also
 // costs one write against the site's shared KV quota bookkeeping (see
 // backend/lib/quota.js). One insert per visit instead of per interaction

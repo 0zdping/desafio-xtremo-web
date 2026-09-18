@@ -1,6 +1,6 @@
 /** Cookieless visitor fingerprint: SHA-256(ip|ua|day|salt), truncated. Never
  *  stored anywhere reversible and rotates every day, so it can't be used to
- *  track a person across days or sites — good enough to count "unique
+ *  track a person across days or sites, which is good enough to count "unique
  *  visitors" without a tracking cookie or a consent banner. */
 export async function visitorHash(env, request) {
   const ip = request.headers.get('cf-connecting-ip') || '0.0.0.0';

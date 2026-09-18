@@ -1,7 +1,7 @@
 /** Verifies a file's *actual* bytes against the MIME type it claims to be.
  *
  *  `file.type` on a FormData upload comes straight from the multipart part's
- *  Content-Type header, which the client controls — trusting it alone (as
+ *  Content-Type header, which the client controls. Trusting it alone (as
  *  media.js/r2Evidence.js did before) means an attacker can label arbitrary
  *  bytes as "image/png" and have us store and publicly re-serve them under
  *  that Content-Type. This checks the file's magic number (its first few
@@ -15,7 +15,7 @@ const SIGNATURES = [
   { mime: 'image/webp', match: (b) => b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50 },
   // ISO base media file format (mp4/mov/m4v/...): 4-byte size, then "ftyp".
   { mime: 'video/mp4', match: (b) => b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70 },
-  // Matroska/WebM EBML header — shared by .webm and .mkv, but we only ever
+  // Matroska/WebM EBML header, shared by .webm and .mkv, but we only ever
   // accept video/webm in ALLOWED_TYPES so that's the only one that matters.
   { mime: 'video/webm', match: (b) => b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3 },
 ];

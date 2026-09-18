@@ -85,7 +85,7 @@
       const countEl = btn.querySelector('.like-count');
       if (countEl) countEl.textContent = body.likes;
     } catch (err) {
-      // Silent — a failed like toggle isn't worth an alert here.
+      // Silent: a failed like toggle isn't worth an alert here.
     } finally {
       btn.disabled = false;
     }

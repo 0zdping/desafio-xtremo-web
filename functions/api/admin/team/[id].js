@@ -46,7 +46,7 @@ export const onRequestPatch = withQuotaHandling(async (context) => {
   if (parsed.error) return jsonResponse({ error: parsed.error }, 400);
   const { mc_nick, rank_label, rank_color, function_text, team, position } = parsed.value;
 
-  // Only hit Mojang again if the nick actually changed — no need to
+  // Only hit Mojang again if the nick actually changed: no need to
   // re-resolve on every unrelated edit (color, función, posición, ...).
   const mc_uuid = mc_nick === existing.mc_nick ? existing.mc_uuid : await resolveMinecraftUuid(mc_nick);
 

@@ -21,7 +21,7 @@
 .mechanics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px;}
 .mechanic-card{
   padding:28px 24px;border-radius:var(--radius-md);
-  background:linear-gradient(155deg, var(--surface-2), var(--surface));border:1px solid var(--border);
+  background:var(--card-bg);border:1px solid var(--border);
   transition:transform .25s var(--ease), border-color .2s ease, box-shadow .25s ease;
 }
 @media (hover:hover) and (pointer:fine){
@@ -41,7 +41,7 @@
 .placeholder-section{padding:160px 0 140px;text-align:center;position:relative;z-index:1;min-height:60vh;}
 .placeholder-icon{
   width:88px;height:88px;border-radius:var(--radius-lg);margin:0 auto 28px;
-  background:linear-gradient(155deg, var(--surface-2), var(--surface));border:1px solid var(--border);
+  background:var(--card-bg);border:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;position:relative;
 }
 .placeholder-icon::after{
@@ -57,7 +57,7 @@
 .cta-section{padding:100px 0;text-align:center;position:relative;z-index:1;}
 .cta-card{
   position:relative;max-width:760px;margin:0 auto;padding:64px 40px;border-radius:var(--radius-lg);
-  background:linear-gradient(155deg, var(--surface-2), var(--surface));border:1px solid var(--border-strong);
+  background:var(--card-bg);border:1px solid var(--border-strong);
   box-shadow:var(--shadow-lg);overflow:hidden;
 }
 .cta-card::before{
@@ -133,7 +133,7 @@
 .team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:20px;}
 .team-card{
   border-radius:var(--radius-md);overflow:hidden;text-align:center;
-  background:linear-gradient(155deg, var(--surface-2), var(--surface));border:1px solid var(--border);
+  background:var(--card-bg);border:1px solid var(--border);
   transition:transform .25s var(--ease), border-color .2s ease, box-shadow .25s ease;
 }
 @media (hover:hover) and (pointer:fine){
@@ -177,7 +177,7 @@
 .wiki-page-link.active{background:var(--accent-soft);color:var(--accent-strong);font-weight:600;}
 .wiki-content{
   flex:1;min-width:0;border-radius:var(--radius-md);padding:38px 42px;
-  background:linear-gradient(155deg, var(--surface-2), var(--surface));border:1px solid var(--border);
+  background:var(--card-bg);border:1px solid var(--border);
 }
 .wiki-content h1{font-size:clamp(24px,3vw,30px);margin-bottom:6px;}
 .wiki-content-meta{font-family:var(--f-mono);font-size:12px;color:var(--text-dim);margin-bottom:26px;}
@@ -223,7 +223,7 @@
 
 /* ---------- post cards (announcements list + home teaser) ---------- */
 /* Class names below are also used verbatim by the server-rendered post
-   detail page (/anuncios/<slug>) — keep them stable. */
+   detail page (/anuncios/<slug>): keep them stable. */
 .category-pill{
   display:inline-flex;align-items:center;font-family:var(--f-mono);font-size:10.5px;font-weight:600;
   letter-spacing:.04em;text-transform:uppercase;color:var(--accent-strong);
@@ -232,7 +232,7 @@
 }
 .post-card{
   display:flex;flex-direction:column;border-radius:var(--radius-md);overflow:hidden;text-decoration:none;color:inherit;
-  background:linear-gradient(155deg, var(--surface-2), var(--surface));border:1px solid var(--border);
+  background:var(--card-bg);border:1px solid var(--border);
   transition:transform .25s var(--ease), border-color .2s ease, box-shadow .25s ease;
 }
 @media (hover:hover) and (pointer:fine){
@@ -241,7 +241,7 @@
 .post-card.pinned{border-color:var(--pin,#f2b544);box-shadow:0 0 0 1px var(--pin,#f2b544) inset;}
 .post-card-image{
   position:relative;aspect-ratio:16/10;width:100%;overflow:hidden;
-  background:linear-gradient(155deg, var(--surface-2), var(--surface));
+  background:var(--card-bg);
 }
 .post-card-image img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
 .post-card-image .pin-badge{position:absolute;top:12px;right:12px;backdrop-filter:blur(6px);}

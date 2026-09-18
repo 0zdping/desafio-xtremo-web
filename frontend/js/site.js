@@ -1,19 +1,47 @@
 (function () {
   const field = document.getElementById('field');
   if (!field) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const count = window.innerWidth < 700 ? 50 : 110;
   for (let i = 0; i < count; i++) {
     const m = document.createElement('div');
     const big = Math.random() < 0.08;
-    m.className = big ? 'mote big' : 'mote';
+    const tint = Math.random() < 0.16;
+    m.className = (big ? 'mote big' : 'mote') + (tint ? ' tint' : '');
     const s = big ? Math.random() * 1.6 + 2.2 : Math.random() * 1.4 + 0.5;
     m.style.width = s + 'px';
     m.style.height = s + 'px';
     m.style.top = Math.random() * 100 + 'vh';
     m.style.left = Math.random() * 100 + 'vw';
-    m.style.animationDuration = 2.5 + Math.random() * 6 + 's';
+    // Small autonomous drift on top of the opacity pulse, so the field reads
+    // as gently alive instead of a flat twinkling grid even with no cursor
+    // movement (the mousemove parallax further down only fires with a mouse).
+    m.style.setProperty('--dx', (Math.random() * 44 - 22).toFixed(1) + 'px');
+    m.style.setProperty('--dy', (Math.random() * 44 - 22).toFixed(1) + 'px');
+    m.style.animationDuration = 7 + Math.random() * 11 + 's';
     m.style.animationDelay = Math.random() * 6 + 's';
     field.appendChild(m);
+  }
+
+  // Embers: slow rising sparks tied to the event's own bonfire/revival
+  // mechanic, layered into the same fixed field as the stars so no extra
+  // markup is needed on every page.
+  if (!reduceMotion) {
+    const emberCount = window.innerWidth < 700 ? 0 : 16;
+    for (let i = 0; i < emberCount; i++) {
+      const e = document.createElement('div');
+      e.className = 'ember';
+      const s = Math.random() * 3 + 2;
+      e.style.width = s + 'px';
+      e.style.height = s + 'px';
+      e.style.top = 60 + Math.random() * 40 + 'vh';
+      e.style.left = Math.random() * 100 + 'vw';
+      e.style.setProperty('--ex', (Math.random() * 60 - 30).toFixed(1) + 'px');
+      e.style.setProperty('--ey', -(140 + Math.random() * 120).toFixed(1) + 'px');
+      e.style.animationDuration = 9 + Math.random() * 9 + 's';
+      e.style.animationDelay = Math.random() * 12 + 's';
+      field.appendChild(e);
+    }
   }
 })();
 
@@ -267,7 +295,7 @@ window.bindReveal();
   function renderAccountChip(user) {
     // user.avatar is built server-side from Discord's own id/avatar-hash
     // fields (see discordAvatarUrl() in backend/lib/discord.js), which are
-    // never expected to contain HTML metacharacters — but it still goes
+    // never expected to contain HTML metacharacters, but it still goes
     // into an unquoted-safe attribute below via a template string, so
     // escape it as cheap defense in depth rather than trust an upstream
     // API's format forever.

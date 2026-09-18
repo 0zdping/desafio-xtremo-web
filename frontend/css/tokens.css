@@ -27,6 +27,10 @@
   --accent-gradient: linear-gradient(135deg, var(--accent), var(--accent-2));
 
   --nebula-violet: rgba(139,92,246,0.16);
+  --ember: rgba(255,158,66,0.9);
+  --ember-glow: rgba(255,140,50,0.22);
+
+  --card-bg: radial-gradient(135% 160% at 8% -25%, var(--accent-soft) 0%, transparent 55%), linear-gradient(155deg, var(--surface-2), var(--surface));
 
   --discord: #5865f2;
   --discord-strong: #6f78f5;
@@ -63,7 +67,7 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 /* `img{display:block}` below (an author-origin rule) otherwise beats the
    UA stylesheet's `[hidden]{display:none}` regardless of selector
-   specificity, since author styles always win over UA defaults — so any
+   specificity, since author styles always win over UA defaults, so any
    <img hidden> (skin/avatar previews toggled from JS) rendered as a
    visible broken-image box instead of actually disappearing. */
 [hidden]{display:none!important;}
@@ -162,21 +166,44 @@ h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:-0.02em;lin
 .reveal.in{opacity:1;transform:translateY(0);}
 
 #field{position:fixed;inset:-40px;z-index:0;pointer-events:none;transition:transform .3s ease-out;}
-.mote{position:absolute;background:#fff;border-radius:50%;animation:motePulse var(--ease-in-out) infinite;}
+.mote{position:absolute;background:#fff;border-radius:50%;animation:moteLife var(--ease-in-out) infinite alternate;--dx:0px;--dy:0px;}
+.mote.tint{background:var(--accent-2);}
 .mote.big{filter:blur(0.5px);box-shadow:0 0 6px 1px rgba(255,255,255,0.5);}
-@keyframes motePulse{0%,100%{opacity:0.06;}50%{opacity:0.5;}}
+.mote.big.tint{box-shadow:0 0 8px 1px var(--accent-glow);}
+@keyframes moteLife{
+  0%{opacity:0.06;transform:translate(0,0);}
+  55%{opacity:0.55;transform:translate(calc(var(--dx) * .6), calc(var(--dy) * .6));}
+  100%{opacity:0.15;transform:translate(var(--dx), var(--dy));}
+}
+
+.ember{position:absolute;border-radius:50%;pointer-events:none;background:radial-gradient(circle, var(--ember) 0%, transparent 72%);animation:emberRise linear infinite;}
+@keyframes emberRise{
+  0%{opacity:0;transform:translate(0,0) scale(.5);}
+  12%{opacity:.85;}
+  80%{opacity:.4;}
+  100%{opacity:0;transform:translate(var(--ex,10px), var(--ey,-160px)) scale(1.1);}
+}
+@media (max-width:700px){ .ember{display:none;} }
 
 .nebula-field{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;transition:transform .4s ease-out;}
-.nebula{position:absolute;border-radius:50%;filter:blur(80px);will-change:transform;}
+.nebula-field::before{
+  content:'';position:absolute;inset:-25%;background-size:220% 220%;mix-blend-mode:screen;opacity:.55;
+  background-image:linear-gradient(120deg, transparent 8%, var(--accent-soft) 32%, transparent 52%, var(--nebula-violet) 74%, transparent 94%);
+  animation:auroraSweep 26s ease-in-out infinite;
+}
+.nebula{position:absolute;border-radius:50%;filter:blur(80px);will-change:transform;mix-blend-mode:screen;}
 .nebula-1{width:620px;height:620px;top:-12%;left:-8%;background:radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);animation:driftA 34s var(--ease-in-out) infinite;}
 .nebula-2{width:520px;height:520px;top:38%;right:-12%;background:radial-gradient(circle, var(--nebula-violet) 0%, transparent 72%);animation:driftB 42s var(--ease-in-out) infinite;}
-.nebula-3{width:460px;height:460px;bottom:-14%;left:22%;background:radial-gradient(circle, rgba(143,227,255,0.14) 0%, transparent 70%);animation:driftC 38s var(--ease-in-out) infinite;}
-@keyframes driftA{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(60px,40px) scale(1.12);}}
-@keyframes driftB{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-50px,-30px) scale(1.08);}}
-@keyframes driftC{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(30px,-50px) scale(1.1);}}
-@media (max-width:700px){ .nebula{filter:blur(60px);opacity:.7;} }
+.nebula-3{width:460px;height:460px;bottom:-14%;left:22%;background:radial-gradient(circle, rgba(143,227,255,0.16) 0%, transparent 70%);animation:driftC 38s var(--ease-in-out) infinite;}
+.nebula-4{width:400px;height:400px;bottom:-8%;right:16%;background:radial-gradient(circle, var(--ember-glow) 0%, transparent 72%);animation:driftD 46s var(--ease-in-out) infinite;}
+@keyframes driftA{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(80px,55px) scale(1.16);}}
+@keyframes driftB{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-70px,-45px) scale(1.12);}}
+@keyframes driftC{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(45px,-65px) scale(1.14);}}
+@keyframes driftD{0%,100%{transform:translate(0,0) rotate(0deg) scale(1);}50%{transform:translate(-55px,40px) rotate(12deg) scale(1.2);}}
+@keyframes auroraSweep{0%{background-position:0% 30%;}50%{background-position:100% 70%;}100%{background-position:0% 30%;}}
+@media (max-width:700px){ .nebula{filter:blur(60px);opacity:.7;} .nebula-field::before{opacity:.35;} }
 
-/* The wrapper only ever translates in a straight line — a plain, unambiguous
+/* The wrapper only ever translates in a straight line: a plain, unambiguous
    motion path. The trail (::after) is a *static* (non-animated) rotation on a
    child, pivoting around the wrapper's origin (where the head sits), so it
    always points opposite the travel direction regardless of the translate
@@ -209,8 +236,8 @@ h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:-0.02em;lin
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 @media (prefers-reduced-motion: reduce){
-  .nebula, .shooting-star{animation:none !important;}
-  .shooting-star{display:none;}
+  .nebula, .nebula-field::before, .shooting-star, .mote, .ember{animation:none !important;}
+  .shooting-star, .ember{display:none;}
 }
 
 section{position:relative;z-index:1;}
@@ -277,11 +304,15 @@ section{position:relative;z-index:1;}
 
 .account-dropdown{
   position:absolute;top:calc(100% + 10px);right:0;width:240px;border-radius:var(--radius-md);
-  background:var(--surface-2);border:1px solid var(--border-strong);box-shadow:var(--shadow-lg);
-  overflow:hidden;opacity:0;pointer-events:none;transform:translateY(-6px);transition:all .2s var(--ease);
+  background:var(--glass-strong);backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);
+  border:1px solid var(--border-strong);box-shadow:var(--shadow-lg);
+  overflow:hidden;opacity:0;pointer-events:none;transform:translateY(-6px) scale(.98);transition:all .2s var(--ease);
 }
-.account-wrap.open .account-dropdown{opacity:1;pointer-events:auto;transform:translateY(0);}
-.account-dropdown-head{display:flex;align-items:center;gap:12px;padding:16px;background:var(--bg-alt);border-bottom:1px solid var(--border-hair);}
+.account-wrap.open .account-dropdown{opacity:1;pointer-events:auto;transform:translateY(0) scale(1);}
+.account-dropdown-head{
+  display:flex;align-items:center;gap:12px;padding:16px;border-bottom:1px solid var(--border-hair);
+  background:linear-gradient(155deg, var(--accent-soft), transparent 75%);
+}
 .account-dropdown-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;background:var(--surface-2);border:1px solid var(--border-strong);display:block;}
 .account-dropdown-name{font-family:var(--f-display);font-size:14px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px;}
 .account-dropdown-role{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-top:3px;}

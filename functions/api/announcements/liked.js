@@ -4,7 +4,7 @@ import { withQuotaHandling, jsonResponse } from '../../../backend/lib/http.js';
 import { d1Select } from '../../../backend/lib/db.js';
 
 /** Which announcements the *current* session has liked. Deliberately not
- *  behind cachedPublicJson — this is per-user and must never be served
+ *  behind cachedPublicJson: this is per-user and must never be served
  *  from the shared edge cache. */
 export const onRequestGet = withQuotaHandling(async (context) => {
   const { request, env } = context;

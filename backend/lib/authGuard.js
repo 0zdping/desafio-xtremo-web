@@ -4,7 +4,7 @@ import { verifyCsrf } from './csrf.js';
 
 export { jsonResponse, withQuotaHandling } from './http.js';
 
-/** For public (non-admin) actions that just need *some* logged-in user —
+/** For public (non-admin) actions that just need *some* logged-in user,
  *  no permission/role check, unlike requirePermission. */
 export async function requireAuth(request, env) {
   const cookieHeader = request.headers.get('cookie');

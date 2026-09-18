@@ -22,7 +22,7 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   const role = await d1First(env, `SELECT id FROM roles WHERE id = ?`, [roleId]);
   if (!role) return jsonResponse({ error: 'Rango no encontrado.' }, 404);
 
-  // Allow assigning a role to a Discord ID that hasn't logged in yet — seed a
+  // Allow assigning a role to a Discord ID that hasn't logged in yet: seed a
   // stub profile row so the FK/reporting stays consistent; the real login
   // callback will fill in username/avatar the first time they sign in.
   await d1Run(

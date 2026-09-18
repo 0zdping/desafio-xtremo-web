@@ -43,7 +43,7 @@ export const onRequestGet = withQuotaHandling(async (context) => {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${title} — Desafio Xtremo</title>
+<title>${title} · Desafio Xtremo</title>
 <meta name="description" content="${excerpt}">
 <meta property="og:type" content="article">
 <meta property="og:title" content="${title}">

@@ -36,7 +36,7 @@ export const onRequestPost = withQuotaHandling(async (context) => {
       );
     } catch (err) {
       // A concurrent request (double-click, duplicate tab) already inserted
-      // the same (announcement_id, user_id) row — that's still a "liked"
+      // the same (announcement_id, user_id) row, which is still a "liked"
       // outcome for this request, not a real error.
       liked = true;
     }

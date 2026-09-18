@@ -4,20 +4,20 @@
  *
  *  Why this exists: the client already runs DOMPurify before submitting
  *  (see frontend/js/admin.js) and wiki pages re-sanitize with DOMPurify at
- *  render time (frontend/js/wiki.js) — but both of those are client-side
+ *  render time (frontend/js/wiki.js), but both of those are client-side
  *  and only advisory. Anyone with a stolen session + CSRF token (e.g. via
  *  another XSS, or a compromised Discord account) can call these admin
- *  endpoints directly with curl/fetch and skip the browser — and the
+ *  endpoints directly with curl/fetch and skip the browser, and the
  *  client-side DOMPurify call itself silently no-ops if the CDN script
  *  failed to load (see the `window.DOMPurify ? ... : rawHtml` fallback in
  *  admin.js). Content stored here is rendered for *every visitor* of the
  *  public site (functions/anuncios/[slug].js renders it server-side with
- *  zero escaping, by design, since it's meant to be rich HTML) — so the
+ *  zero escaping, by design, since it's meant to be rich HTML), so the
  *  real security boundary has to live on the server, not just in the
  *  editor's browser.
  *
  *  The Workers/Pages Functions runtime has no DOM, so DOMPurify can't run
- *  here directly — but the runtime does provide a native HTMLRewriter,
+ *  here directly, but the runtime does provide a native HTMLRewriter,
  *  which parses real HTML (not regex/string matching) and lets us walk it
  *  as a proper element tree. We use it as a strict allowlist: only a small
  *  set of tags survive (matching what the Quill toolbar in admin.js can
@@ -32,7 +32,7 @@ const ALLOWED_TAGS = new Set([
 ]);
 
 // Tags whose *content* is also unsafe to keep (script bodies, stylesheet
-// rules, embedded documents/forms) — removed entirely, not just unwrapped.
+// rules, embedded documents/forms): removed entirely, not just unwrapped.
 const STRIP_WITH_CONTENT = new Set([
   'script', 'style', 'iframe', 'object', 'embed', 'noscript', 'svg', 'math',
   'template', 'link', 'meta', 'base', 'form', 'input', 'button', 'textarea',
@@ -67,7 +67,7 @@ function escapeHtml(str) {
 }
 
 /** Sanitizes an HTML fragment down to a safe allowlisted subset. Never
- *  throws — on any unexpected failure (including the very unlikely case of
+ *  throws: on any unexpected failure (including the very unlikely case of
  *  HTMLRewriter being unavailable) it fails closed to plain escaped text
  *  rather than ever storing/serving raw, unsanitized HTML. */
 export async function sanitizeHtml(html) {
@@ -101,7 +101,7 @@ export async function sanitizeHtml(html) {
           const href = el.getAttribute('href');
           if (!isSafeHref(href)) el.removeAttribute('href');
           // Force safe defaults on every surviving link regardless of what
-          // the editor set — closes tabnabbing via a stripped `rel`.
+          // the editor set: closes tabnabbing via a stripped `rel`.
           el.setAttribute('target', '_blank');
           el.setAttribute('rel', 'noopener noreferrer nofollow ugc');
         }
@@ -121,7 +121,7 @@ export async function sanitizeHtml(html) {
 }
 
 /** Lighter-touch backstop for wiki pages, whose stored `content` is
- *  Markdown *source*, not HTML — rendered client-side via marked() (which
+ *  Markdown *source*, not HTML, rendered client-side via marked() (which
  *  passes raw inline HTML straight through by default) and then DOMPurify
  *  (frontend/js/wiki.js), again only advisory for the same reasons as
  *  above. Unlike sanitizeHtml(), this does NOT unwrap/allowlist tags

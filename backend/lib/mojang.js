@@ -1,6 +1,6 @@
 /** Resolves a Minecraft username to its Mojang account UUID. Returns null
  *  (never throws) if the account doesn't exist or Mojang's API is
- *  unreachable/rate-limited — callers should treat that as "unknown" and
+ *  unreachable/rate-limited. Callers should treat that as "unknown" and
  *  keep going rather than fail the whole request. */
 export async function resolveMinecraftUuid(nick) {
   try {

@@ -2,7 +2,7 @@
  *  We don't have real-time access to Cloudflare's own billing counters from
  *  inside a Worker/Pages Function, so we keep our own counters in KV (reset
  *  daily or monthly depending on the resource) and refuse to proceed once
- *  we're within 1 unit of a limit — i.e. we never actually spend the very
+ *  we're within 1 unit of a limit, i.e. we never actually spend the very
  *  last free unit, on purpose. */
 export const QUOTA_LIMITS = {
   d1_reads: 5000000,
@@ -41,7 +41,7 @@ function periodTtl(resource) {
 // Kept as an alias in case anything else imports the old name directly.
 export const todayKey = periodKey;
 
-/** Check whether `resource` still has headroom. Does not consume anything —
+/** Check whether `resource` still has headroom. Does not consume anything;
  *  call addUsage() after the real operation completes with its actual cost.
  *
  *  This bookkeeping itself rides on KV, which has its own real Cloudflare

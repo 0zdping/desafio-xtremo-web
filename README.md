@@ -3,17 +3,17 @@
 Sitio web de Desafio Xtremo. Cloudflare Pages (frontend estático) + Pages Functions
 (backend serverless) + D1 (SQL) + KV + R2, todo dentro del free tier de Cloudflare.
 
-- `frontend/` — sitio estático: home, wiki, tablón de anuncios, panel de administración.
-- `functions/api/` — backend (Cloudflare Pages Functions).
-- `backend/lib/` — librerías compartidas por las functions (sesiones, permisos, cuotas, etc).
-- `backend/migrations/` — migraciones de D1, en orden (`0001_init.sql`, `0002_content.sql`, ...).
+- `frontend/`: sitio estático: home, wiki, tablón de anuncios, panel de administración.
+- `functions/api/`: backend (Cloudflare Pages Functions).
+- `backend/lib/`: librerías compartidas por las functions (sesiones, permisos, cuotas, etc).
+- `backend/migrations/`: migraciones de D1, en orden (`0001_init.sql`, `0002_content.sql`, ...).
 
 ## Qué hay
 
 - **Login con Discord** (OAuth) + sesiones en KV + protección CSRF de doble cookie en
   toda petición que escribe.
-- **Rangos y permisos** (RBAC): dos equipos con rangos fijos de partida — Staff (Owner,
-  Co-Owner, Community Manager, Admin, Mod, Helper) y Desarrollo (Developer, Builder) —
+- **Rangos y permisos** (RBAC): dos equipos con rangos fijos de partida, Staff (Owner,
+  Co-Owner, Community Manager, Admin, Mod, Helper) y Desarrollo (Developer, Builder),
   gestionables desde el panel (`/admin.html`, permiso `panel.manage_roles`). Los rangos
   no están bloqueados salvo Owner/Co-Owner: se pueden renombrar, cambiar de color/orden y
   ajustar sus permisos libremente.
@@ -39,7 +39,7 @@ Sitio web de Desafio Xtremo. Cloudflare Pages (frontend estático) + Pages Funct
 Bindings del proyecto (Settings → Functions):
 - D1 database → variable `DB`.
 - KV namespace → variable `SESSIONS`.
-- R2 bucket → variable `EVIDENCE` (**pendiente de crear** — solo hace falta para que la
+- R2 bucket → variable `EVIDENCE` (**pendiente de crear**, solo hace falta para que la
   subida de pruebas de sanciones funcione; el resto del sitio funciona igual sin esto).
   1. Cloudflare dashboard → R2 → crear bucket (ej. `desafio-xtremo-evidence`).
   2. Proyecto Pages → Settings → Functions → R2 bucket bindings → variable `EVIDENCE`

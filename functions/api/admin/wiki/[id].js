@@ -22,7 +22,7 @@ async function validatePage(body) {
   if (!title || title.length > 120) return { error: 'Título inválido.' };
   if (category.length > 60) return { error: 'Categoría inválida.' };
 
-  // Server-side backstop for embedded raw HTML in the Markdown source — see
+  // Server-side backstop for embedded raw HTML in the Markdown source, see
   // backend/lib/sanitizeHtml.js.
   const content = await stripDangerousHtml(rawContent);
 

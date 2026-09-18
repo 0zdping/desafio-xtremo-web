@@ -11,7 +11,7 @@ function safeFileName(name) {
 
 /** Sube una imagen pública (portada de post o imagen intercalada en el
  *  cuerpo) al bucket MEDIA y devuelve su URL pública definitiva. A
- *  diferencia de r2Evidence.js, este bucket es público — no hay endpoint
+ *  diferencia de r2Evidence.js, este bucket es público: no hay endpoint
  *  de lectura propio, el navegador pide la imagen directamente a
  *  MEDIA_PUBLIC_URL sin pasar por nuestra Function. */
 export async function putMediaImage(env, file) {
@@ -21,7 +21,7 @@ export async function putMediaImage(env, file) {
   if (file.size > MAX_IMAGE_SIZE) {
     throw new Error('La imagen supera el tamaño máximo permitido (5 MB).');
   }
-  // Don't trust the declared Content-Type alone — a request built outside
+  // Don't trust the declared Content-Type alone: a request built outside
   // the browser (curl/fetch with a stolen session) can label any bytes as
   // "image/png". This is a public bucket served straight from R2 under a
   // browser-facing domain, so confirm the file's own magic bytes actually

@@ -24,7 +24,7 @@ async function validatePage(body) {
   if (category.length > 60) return { error: 'Categoría inválida.' };
 
   // Content is Markdown, rendered client-side with marked()+DOMPurify (see
-  // frontend/js/wiki.js) — but `marked` passes raw inline HTML straight
+  // frontend/js/wiki.js), but `marked` passes raw inline HTML straight
   // through by default, and that client-side DOMPurify pass is advisory
   // only (skipped entirely if the CDN script fails to load). Strip any
   // embedded HTML down to the same safe allowlist used for announcements

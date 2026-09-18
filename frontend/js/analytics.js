@@ -1,5 +1,5 @@
 /* Cookieless page-view + link-click beacon for the public site. Never sets a
- * cookie or reads localStorage — the server derives a daily-rotating,
+ * cookie or reads localStorage; the server derives a daily-rotating,
  * non-reversible visitor hash from IP+UA (see backend/lib/analytics.js), so
  * this needs no consent banner. Events are queued and sent in one batched
  * request instead of one request per interaction, since every write against

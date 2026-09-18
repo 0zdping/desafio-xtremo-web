@@ -48,7 +48,7 @@
       setLiked(body.liked);
       if (countEl) countEl.textContent = body.likes;
     } catch (err) {
-      // Silent — a failed like toggle isn't worth interrupting the reader with an alert.
+      // Silent: a failed like toggle isn't worth interrupting the reader with an alert.
     } finally {
       busy = false;
       btn.disabled = false;

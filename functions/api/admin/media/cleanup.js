@@ -6,7 +6,7 @@ import {
 import { d1Select } from '../../../../backend/lib/db.js';
 
 /** Deletes R2 objects under posts/ that aren't referenced by any
- *  announcement (hero image or an <img> embedded in the body) anymore —
+ *  announcement (hero image or an <img> embedded in the body) anymore:
  *  leftovers from posts deleted before delete cleaned up their images, or
  *  from edits that replaced an image. Nothing outside the MEDIA bucket
  *  (e.g. the static homepage banner in frontend/assets) is ever touched.

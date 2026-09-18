@@ -1,5 +1,5 @@
 -- Upgrades "announcements" into full blog/vlog posts (RoveMC-news-style):
--- rich HTML body (from the Quill editor, sanitized at save time — no DOM in
+-- rich HTML body (from the Quill editor, sanitized at save time: no DOM in
 -- the Workers runtime to sanitize at serve time), a cover image, a category
 -- pill, a short list/teaser excerpt independent of the body, a URL slug for
 -- individual /anuncios/<slug> pages, and a simple non-deduplicated view

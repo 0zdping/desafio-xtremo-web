@@ -19,7 +19,7 @@ export async function putEvidence(env, sanctionId, file) {
     throw new Error('El archivo supera el tamaño máximo permitido (8 MB).');
   }
   // Same reasoning as media.js: don't trust the declared Content-Type for
-  // evidence files either — verify the real magic bytes before storing.
+  // evidence files either: verify the real magic bytes before storing.
   if (!(await verifyFileType(file, ALLOWED_TYPES))) {
     throw new Error('El archivo no coincide con el tipo declarado.');
   }

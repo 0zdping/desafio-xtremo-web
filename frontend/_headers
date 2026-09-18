@@ -1,4 +1,4 @@
-# Security headers applied to every response on the site — both static
+# Security headers applied to every response on the site, both static
 # assets and Pages Functions (/api/*, /anuncios/<slug>, /wiki/<slug>).
 # Content-Security-Policy allowlist reflects the exact external origins the
 # site actually loads (Google Fonts, cdnjs.cloudflare.com for
@@ -8,7 +8,7 @@
 # anywhere in frontend/ (checked), so script-src doesn't need
 # 'unsafe-inline'; style-src does, because avatar/role/rank colors are set
 # as inline `style="..."` attributes from validated #RRGGBB values at
-# render time (frontend/js/site.js, admin.js, home-sections.js) — that's
+# render time (frontend/js/site.js, admin.js, home-sections.js). That's
 # presentation-only and not worth reworking into a nonce/hash scheme here.
 #
 # NOTE: if MEDIA_PUBLIC_URL (env var, see backend/lib/media.js) is ever

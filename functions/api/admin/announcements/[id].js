@@ -29,7 +29,7 @@ async function validateAnnouncement(body) {
   if (!title || title.length > 140) return { error: 'Título inválido.' };
   if (!rawText) return { error: 'El contenido no puede estar vacío.' };
 
-  // Server-side sanitization is the real security boundary here — see
+  // Server-side sanitization is the real security boundary here: see
   // backend/lib/sanitizeHtml.js for why the client-side DOMPurify pass
   // alone isn't enough.
   const text = await sanitizeHtml(rawText);

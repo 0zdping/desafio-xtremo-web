@@ -1,4 +1,4 @@
-/* Dark, in-page replacement for window.confirm() — the native dialog is an
+/* Dark, in-page replacement for window.confirm(): the native dialog is an
  * unstyled OS-chrome white box that also freezes the tab for any outside
  * automation, unlike this one. */
 (function () {
@@ -305,8 +305,8 @@
     const canManage = hasPerm('panel.manage_roles');
 
     // A search by a not-yet-seen Discord ID returns nothing from `users`,
-    // but you can still assign it a role — synthesize a stub row so there's
-    // actually a control to do that, instead of just saying it's possible.
+    // but you can still assign it a role, so synthesize a stub row: that way
+    // there's an actual control to do it, instead of just saying it's possible.
     if (!users.length && DISCORD_ID_RE.test(q)) {
       users = [{ id: q, username: null, avatar: null, roles: [] }];
     }
@@ -346,7 +346,7 @@
 
   function renderUserRow(u, allRoles, canManage) {
     // u.avatar is another user's stored avatar URL (see comment on
-    // avatarSrc in site.js) — escape it here too since this renders other
+    // avatarSrc in site.js), so escape it here too: this renders other
     // people's data in a privileged staff view.
     const avatar = escapeHtml(
       u.avatar ||
@@ -495,7 +495,7 @@
       .map((r) => {
         const val = Number(r[opts.valueKey]) || 0;
         const pct = (val / max) * 100;
-        const label = opts.formatLabel ? opts.formatLabel(r[opts.labelKey]) : escapeHtml(r[opts.labelKey] || '—');
+        const label = opts.formatLabel ? opts.formatLabel(r[opts.labelKey]) : escapeHtml(r[opts.labelKey] || 'Desconocido');
         return `
         <div class="stats-bar-row">
           <span class="stats-bar-label" title="${escapeHtml(String(r[opts.labelKey] || ''))}">${label}</span>
@@ -531,7 +531,7 @@
     renderBarList('stats-countries', data.countries, {
       valueKey: 'views',
       labelKey: 'country',
-      formatLabel: (v) => `${flagEmoji(v)} ${escapeHtml(v || '—')}`,
+      formatLabel: (v) => `${flagEmoji(v)} ${escapeHtml(v || 'Desconocido')}`,
     });
   }
 

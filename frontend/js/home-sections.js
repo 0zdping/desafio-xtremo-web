@@ -59,7 +59,7 @@
         window.bindReveal && window.bindReveal();
       })
       .catch(() => {
-        /* keep the section hidden — no error left visible */
+        /* keep the section hidden, no error left visible */
       });
   })();
 
@@ -100,7 +100,7 @@
         window.bindReveal && window.bindReveal();
       })
       .catch(() => {
-        /* keep the section hidden — no error left visible */
+        /* keep the section hidden, no error left visible */
       });
 
     function renderTeamCard(m) {

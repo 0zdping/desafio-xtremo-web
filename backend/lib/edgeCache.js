@@ -2,7 +2,7 @@ import { jsonResponse } from './http.js';
 
 /** Serves public GET JSON through Cloudflare's edge cache so repeat hits
  *  don't burn D1/KV quota. Falls back to computing (uncached) if the Cache
- *  API isn't available in this runtime — never lets a caching failure break
+ *  API isn't available in this runtime. Never lets a caching failure break
  *  the actual request. */
 export async function cachedPublicJson(context, cacheKeyUrl, ttlSeconds, computeFn) {
   let cache = null;
@@ -24,7 +24,7 @@ export async function cachedPublicJson(context, cacheKeyUrl, ttlSeconds, compute
   try {
     context.waitUntil(cache.put(cacheKey, res.clone()));
   } catch (err) {
-    // Caching failed — still return the freshly computed response.
+    // Caching failed, still return the freshly computed response.
   }
   return res;
 }
@@ -38,6 +38,6 @@ export async function purgeEdgeCache(context, urls) {
     const cache = caches.default;
     await Promise.all(urls.map((url) => cache.delete(new Request(url, context.request))));
   } catch (err) {
-    // Best-effort — the TTL still bounds the staleness.
+    // Best-effort: the TTL still bounds the staleness.
   }
 }
