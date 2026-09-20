@@ -319,6 +319,14 @@ window.bindReveal();
          </a>`
       : '';
 
+    const canDevZone = Array.isArray(user.permissions) && user.permissions.includes('devzone.access');
+    const devZoneLink = canDevZone
+      ? `<a href="/devzone.html">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3L3 12l5 9M16 3l5 9-5 9M13 3l-2 18"/></svg>
+           Dev Zone
+         </a>`
+      : '';
+
     if (corner) {
       const wrap = document.createElement('div');
       wrap.className = 'account-wrap corner-fade-in';
@@ -339,7 +347,8 @@ window.bindReveal();
           </div>
           <div class="account-dropdown-links">
             ${panelLink}
-            ${panelLink ? '<div class="divider"></div>' : ''}
+            ${devZoneLink}
+            ${panelLink || devZoneLink ? '<div class="divider"></div>' : ''}
             <button id="account-logout-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
               Cerrar sesión
@@ -367,6 +376,12 @@ window.bindReveal();
         const a = document.createElement('a');
         a.href = '/admin.html';
         a.textContent = 'Panel de administración';
+        mobileSheet.insertBefore(a, mobileSheet.lastElementChild);
+      }
+      if (canDevZone) {
+        const a = document.createElement('a');
+        a.href = '/devzone.html';
+        a.textContent = 'Dev Zone';
         mobileSheet.insertBefore(a, mobileSheet.lastElementChild);
       }
       const logoutBtn = document.createElement('button');
