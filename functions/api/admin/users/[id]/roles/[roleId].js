@@ -3,7 +3,10 @@ import {
   jsonResponse,
   withQuotaHandling,
 } from '../../../../../../backend/lib/adminGuard.js';
-import { d1Run } from '../../../../../../backend/lib/db.js';
+import { d1Run, d1First } from '../../../../../../backend/lib/db.js';
+import { canManageRole } from '../../../../../../backend/lib/permissions.js';
+
+const DISCORD_ID = /^\d{15,25}$/;
 
 export const onRequestDelete = withQuotaHandling(async (context) => {
   const { request, env, params } = context;
@@ -12,7 +15,14 @@ export const onRequestDelete = withQuotaHandling(async (context) => {
 
   const userId = params.id;
   const roleId = Number(params.roleId);
+  if (!DISCORD_ID.test(String(userId))) return jsonResponse({ error: 'ID de Discord inválido.' }, 400);
   if (!Number.isInteger(roleId)) return jsonResponse({ error: 'Rango inválido.' }, 400);
+
+  const role = await d1First(env, `SELECT id, is_locked, position FROM roles WHERE id = ?`, [roleId]);
+  if (!role) return jsonResponse({ error: 'Rango no encontrado.' }, 404);
+  if (!canManageRole(guard.roles, role)) {
+    return jsonResponse({ error: 'Solo puedes retirar rangos por debajo del tuyo.' }, 403);
+  }
 
   await d1Run(env, `DELETE FROM user_roles WHERE user_id = ? AND role_id = ?`, [userId, roleId]);
   return jsonResponse({ ok: true });

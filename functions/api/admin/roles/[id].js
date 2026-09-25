@@ -4,6 +4,7 @@ import {
   withQuotaHandling,
 } from '../../../../backend/lib/adminGuard.js';
 import { d1Select, d1Run, d1First } from '../../../../backend/lib/db.js';
+import { actorRank, canManageRole, grantablePermissions } from '../../../../backend/lib/permissions.js';
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
@@ -15,20 +16,28 @@ export const onRequestPatch = withQuotaHandling(async (context) => {
   const roleId = Number(params.id);
   if (!Number.isInteger(roleId)) return jsonResponse({ error: 'Rango inválido.' }, 400);
 
-  const role = await d1First(env, `SELECT id, is_locked FROM roles WHERE id = ?`, [roleId]);
+  const role = await d1First(env, `SELECT id, is_locked, position FROM roles WHERE id = ?`, [roleId]);
   if (!role) return jsonResponse({ error: 'Rango no encontrado.' }, 404);
   if (role.is_locked) {
     return jsonResponse({ error: 'Este rango no se puede modificar.' }, 400);
+  }
+  if (!canManageRole(guard.roles, role)) {
+    return jsonResponse({ error: 'Solo puedes editar rangos por debajo del tuyo.' }, 403);
   }
 
   const body = await request.json().catch(() => null);
   const name = (body?.name || '').trim();
   const color = (body?.color || '').trim();
   const position = Number.isFinite(body?.position) ? Math.trunc(body.position) : 0;
-  const permissionKeys = Array.isArray(body?.permissionKeys) ? body.permissionKeys : [];
+  const permissionKeys = Array.isArray(body?.permissionKeys) ? body.permissionKeys.filter((k) => typeof k === 'string').slice(0, 100) : [];
 
   if (!name || name.length > 40) return jsonResponse({ error: 'Nombre inválido.' }, 400);
   if (!HEX_COLOR.test(color)) return jsonResponse({ error: 'Color inválido (usa formato #RRGGBB).' }, 400);
+  if (position >= actorRank(guard.roles)) {
+    return jsonResponse({ error: 'La posición debe ser menor que la de tu rango más alto.' }, 403);
+  }
+  const grant = grantablePermissions(guard.roles, guard.permissions, permissionKeys);
+  if (!grant.ok) return jsonResponse({ error: `No puedes conceder permisos que no tienes: ${grant.extra.join(', ')}.` }, 403);
 
   const dupe = await d1First(env, `SELECT id FROM roles WHERE name = ? AND id != ?`, [name, roleId]);
   if (dupe) return jsonResponse({ error: 'Ya existe un rango con ese nombre.' }, 409);
@@ -66,10 +75,13 @@ export const onRequestDelete = withQuotaHandling(async (context) => {
   const roleId = Number(params.id);
   if (!Number.isInteger(roleId)) return jsonResponse({ error: 'Rango inválido.' }, 400);
 
-  const role = await d1First(env, `SELECT id, is_locked FROM roles WHERE id = ?`, [roleId]);
+  const role = await d1First(env, `SELECT id, is_locked, position FROM roles WHERE id = ?`, [roleId]);
   if (!role) return jsonResponse({ error: 'Rango no encontrado.' }, 404);
   if (role.is_locked) {
     return jsonResponse({ error: 'Este rango no se puede eliminar.' }, 400);
+  }
+  if (!canManageRole(guard.roles, role)) {
+    return jsonResponse({ error: 'Solo puedes eliminar rangos por debajo del tuyo.' }, 403);
   }
 
   await d1Run(env, `DELETE FROM roles WHERE id = ?`, [roleId]);

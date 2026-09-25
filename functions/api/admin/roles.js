@@ -5,6 +5,7 @@ import {
   withQuotaHandling,
 } from '../../../backend/lib/adminGuard.js';
 import { d1Select, d1Run } from '../../../backend/lib/db.js';
+import { actorRank, grantablePermissions } from '../../../backend/lib/permissions.js';
 
 async function loadRolesWithPermissions(env) {
   const roles = await d1Select(
@@ -47,10 +48,15 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   const name = (body?.name || '').trim();
   const color = (body?.color || '').trim();
   const position = Number.isFinite(body?.position) ? Math.trunc(body.position) : 0;
-  const permissionKeys = Array.isArray(body?.permissionKeys) ? body.permissionKeys : [];
+  const permissionKeys = Array.isArray(body?.permissionKeys) ? body.permissionKeys.filter((k) => typeof k === 'string').slice(0, 100) : [];
 
   if (!name || name.length > 40) return jsonResponse({ error: 'Nombre inválido.' }, 400);
   if (!HEX_COLOR.test(color)) return jsonResponse({ error: 'Color inválido (usa formato #RRGGBB).' }, 400);
+  if (position >= actorRank(guard.roles)) {
+    return jsonResponse({ error: 'La posición debe ser menor que la de tu rango más alto.' }, 403);
+  }
+  const grant = grantablePermissions(guard.roles, guard.permissions, permissionKeys);
+  if (!grant.ok) return jsonResponse({ error: `No puedes conceder permisos que no tienes: ${grant.extra.join(', ')}.` }, 403);
 
   const existing = await d1Select(env, `SELECT id FROM roles WHERE name = ?`, [name]);
   if (existing.length) return jsonResponse({ error: 'Ya existe un rango con ese nombre.' }, 409);

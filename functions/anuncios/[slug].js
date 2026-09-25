@@ -2,15 +2,149 @@ import { withQuotaHandling } from '../../backend/lib/http.js';
 import { cachedPublicJson } from '../../backend/lib/edgeCache.js';
 import { d1First, d1Run } from '../../backend/lib/db.js';
 
+/* Server-rendered announcement page (/anuncios/<slug>). Rendered here rather
+ * than client-side so link previews (Discord, X) get the real title, excerpt
+ * and cover image. The NAV/FOOTER markup below mirrors frontend/index.html so
+ * the shell is identical on every page: if you change the nav or footer
+ * there, mirror it here too. */
+
 function escapeHtml(str) {
   return String(str == null ? '' : str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
+/** D1 stores "YYYY-MM-DD HH:MM:SS" in UTC without a zone marker. */
+function toDate(iso) {
+  if (!iso) return null;
+  let s = String(iso);
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/.test(s)) s = s.replace(' ', 'T') + 'Z';
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function formatDate(iso) {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-  } catch { return ''; }
+  const d = toDate(iso);
+  return d ? d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Madrid' }) : '';
+}
+
+function readingTime(html) {
+  const words = String(html || '').replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200));
+}
+
+/** Crawlers, link unfurlers and speculative prefetches shouldn't inflate the
+ *  public view counter (each of them was also a D1 write). */
+function isCountableView(request) {
+  const ua = (request.headers.get('user-agent') || '').toLowerCase();
+  if (!ua || /bot|crawl|spider|slurp|preview|facebookexternalhit|embed|discord|whatsapp|telegram|curl|wget|python|headless/.test(ua)) return false;
+  const purpose = (request.headers.get('sec-purpose') || request.headers.get('purpose') || '').toLowerCase();
+  if (purpose.includes('prefetch') || purpose.includes('prerender')) return false;
+  return true;
+}
+
+const HEAD = `<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#030b0a">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="stylesheet" href="/css/content.css">`;
+
+const NAV = `<header class="site-nav">
+  <div class="container">
+    <a href="/" class="nav-logo" aria-label="Desafio Xtremo, inicio"><img src="/assets/wordmark.png" alt="Desafio Xtremo" width="148" height="20"></a>
+    <ul class="nav-links">
+      <li><a href="/">Inicio</a></li>
+      <li><a href="/#recursos">El juego</a></li>
+      <li><a href="/wiki.html">Wiki</a></li>
+      <li><a href="/anuncios.html">Anuncios</a></li>
+      <li><a href="/#equipo">Equipo</a></li>
+    </ul>
+    <div class="nav-right">
+      <div id="account-slot"></div>
+      <a href="/invite" target="_blank" rel="noopener" class="btn btn-discord btn-sm nav-cta">Discord</a>
+      <button class="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<div class="mobile-menu" id="mobile-menu">
+  <nav aria-label="Menú móvil">
+    <a href="/"><small>01</small>Inicio</a>
+    <a href="/#recursos"><small>02</small>El juego</a>
+    <a href="/wiki.html"><small>03</small>Wiki</a>
+    <a href="/anuncios.html"><small>04</small>Anuncios</a>
+    <a href="/invite" target="_blank" rel="noopener"><small>05</small>Discord</a>
+  </nav>
+  <div class="mobile-menu-account" id="mobile-account"></div>
+</div>`;
+
+const FOOTER = `<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <img src="/assets/wordmark.png" alt="Desafio Xtremo" width="163" height="22" loading="lazy">
+        <p>Un evento de Minecraft por equipos, hecho por y para jugadores. Proyecto independiente.</p>
+      </div>
+      <div class="footer-col">
+        <h3>Explorar</h3>
+        <ul><li><a href="/#recursos">El juego</a></li><li><a href="/wiki.html">Wiki</a></li><li><a href="/anuncios.html">Anuncios</a></li><li><a href="/#equipo">Equipo</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h3>Comunidad</h3>
+        <ul><li><a href="/invite" target="_blank" rel="noopener">Discord</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h3>Servidor</h3>
+        <div class="server-ip"><span class="status-dot"></span><div><p class="server-ip-label">IP del servidor</p><p class="server-ip-value">Próximamente</p></div></div>
+      </div>
+    </div>
+    <p class="footer-giant" aria-hidden="true">DESAFIO XTREMO</p>
+    <div class="footer-bottom">
+      <p>© 2026 Desafio Xtremo. No es un producto oficial de Minecraft. No está aprobado por Mojang ni Microsoft, ni asociado con ellos.</p>
+      <p>Hecho a mano por el equipo.</p>
+    </div>
+  </div>
+</footer>`;
+
+const BACKDROP = `<a class="skip-link" href="#main">Saltar al contenido</a>
+<div class="scroll-progress" aria-hidden="true"></div>
+<div class="backdrop" aria-hidden="true"></div>
+<canvas id="dust" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>`;
+
+const HEART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>';
+
+function notFound() {
+  const html = `<!DOCTYPE html>
+<html lang="es" class="no-js">
+<head>
+<title>Anuncio no encontrado · Desafio Xtremo</title>
+<meta name="robots" content="noindex">
+${HEAD}
+</head>
+<body>
+${BACKDROP}
+${NAV}
+<main id="main">
+  <section class="page-head">
+    <div class="container">
+      <p class="eyebrow">Error 404</p>
+      <h1>Te has perdido<br>en la niebla.</h1>
+      <p>Este anuncio no existe o se ha retirado. Vuelve al diario para ver las últimas novedades.</p>
+      <p style="margin-top:28px"><a class="btn btn-primary" href="/anuncios.html">Ver todos los anuncios</a></p>
+    </div>
+  </section>
+</main>
+${FOOTER}
+<script src="/js/site.js"></script>
+<script src="/js/motion.js"></script>
+</body>
+</html>`;
+  return new Response(html, { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 }
 
 export const onRequestGet = withQuotaHandling(async (context) => {
@@ -26,96 +160,94 @@ export const onRequestGet = withQuotaHandling(async (context) => {
     return { post };
   }).then((res) => res.clone().json());
 
-  if (!post) {
-    return new Response('<!doctype html><title>No encontrado</title><p>Anuncio no encontrado.</p>', { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  if (!post) return notFound();
+
+  if (isCountableView(request)) {
+    // Best-effort and off the critical path: a failed counter update must
+    // never break or slow down the page itself.
+    const bump = d1Run(env, 'UPDATE announcements SET views = views + 1 WHERE id = ?', [post.id]).catch(() => {});
+    if (context.waitUntil) context.waitUntil(bump);
+    else await bump;
   }
 
-  await d1Run(env, 'UPDATE announcements SET views = views + 1 WHERE id = ?', [post.id]);
-
+  const origin = new URL(request.url).origin;
+  const url = `${origin}/anuncios/${encodeURIComponent(post.slug)}`;
   const title = escapeHtml(post.title);
   const excerpt = escapeHtml(post.excerpt || '');
   const heroUrl = post.hero_image_url ? escapeHtml(post.hero_image_url) : '';
+  const ogImage = heroUrl || `${origin}/assets/banner.png`;
   const category = escapeHtml(post.category || 'Anuncio');
-  const dateStr = formatDate(post.created_at);
+  const published = toDate(post.created_at);
+  const mins = readingTime(post.body);
+  const likes = Number(post.likes) || 0;
+  const id = Number(post.id);
 
   const html = `<!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="no-js">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${title} · Desafio Xtremo</title>
 <meta name="description" content="${excerpt}">
+<link rel="canonical" href="${escapeHtml(url)}">
 <meta property="og:type" content="article">
+<meta property="og:site_name" content="Desafio Xtremo">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${excerpt}">
-${heroUrl ? `<meta property="og:image" content="${heroUrl}">` : ''}
+<meta property="og:image" content="${ogImage}">
+<meta property="og:url" content="${escapeHtml(url)}">
+${published ? `<meta property="article:published_time" content="${published.toISOString()}">` : ''}
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/tokens.css">
-<link rel="stylesheet" href="/css/home.css">
+<meta name="twitter:title" content="${title}">
+<meta name="twitter:description" content="${excerpt}">
+<meta name="twitter:image" content="${ogImage}">
+${HEAD}
 </head>
-<body>
-<div id="field"></div>
-<div class="nebula-field" id="nebula-field"><div class="nebula nebula-1"></div><div class="nebula nebula-2"></div><div class="nebula nebula-3"></div></div>
-<div class="grain"></div>
-<div id="account-corner" class="account-corner"></div>
-<div class="nav-wrap">
-  <nav class="nav glass">
-    <a href="/index.html" class="nav-logo"><img src="/assets/wordmark.png" alt="Desafio Xtremo"></a>
-    <ul class="nav-links">
-      <li><a href="/index.html">Inicio</a></li>
-      <li><a href="/wiki.html">Wiki</a></li>
-      <li><a href="/anuncios.html" class="active">Anuncios</a></li>
-      <li><a href="/index.html#equipo">Equipo</a></li>
-      <li><a href="/invite" target="_blank" rel="noopener">Discord</a></li>
-    </ul>
-    <div class="nav-right"><button class="nav-toggle" aria-label="Abrir menú"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>
-  </nav>
-</div>
-<div class="mobile-sheet">
-  <a href="/index.html">Inicio</a>
-  <a href="/wiki.html">Wiki</a>
-  <a href="/anuncios.html">Anuncios</a>
-  <a href="/index.html#equipo">Equipo</a>
-  <a href="/invite" target="_blank" rel="noopener">Discord</a>
-</div>
-
-<section class="post-detail">
-  <div class="container post-detail-container">
-    ${heroUrl ? `<div class="post-detail-hero"><img src="${heroUrl}" alt="${title}"></div>` : ''}
-    <h1 class="post-detail-title">${title}</h1>
-    <div class="post-detail-meta">
-      <span class="category-pill">${category}</span>
-      <span class="post-detail-date">${escapeHtml(dateStr)}</span>
+<body class="page-post">
+${BACKDROP}
+${NAV}
+<main id="main">
+  <article class="post" data-post-id="${id}" data-slug="${escapeHtml(post.slug)}">
+    <div class="container">
+      <div class="post-wrap">
+        <a href="/anuncios.html" class="post-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>Volver a los anuncios</a>
+        <div class="post-meta" data-reveal="up">
+          <span class="category-pill">${category}</span>
+          ${published ? `<time datetime="${published.toISOString()}">${escapeHtml(formatDate(post.created_at))}</time>` : ''}
+          <span>${mins} min de lectura</span>
+        </div>
+        <h1 class="post-title" data-split>${title}</h1>
+        ${excerpt ? `<p class="post-dek" data-reveal="up" data-delay="0.1">${excerpt}</p>` : ''}
+        <div class="post-actions" data-reveal="up" data-delay="0.15">
+          <span class="stat" title="Visitas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>${Number(post.views) || 0}</span>
+          <button type="button" class="like-btn" data-like-id="${id}" aria-pressed="false" aria-label="Me gusta">${HEART}<span class="like-count">${likes}</span></button>
+          <button type="button" class="btn btn-ghost btn-sm share-btn" data-share="${escapeHtml(url)}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg>
+            Compartir
+          </button>
+        </div>
+      </div>
+      ${heroUrl ? `<figure class="post-hero" data-reveal="scale"><img src="${heroUrl}" alt="" fetchpriority="high"></figure>` : ''}
+      <div class="md-content post-body">${post.body || ''}</div>
+      <aside class="post-end">
+        <p>¿Te ha gustado?</p>
+        <button type="button" class="like-btn" data-like-id="${id}" aria-pressed="false" aria-label="Me gusta">${HEART}<span class="like-count">${likes}</span></button>
+      </aside>
     </div>
-    <div class="post-detail-stats">
-      <span class="stat-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-        ${post.views}
-      </span>
-      <button type="button" class="like-btn" id="post-like-btn" data-post-id="${post.id}" aria-pressed="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>
-        <span class="like-count">${post.likes || 0}</span>
-      </button>
+  </article>
+  <section class="post-related" id="post-related" hidden>
+    <div class="container">
+      <h2>Más del diario</h2>
+      <div class="posts-grid" id="related-grid"></div>
     </div>
-    <div class="md-content post-detail-body">${post.body || ''}</div>
-    <a href="/anuncios.html" class="post-detail-back">← Volver a los anuncios</a>
-  </div>
-</section>
-
-<footer class="site-footer">
-  <div class="footer-bar"><div class="container"><span class="footer-ip">IP · próximamente</span><div class="footer-social"><a href="/invite" target="_blank" rel="noopener" aria-label="Discord"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0015.6 3l-.3.6a14 14 0 014.1 1.6 17 17 0 00-14.8 0A14 14 0 018.7 3.6L8.4 3a19.7 19.7 0 00-4.7 1.4C1 9 .3 13.5.6 18a20 20 0 006 3l1-1.4a12.8 12.8 0 01-1.9-.9l.5-.4a14.3 14.3 0 0011.6 0l.5.4c-.6.4-1.2.6-1.9.9l1 1.4a20 20 0 006-3c.4-5.2-.9-9.7-3.1-13.6zM8.5 15c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2zm7 0c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2z"/></svg></a></div></div></div>
-  <div class="footer-bottom"><div class="container"><p>© 2026 Desafio Xtremo</p></div></div>
-</footer>
+  </section>
+</main>
+${FOOTER}
 <script src="/js/site.js"></script>
+<script src="/js/motion.js"></script>
 <script src="/js/analytics.js"></script>
-<script src="/js/post-like.js"></script>
+<script src="/js/posts.js"></script>
+<script src="/js/post.js"></script>
 </body>
 </html>`;
 
-  return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' } });
 });

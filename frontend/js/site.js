@@ -1,419 +1,433 @@
-(function () {
-  const field = document.getElementById('field');
-  if (!field) return;
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const count = window.innerWidth < 700 ? 50 : 110;
-  for (let i = 0; i < count; i++) {
-    const m = document.createElement('div');
-    const big = Math.random() < 0.08;
-    const tint = Math.random() < 0.16;
-    m.className = (big ? 'mote big' : 'mote') + (tint ? ' tint' : '');
-    const s = big ? Math.random() * 1.6 + 2.2 : Math.random() * 1.4 + 0.5;
-    m.style.width = s + 'px';
-    m.style.height = s + 'px';
-    m.style.top = Math.random() * 100 + 'vh';
-    m.style.left = Math.random() * 100 + 'vw';
-    // Small autonomous drift on top of the opacity pulse, so the field reads
-    // as gently alive instead of a flat twinkling grid even with no cursor
-    // movement (the mousemove parallax further down only fires with a mouse).
-    m.style.setProperty('--dx', (Math.random() * 44 - 22).toFixed(1) + 'px');
-    m.style.setProperty('--dy', (Math.random() * 44 - 22).toFixed(1) + 'px');
-    m.style.animationDuration = 7 + Math.random() * 11 + 's';
-    m.style.animationDelay = Math.random() * 6 + 's';
-    field.appendChild(m);
-  }
+/* ==========================================================================
+   site.js · shared shell for every public page (+ utilities reused by the
+   admin panel and Dev Zone through window.DX).
 
-  // Embers: slow rising sparks tied to the event's own bonfire/revival
-  // mechanic, layered into the same fixed field as the stars so no extra
-  // markup is needed on every page.
-  if (!reduceMotion) {
-    const emberCount = window.innerWidth < 700 ? 0 : 16;
-    for (let i = 0; i < emberCount; i++) {
-      const e = document.createElement('div');
-      e.className = 'ember';
-      const s = Math.random() * 3 + 2;
-      e.style.width = s + 'px';
-      e.style.height = s + 'px';
-      e.style.top = 60 + Math.random() * 40 + 'vh';
-      e.style.left = Math.random() * 100 + 'vw';
-      e.style.setProperty('--ex', (Math.random() * 60 - 30).toFixed(1) + 'px');
-      e.style.setProperty('--ey', -(140 + Math.random() * 120).toFixed(1) + 'px');
-      e.style.animationDuration = 9 + Math.random() * 9 + 's';
-      e.style.animationDelay = Math.random() * 12 + 's';
-      field.appendChild(e);
+   window.DX exposes:
+     DX.me          Promise<{ user, csrfToken }> (ONE /api/auth/me per page
+                    load: every script awaits this instead of refetching it,
+                    each call costs a KV read against the free-tier quota)
+     DX.escapeHtml, DX.formatDate, DX.relTime, DX.toast, DX.loginUrl,
+     DX.safeColor, DX.defaultAvatar
+   ========================================================================== */
+(function () {
+  const DX = (window.DX = window.DX || {});
+
+  DX.escapeHtml = function (str) {
+    return String(str == null ? '' : str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  };
+
+  DX.formatDate = function (iso, opts) {
+    const d = parseDate(iso);
+    if (!d) return '';
+    return d.toLocaleDateString('es-ES', opts || { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  /** "hace 3 h" style relative time; absolute date past ~a month. */
+  DX.relTime = function (iso) {
+    const d = parseDate(iso);
+    if (!d) return '';
+    const diff = (d.getTime() - Date.now()) / 1000;
+    const abs = Math.abs(diff);
+    const rtf = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
+    if (abs < 45) return 'ahora mismo';
+    if (abs < 3600) return rtf.format(Math.round(diff / 60), 'minute');
+    if (abs < 86400) return rtf.format(Math.round(diff / 3600), 'hour');
+    if (abs < 86400 * 30) return rtf.format(Math.round(diff / 86400), 'day');
+    return DX.formatDate(iso);
+  };
+
+  /** D1's datetime('now') returns "YYYY-MM-DD HH:MM:SS" in UTC with no zone
+   *  marker, which browsers parse as LOCAL time (off by 1-2 h in Spain).
+   *  Normalize it to real UTC before formatting anything. */
+  function parseDate(iso) {
+    if (!iso) return null;
+    let s = String(iso);
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/.test(s)) s = s.replace(' ', 'T') + 'Z';
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  DX.parseDate = parseDate;
+
+  DX.safeColor = function (c, fallback) {
+    return /^#[0-9a-fA-F]{3,8}$/.test(c || '') ? c : fallback || '#37d6b4';
+  };
+
+  DX.defaultAvatar =
+    'data:image/svg+xml;utf8,' +
+    encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#123029"/><circle cx="12" cy="9.5" r="3.5" fill="#4d7a6d"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" fill="#4d7a6d"/></svg>'
+    );
+
+  DX.loginUrl = function () {
+    return `/api/auth/login?return_to=${encodeURIComponent(location.pathname + location.search)}`;
+  };
+
+  /* ---------- toasts ---------- */
+  const TOAST_ICONS = {
+    ok: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>',
+    error: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg>',
+    info: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.01"/></svg>',
+  };
+  DX.toast = function (message, type, opts) {
+    type = type || 'ok';
+    opts = opts || {};
+    let stack = document.querySelector('.toast-stack');
+    if (!stack) {
+      stack = document.createElement('div');
+      stack.className = 'toast-stack';
+      stack.setAttribute('role', 'status');
+      stack.setAttribute('aria-live', 'polite');
+      document.body.appendChild(stack);
     }
-  }
-})();
-
-/* ---------- shooting stars ---------- */
-(function () {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-  const STAR_DURATION_MS = 1150;
-  const MAX_CONCURRENT = 3;
-  let liveCount = 0;
-  let pendingTimer = null;
-
-  function purgeAll() {
-    document.querySelectorAll('.shooting-star').forEach((el) => el.remove());
-    liveCount = 0;
-  }
-
-  function spawn() {
-    if (liveCount >= MAX_CONCURRENT) return;
-    liveCount++;
-
-    const star = document.createElement('div');
-    star.className = 'shooting-star';
-    // Travel angle in standard screen atan2 terms (0deg = right, 90deg = down):
-    // 148-166deg points down-and-left, matching the trail's own rotation math.
-    const angleDeg = 148 + Math.random() * 18;
-    const dist = 380 + Math.random() * 140;
-    const rad = (angleDeg * Math.PI) / 180;
-    const dx = Math.cos(rad) * dist;
-    const dy = Math.sin(rad) * dist;
-    star.style.top = Math.random() * 45 + 'vh';
-    star.style.left = 55 + Math.random() * 35 + 'vw';
-    star.style.setProperty('--ang', angleDeg + 'deg');
-    star.style.setProperty('--dx', dx + 'px');
-    star.style.setProperty('--dy', dy + 'px');
-    document.body.appendChild(star);
-
-    // Belt-and-suspenders removal: `animationend` doesn't reliably fire while
-    // the tab is hidden/minimized (no rendering happening), which otherwise
-    // lets spawned stars pile up silently and all animate at once the moment
-    // the tab becomes visible again ("un ejército de cometas"). A plain
-    // timer removes it regardless of whether the animation event ever fires.
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      star.remove();
-      liveCount--;
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.innerHTML = `${TOAST_ICONS[type] || TOAST_ICONS.info}<div class="toast-body"></div>`;
+    el.querySelector('.toast-body').textContent = message;
+    stack.appendChild(el);
+    const ms = opts.duration || (type === 'error' ? 6500 : 3500);
+    const close = () => {
+      el.classList.add('out');
+      setTimeout(() => el.remove(), 260);
     };
-    star.addEventListener('animationend', finish);
-    setTimeout(finish, STAR_DURATION_MS + 200);
-  }
+    const timer = setTimeout(close, ms);
+    el.addEventListener('click', () => {
+      clearTimeout(timer);
+      close();
+    });
+    return el;
+  };
 
-  function scheduleNext() {
-    const next = 4000 + Math.random() * 6000;
-    pendingTimer = setTimeout(() => {
-      spawn();
-      scheduleNext();
-    }, next);
-  }
-
-  // While the tab is hidden, timers get throttled rather than paused, so
-  // stop scheduling new spawns entirely and wipe anything left over the
-  // moment the tab is visible again, instead of letting a backlog render.
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      if (pendingTimer) clearTimeout(pendingTimer);
-      pendingTimer = null;
-    } else {
-      purgeAll();
-      scheduleNext();
-    }
-  });
-
-  pendingTimer = setTimeout(() => {
-    spawn();
-    scheduleNext();
-  }, 2000);
-})();
-
-/* ---------- subtle background parallax ---------- */
-(function () {
-  if (!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const field = document.getElementById('field');
-  const nebulaField = document.getElementById('nebula-field');
-  if (!field && !nebulaField) return;
-  // Coalesce to one style write per animation frame instead of one per
-  // mousemove event (which can fire far faster than the screen repaints) --
-  // same visual result, far fewer forced style/composite passes.
-  let raf = null, lastX = 0, lastY = 0;
-  function apply() {
-    raf = null;
-    if (field) field.style.transform = `translate(${lastX * -10}px, ${lastY * -10}px)`;
-    if (nebulaField) nebulaField.style.transform = `translate(${lastX * 14}px, ${lastY * 14}px)`;
-  }
-  document.addEventListener('mousemove', (e) => {
-    lastX = (e.clientX / window.innerWidth - 0.5) * 2;
-    lastY = (e.clientY / window.innerHeight - 0.5) * 2;
-    if (raf == null) raf = requestAnimationFrame(apply);
-  });
-})();
-
-window.bindReveal = function () {
-  const els = document.querySelectorAll('.reveal:not([data-reveal-bound])');
-  if (!els.length) return;
-  els.forEach((el, idx) => {
-    el.dataset.revealBound = '1';
-    el.style.transitionDelay = idx % 4 * 0.06 + 's';
-  });
-  const io = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting) {
-          e.target.classList.add('in');
-          io.unobserve(e.target);
+  /* ---------- confirm dialog (replaces window.confirm) ---------- */
+  DX.confirm = function (message, opts) {
+    opts = opts || {};
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'dialog-overlay';
+      overlay.innerHTML = `
+        <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dx-confirm-title">
+          <h2 id="dx-confirm-title"></h2>
+          <p></p>
+          <div class="dialog-actions">
+            <button type="button" class="btn btn-ghost btn-sm" data-act="cancel">Cancelar</button>
+            <button type="button" class="btn ${opts.danger === false ? 'btn-accent' : 'btn-danger'} btn-sm" data-act="ok"></button>
+          </div>
+        </div>`;
+      overlay.querySelector('h2').textContent = opts.title || '¿Seguro?';
+      overlay.querySelector('p').textContent = message;
+      overlay.querySelector('[data-act="ok"]').textContent = opts.okLabel || 'Eliminar';
+      const prevFocus = document.activeElement;
+      function done(v) {
+        overlay.remove();
+        document.removeEventListener('keydown', onKey, true);
+        if (prevFocus && prevFocus.focus) prevFocus.focus();
+        resolve(v);
+      }
+      function onKey(e) {
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          done(false);
         }
+      }
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) done(false);
+        const act = e.target.closest('[data-act]');
+        if (act) done(act.dataset.act === 'ok');
       });
-    },
-    { threshold: 0.14 }
-  );
-  els.forEach((el) => io.observe(el));
-};
-window.bindReveal();
+      document.addEventListener('keydown', onKey, true);
+      document.body.appendChild(overlay);
+      overlay.querySelector('[data-act="cancel"]').focus();
+    });
+  };
 
-/* ---------- scroll progress bar ---------- */
+  /** Turns GitHub-style callouts in rendered markdown
+   *  (> [!TIP] / [!NOTE] / [!WARNING] / [!DANGER]) into styled boxes.
+   *  Shared by the public wiki, the admin preview and Dev Zone. */
+  DX.mdCallouts = function (container) {
+    const map = { NOTE: ['note', 'Nota'], IMPORTANT: ['note', 'Importante'], TIP: ['tip', 'Consejo'], WARNING: ['warning', 'Atención'], CAUTION: ['warning', 'Cuidado'], DANGER: ['danger', 'Peligro'] };
+    container.querySelectorAll('blockquote').forEach((bq) => {
+      const first = bq.querySelector('p');
+      if (!first) return;
+      const m = first.innerHTML.match(/^\s*\[!(NOTE|TIP|WARNING|DANGER|IMPORTANT|CAUTION)\]\s*(<br>)?/i);
+      if (!m) return;
+      const [cls, label] = map[m[1].toUpperCase()];
+      first.innerHTML = first.innerHTML.slice(m[0].length);
+      if (!first.textContent.trim() && !first.querySelector('img')) first.remove();
+      bq.classList.add('callout', 'callout-' + cls);
+      const title = document.createElement('div');
+      title.className = 'callout-title';
+      title.textContent = label;
+      bq.prepend(title);
+    });
+  };
+
+  /* ---------- session (one request per page) ---------- */
+  DX.me = fetch('/api/auth/me', { credentials: 'include' })
+    .then((r) => (r.ok ? r.json() : { user: null, csrfToken: '' }))
+    .catch(() => ({ user: null, csrfToken: '' }));
+
+  DX.hasPerm = function (user, key) {
+    return !!(user && Array.isArray(user.permissions) && user.permissions.includes(key));
+  };
+})();
+
+/* ---------- nav: scrolled state, hide on scroll down, progress ---------- */
 (function () {
-  const bar = document.getElementById('scroll-progress');
-  if (!bar) return;
-  const onScroll = () => {
+  const nav = document.querySelector('.site-nav');
+  const bar = document.querySelector('.scroll-progress');
+  let lastY = window.scrollY;
+  let ticking = false;
+  function update() {
+    ticking = false;
+    const y = window.scrollY;
     const doc = document.documentElement;
     const max = doc.scrollHeight - doc.clientHeight;
-    const pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
-    bar.style.width = pct + '%';
-  };
-  document.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', onScroll);
-  onScroll();
-})();
-
-/* ---------- active nav link ---------- */
-(function () {
-  const path = location.pathname.replace(/\/+$/, '') || '/index';
-  const here = path.endsWith('/') || path === '' ? 'index' : path.split('/').pop().replace('.html', '') || 'index';
-  document.querySelectorAll('.nav-links a, .mobile-sheet a').forEach((a) => {
-    const href = a.getAttribute('href') || '';
-    if (!href || href.startsWith('#') || href.startsWith('/invite')) return;
-    const target = href.replace('.html', '') || 'index';
-    if (target === here) a.classList.add('active');
-  });
-})();
-
-/* ---------- 3D tilt on cards ---------- */
-(function () {
-  if (!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const SEL = '.post-card, .team-card';
-  let current = null;
-
-  function release(card) {
-    card.style.transition = '';
-    card.style.transform = '';
-  }
-
-  document.addEventListener('mousemove', (e) => {
-    const card = e.target.closest(SEL);
-    if (card !== current) {
-      if (current) release(current);
-      current = card;
-      if (card) card.style.transition = 'none';
+    if (bar) bar.style.setProperty('--progress', max > 0 ? (y / max).toFixed(4) : 0);
+    if (nav) {
+      nav.classList.toggle('is-scrolled', y > 24);
+      const menuOpen = document.body.classList.contains('menu-open');
+      const accountOpen = !!document.querySelector('.account-wrap.open');
+      if (!menuOpen && !accountOpen) {
+        if (y > lastY + 4 && y > 260) nav.classList.add('is-hidden');
+        else if (y < lastY - 4 || y < 260) nav.classList.remove('is-hidden');
+      }
     }
-    if (!card) return;
-    const r = card.getBoundingClientRect();
-    const px = (e.clientX - r.left) / r.width - 0.5;
-    const py = (e.clientY - r.top) / r.height - 0.5;
-    card.style.transform = `perspective(800px) rotateX(${(-py * 6).toFixed(2)}deg) rotateY(${(px * 8).toFixed(2)}deg) translateY(-4px)`;
-  });
-  document.addEventListener(
-    'mouseleave',
-    (e) => {
-      if (current && (e.target === current || e.target === document)) {
-        release(current);
-        current = null;
+    lastY = y;
+  }
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
       }
     },
-    true
+    { passive: true }
+  );
+  update();
+
+  /* active link: exact page match (hash links are never "current") */
+  const here = (location.pathname.replace(/\/+$/, '').split('/').pop() || 'index').replace('.html', '') || 'index';
+  document.querySelectorAll('.nav-links a, .mobile-menu nav a').forEach((a) => {
+    const href = a.getAttribute('href') || '';
+    if (!href || href.includes('#') || href.startsWith('/invite') || /^https?:/.test(href)) return;
+    const target = (href.replace(/^\//, '').split('?')[0].replace('.html', '') || 'index');
+    const isPostPage = location.pathname.startsWith('/anuncios/') && target === 'anuncios';
+    if (target === here || isPostPage) a.setAttribute('aria-current', 'page');
+  });
+
+  /* mobile menu */
+  const toggle = document.querySelector('.nav-toggle');
+  const menu = document.querySelector('.mobile-menu');
+  function setMenu(open) {
+    document.body.classList.toggle('menu-open', open);
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggle.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+    }
+    if (menu) menu.toggleAttribute('inert', !open);
+    if (open && nav) nav.classList.remove('is-hidden');
+  }
+  if (toggle && menu) {
+    setMenu(false);
+    toggle.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open')));
+    menu.addEventListener('click', (e) => {
+      if (e.target.closest('a')) setMenu(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('menu-open')) {
+        setMenu(false);
+        toggle.focus();
+      }
+    });
+    window.matchMedia('(min-width: 901px)').addEventListener('change', (e) => {
+      if (e.matches) setMenu(false);
+    });
+  }
+})();
+
+/* ---------- cursor spotlight on .spot cards ---------- */
+(function () {
+  if (!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+  document.addEventListener(
+    'pointermove',
+    (e) => {
+      const el = e.target.closest && e.target.closest('.spot');
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--mx', e.clientX - r.left + 'px');
+      el.style.setProperty('--my', e.clientY - r.top + 'px');
+    },
+    { passive: true }
   );
 })();
 
+/* ---------- pixel dust: slow square motes drifting up (one canvas) ---------- */
 (function () {
-  const nav = document.querySelector('.nav');
-  const onScroll = () => {
-    if (!nav) return;
-    if (window.scrollY > 40) nav.classList.add('glass');
-    else nav.classList.remove('glass');
-  };
-  document.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
+  const canvas = document.getElementById('dust');
+  if (!canvas || !canvas.getContext) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const ctx = canvas.getContext('2d');
+  const COLORS = ['164,245,201', '55,214,180', '233,247,240'];
+  let w = 0, h = 0, dpr = 1, motes = [], running = true, raf = null;
 
-  document.querySelectorAll('[data-scroll]').forEach((el) => {
-    el.addEventListener('click', (e) => {
-      const sel = el.getAttribute('data-scroll');
-      const target = document.querySelector(sel);
-      if (target) {
-        e.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth' });
-      }
-      closeSheet();
-    });
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = window.innerWidth;
+    h = window.innerHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const count = w < 700 ? 16 : 38;
+    motes = Array.from({ length: count }, () => spawn(true));
+  }
+  function spawn(anywhere) {
+    return {
+      x: Math.random() * w,
+      y: anywhere ? Math.random() * h : h + 10,
+      s: Math.random() < 0.15 ? 3 : 2,
+      vy: 0.12 + Math.random() * 0.3,
+      vx: (Math.random() - 0.5) * 0.12,
+      a: 0.08 + Math.random() * 0.35,
+      c: COLORS[(Math.random() * COLORS.length) | 0],
+      tw: Math.random() * Math.PI * 2,
+    };
+  }
+  function tick() {
+    raf = null;
+    if (!running) return;
+    ctx.clearRect(0, 0, w, h);
+    for (const m of motes) {
+      m.y -= m.vy;
+      m.x += m.vx;
+      m.tw += 0.02;
+      if (m.y < -10) Object.assign(m, spawn(false));
+      const alpha = m.a * (0.6 + 0.4 * Math.sin(m.tw));
+      ctx.fillStyle = `rgba(${m.c},${alpha.toFixed(3)})`;
+      ctx.fillRect(Math.round(m.x), Math.round(m.y), m.s, m.s);
+    }
+    raf = requestAnimationFrame(tick);
+  }
+  document.addEventListener('visibilitychange', () => {
+    running = !document.hidden;
+    if (running && !raf) raf = requestAnimationFrame(tick);
   });
-
-  const toggle = document.querySelector('.nav-toggle');
-  const sheet = document.querySelector('.mobile-sheet');
-  function closeSheet() {
-    if (sheet) sheet.classList.remove('open');
-  }
-  if (toggle && sheet) {
-    toggle.addEventListener('click', () => sheet.classList.toggle('open'));
-    sheet.querySelectorAll('a').forEach((a) => a.addEventListener('click', closeSheet));
-  }
+  window.addEventListener('resize', resize);
+  resize();
+  raf = requestAnimationFrame(tick);
 })();
 
-/* ---------- Discord auth ---------- */
+/* ---------- copy server IP buttons ---------- */
 (function () {
-  const corner = document.getElementById('account-corner');
-  const mobileSheet = document.querySelector('.mobile-sheet');
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-copy]');
+    if (!btn) return;
+    const value = btn.getAttribute('data-copy');
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      window.DX.toast('IP copiada al portapapeles.', 'ok');
+    } catch (err) {
+      window.DX.toast('No se pudo copiar. IP: ' + value, 'info');
+    }
+  });
+})();
 
-  fetch('/api/auth/me', { credentials: 'include' })
-    .then((r) => (r.ok ? r.json() : Promise.reject()))
-    .then((data) => {
-      if (data.user) renderAccountChip(data.user);
-      else renderLoginButton();
-    })
-    .catch(() => {});
-
-  function loginUrl() {
-    return `/api/auth/login?return_to=${encodeURIComponent(location.pathname)}`;
-  }
+/* ---------- Discord session: account chip in the nav + mobile menu ---------- */
+(function () {
+  const DX = window.DX;
+  const slot = document.getElementById('account-slot');
+  const mobileSlot = document.getElementById('mobile-account');
+  if (!slot && !mobileSlot) return;
 
   const DISCORD_ICON =
-    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0015.6 3l-.3.6a14 14 0 014.1 1.6 17 17 0 00-14.8 0A14 14 0 018.7 3.6L8.4 3a19.7 19.7 0 00-4.7 1.4C1 9 .3 13.5.6 18a20 20 0 006 3l1-1.4a12.8 12.8 0 01-1.9-.9l.5-.4a14.3 14.3 0 0011.6 0l.5.4c-.6.4-1.2.6-1.9.9l1 1.4a20 20 0 006-3c.4-5.2-.9-9.7-3.1-13.6zM8.5 15c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2zm7 0c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2z"/></svg>';
+    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.3 4.4A19.8 19.8 0 0015.6 3l-.3.6a14 14 0 014.1 1.6 17 17 0 00-14.8 0A14 14 0 018.7 3.6L8.4 3a19.7 19.7 0 00-4.7 1.4C1 9 .3 13.5.6 18a20 20 0 006 3l1-1.4a12.8 12.8 0 01-1.9-.9l.5-.4a14.3 14.3 0 0011.6 0l.5.4c-.6.4-1.2.6-1.9.9l1 1.4a20 20 0 006-3c.4-5.2-.9-9.7-3.1-13.6zM8.5 15c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2zm7 0c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2z"/></svg>';
 
-  function renderLoginButton() {
-    const btn = document.createElement('a');
-    btn.href = loginUrl();
-    btn.className = 'nav-login-btn corner-fade-in';
-    btn.innerHTML = `${DISCORD_ICON}Iniciar sesión`;
-    if (corner) corner.appendChild(btn);
+  DX.me.then((data) => {
+    if (data && data.user) renderAccount(data.user, data.csrfToken);
+    else renderLogin();
+  });
 
-    if (mobileSheet) {
-      const mBtn = btn.cloneNode(true);
-      mBtn.classList.remove('nav-login-btn');
-      mBtn.classList.add('btn', 'btn-discord');
-      mBtn.style.marginTop = '18px';
-      mobileSheet.insertBefore(mBtn, mobileSheet.lastElementChild);
+  function renderLogin() {
+    if (slot) {
+      const a = document.createElement('a');
+      a.className = 'nav-login-btn';
+      a.href = DX.loginUrl();
+      a.innerHTML = `${DISCORD_ICON}<span>Iniciar sesión</span>`;
+      slot.appendChild(a);
+    }
+    if (mobileSlot) {
+      mobileSlot.innerHTML = `<a class="btn btn-discord" href="${DX.escapeHtml(DX.loginUrl())}">${DISCORD_ICON}Iniciar sesión con Discord</a>`;
     }
   }
 
-  function renderAccountChip(user) {
-    // user.avatar is built server-side from Discord's own id/avatar-hash
-    // fields (see discordAvatarUrl() in backend/lib/discord.js), which are
-    // never expected to contain HTML metacharacters, but it still goes
-    // into an unquoted-safe attribute below via a template string, so
-    // escape it as cheap defense in depth rather than trust an upstream
-    // API's format forever.
-    const avatarSrc = escapeHtml(user.avatar || defaultAvatarSvg());
-    const topRole = (user.roles || [])[0] || null;
-    const roleLabel = topRole ? topRole.name : 'Miembro';
-    const roleColor = topRole ? topRole.color : 'var(--accent)';
-    const canPanel = Array.isArray(user.permissions) && user.permissions.includes('panel.access');
-    const panelLink = canPanel
-      ? `<a href="/admin.html">
-           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
-           Panel de administración
-         </a>`
-      : '';
+  function renderAccount(user, csrfToken) {
+    const avatar = DX.escapeHtml(user.avatar || DX.defaultAvatar);
+    const top = (user.roles || [])[0] || null;
+    const roleLabel = top ? top.name : 'Miembro';
+    const roleColor = DX.safeColor(top && top.color, '#a4f5c9');
+    const canPanel = DX.hasPerm(user, 'panel.access');
+    const canDev = DX.hasPerm(user, 'devzone.access');
+    const name = DX.escapeHtml(user.username || 'Jugador');
 
-    const canDevZone = Array.isArray(user.permissions) && user.permissions.includes('devzone.access');
-    const devZoneLink = canDevZone
-      ? `<a href="/devzone.html">
-           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3L3 12l5 9M16 3l5 9-5 9M13 3l-2 18"/></svg>
-           Dev Zone
-         </a>`
-      : '';
-
-    if (corner) {
+    if (slot) {
       const wrap = document.createElement('div');
-      wrap.className = 'account-wrap corner-fade-in';
+      wrap.className = 'account-wrap';
       wrap.innerHTML = `
-        <button class="account-chip" id="account-chip-btn">
-          <img class="account-avatar" src="${avatarSrc}" alt="">
-          <span class="account-name">${escapeHtml(user.username)}</span>
-          <span class="account-dot" style="background:${roleColor};box-shadow:0 0 6px ${roleColor}"></span>
-          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        <button type="button" class="account-chip" aria-haspopup="true" aria-expanded="false">
+          <img class="account-avatar" src="${avatar}" alt="">
+          <span class="account-name">${name}</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
         </button>
-        <div class="account-dropdown">
+        <div class="account-dropdown" role="menu">
           <div class="account-dropdown-head">
-            <img class="account-dropdown-avatar" src="${avatarSrc}" alt="">
+            <img src="${avatar}" alt="">
             <div>
-              <p class="account-dropdown-name">${escapeHtml(user.username)}</p>
-              <p class="account-dropdown-role" style="color:${roleColor}">${escapeHtml(roleLabel)}</p>
+              <p class="account-dropdown-name">${name}</p>
+              <p class="account-dropdown-role" style="color:${roleColor}">${DX.escapeHtml(roleLabel)}</p>
             </div>
           </div>
           <div class="account-dropdown-links">
-            ${panelLink}
-            ${devZoneLink}
-            ${panelLink || devZoneLink ? '<div class="divider"></div>' : ''}
-            <button id="account-logout-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-              Cerrar sesión
-            </button>
+            ${canPanel ? `<a href="/admin.html" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>Panel de administración</a>` : ''}
+            ${canDev ? `<a href="/devzone.html" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16"/></svg>Dev Zone</a>` : ''}
+            ${canPanel || canDev ? '<div class="divider"></div>' : ''}
+            <button type="button" data-logout role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>Cerrar sesión</button>
           </div>
-        </div>
-      `;
-      corner.appendChild(wrap);
-
-      const chipBtn = wrap.querySelector('#account-chip-btn');
-      chipBtn.addEventListener('click', (e) => {
+        </div>`;
+      slot.appendChild(wrap);
+      const chip = wrap.querySelector('.account-chip');
+      const setOpen = (open) => {
+        wrap.classList.toggle('open', open);
+        chip.setAttribute('aria-expanded', open ? 'true' : 'false');
+      };
+      chip.addEventListener('click', (e) => {
         e.stopPropagation();
-        wrap.classList.toggle('open');
+        setOpen(!wrap.classList.contains('open'));
       });
-      document.addEventListener('click', () => wrap.classList.remove('open'));
-      wrap.querySelector('#account-logout-btn').addEventListener('click', logout);
+      document.addEventListener('click', (e) => {
+        if (!wrap.contains(e.target)) setOpen(false);
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && wrap.classList.contains('open')) {
+          setOpen(false);
+          chip.focus();
+        }
+      });
     }
 
-    if (mobileSheet) {
-      const row = document.createElement('div');
-      row.className = 'mobile-account-row';
-      row.innerHTML = `<img src="${avatarSrc}" alt=""><span>${escapeHtml(user.username)}</span>`;
-      mobileSheet.insertBefore(row, mobileSheet.lastElementChild);
-      if (canPanel) {
-        const a = document.createElement('a');
-        a.href = '/admin.html';
-        a.textContent = 'Panel de administración';
-        mobileSheet.insertBefore(a, mobileSheet.lastElementChild);
-      }
-      if (canDevZone) {
-        const a = document.createElement('a');
-        a.href = '/devzone.html';
-        a.textContent = 'Dev Zone';
-        mobileSheet.insertBefore(a, mobileSheet.lastElementChild);
-      }
-      const logoutBtn = document.createElement('button');
-      logoutBtn.className = 'mobile-logout';
-      logoutBtn.textContent = 'Cerrar sesión';
-      logoutBtn.addEventListener('click', logout);
-      mobileSheet.appendChild(logoutBtn);
+    if (mobileSlot) {
+      mobileSlot.innerHTML = `
+        <div class="mobile-account-row"><img src="${avatar}" alt=""><span>${name}</span></div>
+        ${canPanel ? '<a href="/admin.html">Panel de administración</a>' : ''}
+        ${canDev ? '<a href="/devzone.html">Dev Zone</a>' : ''}
+        <button type="button" data-logout>Cerrar sesión</button>`;
     }
-  }
 
-  async function logout() {
-    try {
-      const me = await fetch('/api/auth/me', { credentials: 'include' }).then((r) => r.json());
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'X-CSRF-Token': me.csrfToken || '' },
-      });
-    } catch (err) {}
-    location.reload();
-  }
-
-  function defaultAvatarSvg() {
-    return (
-      'data:image/svg+xml;utf8,' +
-      encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#172038"/><circle cx="12" cy="9.5" r="3.5" fill="#54607f"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" fill="#54607f"/></svg>'
-      )
-    );
-  }
-
-  function escapeHtml(str) {
-    return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    document.addEventListener('click', async (e) => {
+      if (!e.target.closest('[data-logout]')) return;
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include', headers: { 'X-CSRF-Token': csrfToken || '' } });
+      } catch (err) {}
+      location.reload();
+    });
   }
 })();

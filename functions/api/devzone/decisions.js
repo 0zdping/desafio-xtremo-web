@@ -1,6 +1,6 @@
 // Registro de decisiones de Dev Zone: append-only a propósito (sin PATCH/DELETE).
-// Es un log de "esto se decidió, en esta fecha, por esta razón" — igual que un
-// commit no se reescribe, una decisión ya tomada no se edita, se supera con una
+// Es un log de "esto se decidió, en esta fecha, por esta razón": igual que un
+// commit no se reescribe, una decisión ya tomada no se edita: se supera con una
 // entrada nueva si cambia. Evita reescribir contexto que otro developer ya leyó.
 import {
   requirePermission,
@@ -31,12 +31,13 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   if (!guard.ok) return jsonResponse(guard.body, guard.status);
 
   const body = await request.json().catch(() => null);
-  const title = (body?.title || '').trim();
-  const system = (body?.system || 'general').trim() || 'general';
+  const title = typeof body?.title === 'string' ? body.title.trim() : '';
+  const system = (typeof body?.system === 'string' ? body.system.trim() : '') || 'general';
   const rawText = typeof body?.body === 'string' ? body.body : '';
 
   if (!title || title.length > 160) return jsonResponse({ error: 'Título inválido.' }, 400);
   if (system.length > 40) return jsonResponse({ error: 'Sistema inválido.' }, 400);
+  if (rawText.length > 20000) return jsonResponse({ error: 'Detalle demasiado largo (máx. 20.000 caracteres).' }, 400);
 
   const text = await stripDangerousHtml(rawText);
 

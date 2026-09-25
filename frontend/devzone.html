@@ -4,94 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#07050d">
 <title>Dev Zone · Desafio Xtremo</title>
-<meta name="description" content="Centro de organización interno para el equipo de desarrollo de Desafio Xtremo.">
-<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/tokens.css">
-<link rel="stylesheet" href="css/home.css">
-<link rel="stylesheet" href="css/devzone.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js" integrity="sha512-xeUh+KxNyTufZOje++oQHstlMQ8/rpyzPuM+gjMFYK3z5ILJGE7l2NvYL+XfliKURMpBIKKp1XoPN/qswlSMFA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js" integrity="sha512-JatFEe90fJU2nrgf27fUz2hWRvdYrSlTEV8esFuqCtfiqWN8phkS1fUl/xCfYyrLDQcNf3YyS0V9hG7U4RHNmQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/devzone.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js" integrity="sha512-xeUh+KxNyTufZOje++oQHstlMQ8/rpyzPuM+gjMFYK3z5ILJGE7l2NvYL+XfliKURMpBIKKp1XoPN/qswlSMFA==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js" integrity="sha512-JatFEe90fJU2nrgf27fUz2hWRvdYrSlTEV8esFuqCtfiqWN8phkS1fUl/xCfYyrLDQcNf3YyS0V9hG7U4RHNmQ==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 </head>
-<body class="devzone-theme">
-
-<div class="grain"></div>
-
-<div id="devzone-root">
-  <p class="devzone-loading">Cargando…</p>
+<body class="app theme-dev">
+<div id="app-root">
+  <div class="app-splash"><div><div class="app-splash-mark"></div><p class="pixel">Cargando Dev Zone…</p></div></div>
 </div>
-
-<template id="tpl-devzone">
-  <div class="devzone-shell">
-    <header class="devzone-header">
-      <div class="container devzone-header-inner">
-        <a href="index.html" class="devzone-back" title="Volver al sitio">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-        </a>
-        <img src="assets/devzonetitle.png" alt="Dev Zone" class="devzone-title-img">
-        <div class="devzone-user" id="devzone-user"></div>
-      </div>
-    </header>
-
-    <nav class="devzone-nav">
-      <div class="container devzone-nav-inner">
-        <button class="devzone-nav-btn active" data-section="tasks">Tareas</button>
-        <button class="devzone-nav-btn" data-section="decisions">Decisiones</button>
-        <button class="devzone-nav-btn" data-section="specs">Specs</button>
-      </div>
-    </nav>
-
-    <main class="container devzone-main">
-      <section class="devzone-section active" id="devzone-section-tasks">
-        <div class="devzone-section-head">
-          <div>
-            <h1>Tareas</h1>
-            <p class="devzone-section-sub">Quién está en qué, ahora mismo. Antes de arrancar algo nuevo, revisa si ya hay una tarjeta.</p>
-          </div>
-          <button class="btn btn-accent btn-sm" id="devzone-task-new">+ Nueva tarea</button>
-        </div>
-        <div class="devzone-board" id="devzone-board"></div>
-      </section>
-
-      <section class="devzone-section" id="devzone-section-decisions">
-        <div class="devzone-section-head">
-          <div>
-            <h1>Decisiones</h1>
-            <p class="devzone-section-sub">Registro de lo ya confirmado. No se edita: si algo cambia, se añade una entrada nueva.</p>
-          </div>
-          <button class="btn btn-accent btn-sm" id="devzone-decision-new">+ Registrar decisión</button>
-        </div>
-        <div class="devzone-decisions-list" id="devzone-decisions-list"></div>
-      </section>
-
-      <section class="devzone-section" id="devzone-section-specs">
-        <div class="devzone-section-head">
-          <div>
-            <h1>Specs por sistema</h1>
-            <p class="devzone-section-sub">Copia de trabajo del Google Doc + mapa mental. El Doc es la fuente viva; si algo no encaja, revisa el Doc antes de asumir esto.</p>
-          </div>
-          <button class="btn btn-accent btn-sm" id="devzone-spec-new">+ Nueva spec</button>
-        </div>
-        <div class="devzone-layout">
-          <aside class="devzone-specs-sidebar glass" id="devzone-specs-sidebar"></aside>
-          <div class="devzone-specs-content" id="devzone-specs-content">
-            <p class="devzone-content-msg">Elige una spec de la lista.</p>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
-</template>
-
-<div class="devzone-modal-overlay" id="devzone-modal-overlay" hidden>
-  <div class="devzone-modal glass" id="devzone-modal"></div>
-</div>
-
-<script src="js/devzone.js"></script>
+<script src="/js/site.js"></script>
+<script src="/js/app-ui.js"></script>
+<script src="/js/devzone.js" defer></script>
 </body>
 </html>

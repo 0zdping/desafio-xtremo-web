@@ -1,181 +1,514 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="no-js">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Desafio Xtremo · Un mundo nuevo</title>
-<meta name="description" content="Desafio Xtremo: un evento de Minecraft hecho por y para jugadores. Vive la experiencia que hasta ahora solo unos pocos streamers habían podido tener en grandes producciones.">
+<meta name="description" content="Desafio Xtremo es un evento de Minecraft por equipos hecho por y para jugadores: un juego totalmente distinto dentro de Minecraft. Despiertas solo en una isla, sin nada. Inscripción abierta a cualquiera.">
+<meta name="theme-color" content="#030b0a">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Desafio Xtremo · Un mundo nuevo">
-<meta property="og:description" content="Un evento de Minecraft hecho por y para jugadores. Vive la experiencia que hasta ahora solo unos pocos streamers habían podido tener en grandes producciones.">
+<meta property="og:description" content="Un evento de Minecraft por equipos hecho por y para jugadores. Despiertas solo en una isla, sin nada. ¿Encontrarás a tu clan?">
 <meta property="og:image" content="https://desafioxtremo.site/assets/banner.png">
 <meta property="og:url" content="https://desafioxtremo.site/">
 <meta property="og:site_name" content="Desafio Xtremo">
+<meta property="og:locale" content="es_ES">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Desafio Xtremo · Un mundo nuevo">
-<meta name="twitter:description" content="Un evento de Minecraft hecho por y para jugadores. Vive la experiencia que hasta ahora solo unos pocos streamers habían podido tener en grandes producciones.">
+<meta name="twitter:description" content="Un evento de Minecraft por equipos hecho por y para jugadores. Despiertas solo en una isla, sin nada.">
 <meta name="twitter:image" content="https://desafioxtremo.site/assets/banner.png">
+<link rel="canonical" href="https://desafioxtremo.site/">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="preload" href="assets/banner.png" as="image">
 <link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/content.css">
 <link rel="stylesheet" href="css/home.css">
 </head>
-<body>
+<body class="page-home">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<div class="scroll-progress" aria-hidden="true"></div>
+<div class="backdrop" aria-hidden="true"></div>
+<canvas id="dust" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
 
-<div class="scroll-progress" id="scroll-progress"></div>
-<div id="field"></div>
-<div class="nebula-field" id="nebula-field">
-  <div class="nebula nebula-1"></div>
-  <div class="nebula nebula-2"></div>
-  <div class="nebula nebula-3"></div>
-  <div class="nebula nebula-4"></div>
-</div>
-<div class="grain"></div>
-
-<div id="account-corner" class="account-corner"></div>
-
-<div class="nav-wrap">
-  <nav class="nav glass">
-    <a href="index.html" class="nav-logo"><img src="assets/wordmark.png" alt="Desafio Xtremo"></a>
+<header class="site-nav">
+  <div class="container">
+    <a href="/" class="nav-logo" aria-label="Desafio Xtremo, inicio"><img src="assets/wordmark.png" alt="Desafio Xtremo" width="148" height="20"></a>
     <ul class="nav-links">
-      <li><a href="index.html">Inicio</a></li>
-      <li><a href="#mecanicas">Mecánicas</a></li>
-      <li><a href="wiki.html">Wiki</a></li>
-      <li><a href="anuncios.html">Anuncios</a></li>
-      <li><a href="#equipo">Equipo</a></li>
-      <li><a href="/invite" target="_blank" rel="noopener">Discord</a></li>
+      <li><a href="/">Inicio</a></li>
+      <li><a href="/#recursos">El juego</a></li>
+      <li><a href="/wiki.html">Wiki</a></li>
+      <li><a href="/anuncios.html">Anuncios</a></li>
+      <li><a href="/#equipo">Equipo</a></li>
     </ul>
     <div class="nav-right">
-      <button class="nav-toggle" aria-label="Abrir menú">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-      </button>
-    </div>
-  </nav>
-</div>
-
-<div class="mobile-sheet">
-  <a href="index.html">Inicio</a>
-  <a href="#mecanicas">Mecánicas</a>
-  <a href="wiki.html">Wiki</a>
-  <a href="anuncios.html">Anuncios</a>
-  <a href="#equipo">Equipo</a>
-  <a href="/invite" target="_blank" rel="noopener">Discord</a>
-</div>
-
-<header class="hero">
-  <div class="hero-inner">
-    <div class="hero-banner"><img src="assets/banner.png" alt="Desafio Xtremo · Un mundo nuevo"></div>
-    <p class="hero-tagline">Un evento de Minecraft hecho por y para jugadores. Vive la experiencia que hasta ahora solo unos pocos streamers habían podido tener en grandes producciones.</p>
-    <div class="hero-badges">
-      <span class="badge-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Inscripción abierta a cualquier jugador</span>
-      <span class="badge-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>No hace falta transmitir para participar</span>
-    </div>
-    <div class="hero-actions">
-      <a href="/invite" target="_blank" rel="noopener" class="btn btn-discord">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0015.6 3l-.3.6a14 14 0 014.1 1.6 17 17 0 00-14.8 0A14 14 0 018.7 3.6L8.4 3a19.7 19.7 0 00-4.7 1.4C1 9 .3 13.5.6 18a20 20 0 006 3l1-1.4a12.8 12.8 0 01-1.9-.9l.5-.4a14.3 14.3 0 0011.6 0l.5.4c-.6.4-1.2.6-1.9.9l1 1.4a20 20 0 006-3c.4-5.2-.9-9.7-3.1-13.6zM8.5 15c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2zm7 0c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2z"/></svg>
-        Unirse al Discord
-      </a>
-      <a href="wiki.html" class="btn btn-ghost">Ver la Wiki</a>
+      <div id="account-slot"></div>
+      <a href="/invite" target="_blank" rel="noopener" class="btn btn-discord btn-sm nav-cta">Discord</a>
+      <button class="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu"><span></span><span></span><span></span></button>
     </div>
   </div>
 </header>
+<div class="mobile-menu" id="mobile-menu">
+  <nav aria-label="Menú móvil">
+    <a href="/"><small>01</small>Inicio</a>
+    <a href="/#recursos"><small>02</small>El juego</a>
+    <a href="/wiki.html"><small>03</small>Wiki</a>
+    <a href="/anuncios.html"><small>04</small>Anuncios</a>
+    <a href="/invite" target="_blank" rel="noopener"><small>05</small>Discord</a>
+  </nav>
+  <div class="mobile-menu-account" id="mobile-account"></div>
+</div>
 
-<section class="mechanics-section" id="mecanicas">
-  <div class="container">
-    <div class="section-head reveal">
-      <span class="eyebrow">Cómo se juega</span>
-      <h2>Mecánicas hechas a medida para <span class="accent">Desafio Xtremo</span></h2>
-      <p class="section-sub">Un plugin y un resourcepack propios, construidos para que cada muerte, cada revivir y cada giro de ruleta se sientan parte del show.</p>
-    </div>
-    <div class="mechanics-grid">
-      <article class="mechanic-card reveal">
-        <div class="mechanic-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h12M6 22h12M7 2c0 5 3.5 6.5 5 8-1.5 1.5-5 3-5 8M17 2c0 5-3.5 6.5-5 8 1.5 1.5 5 3 5 8"/></svg>
+<main id="main">
+
+  <!-- ============ HERO: despiertas en la isla ============ -->
+  <section class="hero" id="inicio" data-scene="pin" aria-label="Portada">
+    <div class="hero-sticky">
+      <div class="eyelids" aria-hidden="true"><span></span><span></span></div>
+      <div class="hero-map" aria-hidden="true">
+        <div class="hero-map-tilt">
+          <canvas id="island-hero" width="192" height="120"></canvas>
+          <div class="hero-markers" id="hero-markers"></div>
         </div>
-        <h3>Destierro temporal</h3>
-        <p>Morir no te saca del evento: te destierra por un tiempo limitado, con un período de gracia antes de que se aplique.</p>
-      </article>
-      <article class="mechanic-card reveal">
-        <div class="mechanic-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2c-3 4-5 7-5 10a5 5 0 0010 0c0-1.5-.6-2.8-1.5-4 .2 1.2-.3 2-1 2.5C15 8 13.5 5 12 2z"/></svg>
+      </div>
+      <div class="hero-vignette" aria-hidden="true"></div>
+
+      <div class="hero-content container">
+        <p class="eyebrow hero-eyebrow">Evento de Minecraft por equipos · Temporada 2</p>
+        <h1 class="hero-title">
+          <img src="assets/banner.png" alt="Desafio Xtremo: Un mundo nuevo" width="1024" height="138">
+        </h1>
+        <p class="hero-lead">Despiertas solo, en algún punto de una isla, sin nada. Tu clan está ahí fuera. <strong>Todo lo demás tendrás que ganártelo.</strong></p>
+        <div class="hero-actions">
+          <a href="/invite" target="_blank" rel="noopener" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.3 4.4A19.8 19.8 0 0015.6 3l-.3.6a14 14 0 014.1 1.6 17 17 0 00-14.8 0A14 14 0 018.7 3.6L8.4 3a19.7 19.7 0 00-4.7 1.4C1 9 .3 13.5.6 18a20 20 0 006 3l1-1.4a12.8 12.8 0 01-1.9-.9l.5-.4a14.3 14.3 0 0011.6 0l.5.4c-.6.4-1.2.6-1.9.9l1 1.4a20 20 0 006-3c.4-5.2-.9-9.7-3.1-13.6zM8.5 15c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2zm7 0c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2z"/></svg>
+            Quiero participar
+          </a>
+          <a href="#manifiesto" class="btn btn-ghost">Explorar el mundo</a>
         </div>
-        <h3>Revive con la Cuchara</h3>
-        <p>Un ítem propio del evento, "la Cuchara", te permite volver a la partida reviviendo en una fogata.</p>
-      </article>
-      <article class="mechanic-card reveal">
-        <div class="mechanic-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 3v9M12 12l7.8 4.5M12 12l-7.8 4.5"/></svg>
-        </div>
-        <h3>Ruleta en vivo</h3>
-        <p>En momentos clave del evento se activan ruletas animadas en pantalla que reparten giros de guion en tiempo real.</p>
-      </article>
-    </div>
-  </div>
-</section>
+        <ul class="hero-facts" aria-label="Datos clave">
+          <li><span class="status-dot ok"></span>Inscripción abierta a cualquiera</li>
+          <li><span class="status-dot ok"></span>Transmitir es opcional</li>
+        </ul>
+      </div>
 
-<section class="announcements-teaser" id="anuncios" hidden>
-  <div class="container">
-    <div class="section-head reveal">
-      <span class="eyebrow">Novedades</span>
-      <h2>Anuncios recientes</h2>
-    </div>
-    <div class="announcements-grid" id="announcements-teaser-grid"></div>
-    <div class="section-more reveal">
-      <a href="anuncios.html" class="btn btn-ghost">Ver todos los anuncios →</a>
-    </div>
-  </div>
-</section>
-
-<section class="team-section" id="equipo" hidden>
-  <div class="container">
-    <div class="section-head reveal">
-      <span class="eyebrow">El equipo</span>
-      <h2>Quién está detrás de <span class="accent">Desafio Xtremo</span></h2>
-      <p class="section-sub">Las personas que organizan, moderan y desarrollan el evento.</p>
-    </div>
-    <div id="team-groups"></div>
-  </div>
-</section>
-
-<section class="cta-section">
-  <div class="container">
-    <div class="cta-card reveal">
-      <h2>¿Listo para el <span class="accent">Desafio Xtremo</span>?</h2>
-      <p>Únete al Discord para enterarte de todas las novedades y ser de los primeros en anotarte cuando abran las inscripciones.</p>
-      <div class="cta-actions">
-        <a href="/invite" target="_blank" rel="noopener" class="btn btn-discord">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0015.6 3l-.3.6a14 14 0 014.1 1.6 17 17 0 00-14.8 0A14 14 0 018.7 3.6L8.4 3a19.7 19.7 0 00-4.7 1.4C1 9 .3 13.5.6 18a20 20 0 006 3l1-1.4a12.8 12.8 0 01-1.9-.9l.5-.4a14.3 14.3 0 0011.6 0l.5.4c-.6.4-1.2.6-1.9.9l1 1.4a20 20 0 006-3c.4-5.2-.9-9.7-3.1-13.6zM8.5 15c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2zm7 0c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2z"/></svg>
-          Unirse al Discord
-        </a>
+      <div class="hud hud-coords" aria-hidden="true">
+        <span class="hud-label">Posición</span>
+        <span class="hud-value"><span id="hud-x">X 1204</span> <span id="hud-z">Z -388</span></span>
+        <span class="hud-sub" id="hud-biome">Bioma · desconocido</span>
+      </div>
+      <div class="hud hud-scroll" aria-hidden="true">
+        <span class="hud-mouse"><span></span></span>
+        <span class="hud-label">Desplázate para explorar</span>
       </div>
     </div>
+  </section>
+
+  <!-- ============ ticker ============ -->
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-row" data-dir="1">
+      <div class="ticker-track"><span>Sin mesa de crafteo</span><i></i><span>Sin minería vanilla</span><i></i><span>Recursos por nodos</span><i></i><span>Clanes de 4</span><i></i><span>Tres biomas</span><i></i><span>Temperatura</span><i></i><span>Sacos de dormir</span><i></i><span>Eventos por colores</span><i></i></div>
+    </div>
+    <div class="ticker-row ticker-row-alt" data-dir="-1">
+      <div class="ticker-track"><span>Un mundo nuevo</span><i></i><span>De jugadores para jugadores</span><i></i><span>Plugin propio</span><i></i><span>Resourcepack propio</span><i></i><span>Hecho desde cero</span><i></i><span>Un mundo nuevo</span><i></i><span>De jugadores para jugadores</span><i></i></div>
+    </div>
   </div>
-</section>
+
+  <!-- ============ manifiesto ============ -->
+  <section class="manifesto" id="manifiesto" data-chapter="0">
+    <div class="container">
+      <p class="eyebrow" data-reveal="up">El concepto</p>
+      <p class="manifesto-text" data-fill>No es Minecraft con mecánicas extra. Es <em>un juego totalmente distinto</em>, dentro de Minecraft: sin bloques vanilla, sin minería, sin mesa de crafteo. Una isla nueva, construida desde cero, donde cada recurso cuesta y cada decisión pesa.</p>
+      <dl class="manifesto-stats">
+        <div data-reveal="up"><dt>Biomas</dt><dd data-count="3">3</dd></div>
+        <div data-reveal="up" data-delay="0.08"><dt>Jugadores por clan</dt><dd data-count="4">4</dd></div>
+        <div data-reveal="up" data-delay="0.16"><dt>Niveles de mesa</dt><dd data-count="3">3</dd></div>
+        <div data-reveal="up" data-delay="0.24"><dt>Tipos de evento</dt><dd data-count="8">8</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ============ 01 recursos ============ -->
+  <section class="chapter resources" id="recursos" data-chapter="1" data-achievement="Recursos básicos">
+    <div class="container">
+      <header class="chapter-head">
+        <span class="chapter-num" aria-hidden="true" data-scramble>01</span>
+        <div>
+          <p class="eyebrow" data-reveal="up">Recursos</p>
+          <h2 data-split>Todo sale de <span class="accent">la isla.</span></h2>
+          <p class="section-sub" data-reveal="up" data-delay="0.1">Aquí no se mina ni se rompen bloques. Talas, picas y recolectas nodos repartidos por el mapa, y lo que sacas depende de la herramienta que lleves.</p>
+        </div>
+      </header>
+      <div class="node-grid">
+        <button type="button" class="node-card spot" data-node="wood" data-reveal="up">
+          <span class="node-icon" data-pixel="wood"></span>
+          <span class="node-name">Madera</span>
+          <span class="node-desc">Tala árboles con herramienta. Un árbol completo da hasta <strong>12</strong>.</span>
+          <span class="node-count" aria-live="polite"><span>0</span> recolectada</span>
+        </button>
+        <button type="button" class="node-card spot" data-node="stone" data-reveal="up" data-delay="0.08">
+          <span class="node-icon" data-pixel="stone"></span>
+          <span class="node-name">Piedra</span>
+          <span class="node-desc">Pica menas de piedra poco a poco. Cuánto sacas depende de tu herramienta.</span>
+          <span class="node-count" aria-live="polite"><span>0</span> recolectada</span>
+        </button>
+        <button type="button" class="node-card spot" data-node="metal" data-reveal="up" data-delay="0.16">
+          <span class="node-icon" data-pixel="metal"></span>
+          <span class="node-name">Metal</span>
+          <span class="node-desc">Menas de metal. Imprescindible si quieres una base en condiciones.</span>
+          <span class="node-count" aria-live="polite"><span>0</span> recolectado</span>
+        </button>
+        <button type="button" class="node-card spot" data-node="cloth" data-reveal="up" data-delay="0.24">
+          <span class="node-icon" data-pixel="cloth"></span>
+          <span class="node-name">Tela</span>
+          <span class="node-desc">Plantas de tela por toda la isla. Sin herramientas: <strong>5</strong> cada vez. Vital para sobrevivir.</span>
+          <span class="node-count" aria-live="polite"><span>0</span> recolectada</span>
+        </button>
+      </div>
+      <p class="chapter-note" data-reveal="up"><span class="note-dot"></span>Los nodos y árboles reaparecen cada uno o dos días. Pulsa un nodo para recolectar.</p>
+    </div>
+  </section>
+
+  <!-- ============ 02 fabricación (pinned) ============ -->
+  <section class="chapter craft" id="fabricacion" data-chapter="2" data-scene="pin" data-achievement="Mesa de trabajo">
+    <div class="craft-sticky">
+      <div class="container craft-layout">
+        <div class="craft-copy">
+          <header class="chapter-head chapter-head-compact">
+            <span class="chapter-num" aria-hidden="true">02</span>
+            <div>
+              <p class="eyebrow">Fabricación</p>
+              <h2>Adiós a la <span class="accent">mesa de crafteo.</span></h2>
+            </div>
+          </header>
+          <ol class="craft-steps">
+            <li class="craft-step" data-step="0">
+              <h3>Fabrica desde el inventario</h3>
+              <p>Abre el menú de fabricación en tu propio inventario. Si llevas los materiales, eliges el objeto y en unos segundos lo tienes.</p>
+            </li>
+            <li class="craft-step" data-step="1">
+              <h3>Mesa de trabajo · Nivel 1</h3>
+              <p>La primera se levanta con <strong>20 de madera y 5 de metal</strong>. Cada mesa desbloquea objetos nuevos en tu menú.</p>
+            </li>
+            <li class="craft-step" data-step="2">
+              <h3>Nivel 2 · Planos básicos</h3>
+              <p>Reúne <strong>5 fragmentos de plano básico</strong> y 50 de metal, teniendo ya una mesa de nivel 1.</p>
+            </li>
+            <li class="craft-step" data-step="3">
+              <h3>Nivel 3 · Planos avanzados</h3>
+              <p><strong>5 fragmentos de plano avanzado</strong> y 100 de metal. Aquí empiezan las herramientas épicas.</p>
+            </li>
+          </ol>
+          <div class="craft-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        </div>
+        <div class="craft-visual" aria-hidden="true">
+          <div class="inv-panel">
+            <div class="inv-head"><span class="pixel">Fabricación</span><span class="inv-level">Nivel <b id="craft-level">0</b></span></div>
+            <ul class="inv-list">
+              <li class="inv-item" data-tier="0"><span class="inv-slot" data-pixel="pickaxe"></span><span>Pico de piedra</span><em class="r-common">Común</em></li>
+              <li class="inv-item" data-tier="0"><span class="inv-slot" data-pixel="axe"></span><span>Hacha de piedra</span><em class="r-common">Común</em></li>
+              <li class="inv-item" data-tier="1"><span class="inv-slot" data-pixel="bench"></span><span>Mesa de trabajo II</span><em class="r-common">Mesa</em></li>
+              <li class="inv-item" data-tier="2"><span class="inv-slot" data-pixel="pickaxe"></span><span>Picahielos</span><em class="r-rare">Raro</em></li>
+              <li class="inv-item" data-tier="2"><span class="inv-slot" data-pixel="hammer"></span><span>Martillo</span><em class="r-rare">Raro</em></li>
+              <li class="inv-item" data-tier="3"><span class="inv-slot" data-pixel="pickaxe"></span><span>Motopico</span><em class="r-epic">Épico</em></li>
+              <li class="inv-item" data-tier="3"><span class="inv-slot" data-pixel="axe"></span><span>Sierra eléctrica</span><em class="r-epic">Épico</em></li>
+            </ul>
+            <div class="inv-progress"><span></span></div>
+          </div>
+          <div class="tiers">
+            <div class="tier tier-1"><div class="cube"><i></i><i></i><i></i></div><span class="pixel">Nv 1</span></div>
+            <div class="tier tier-2"><div class="cube"><i></i><i></i><i></i></div><span class="pixel">Nv 2</span></div>
+            <div class="tier tier-3"><div class="cube"><i></i><i></i><i></i></div><span class="pixel">Nv 3</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 03 biomas (pinned) ============ -->
+  <section class="chapter biomes" id="biomas" data-chapter="3" data-scene="pin" data-achievement="Explorador de biomas">
+    <div class="biomes-sticky">
+      <div class="biomes-map" aria-hidden="true">
+        <canvas id="island-biomes" width="192" height="120"></canvas>
+      </div>
+      <div class="biomes-tint" aria-hidden="true"></div>
+      <div class="container biomes-layout">
+        <header class="chapter-head chapter-head-compact">
+          <span class="chapter-num" aria-hidden="true">03</span>
+          <div>
+            <p class="eyebrow">Biomas y temperatura</p>
+            <h2>Dónde vives <span class="accent">lo decide todo.</span></h2>
+          </div>
+        </header>
+        <div class="biome-cards">
+          <article class="biome-card" data-biome="intro">
+            <p class="biome-kicker pixel">Tres biomas · Ni uno más</p>
+            <h3>Elige bien</h3>
+            <p>Nieve, bosque y desierto. Cada uno tiene sus ventajas y sus problemas, y una mala ubicación puede arruinar todo tu desarrollo.</p>
+            <p class="biome-hint pixel">Sigue bajando para recorrer la isla</p>
+          </article>
+          <article class="biome-card" data-biome="snow">
+            <p class="biome-kicker pixel">Norte · Frío</p>
+            <h3>Nieve</h3>
+            <p>Madera y piedra de sobra, pero casi nada de metal y apenas animales. Comer y avanzar rápido se complica.</p>
+            <dl class="biome-stats">
+              <div><dt>Madera</dt><dd><span style="--v:.85"></span></dd></div>
+              <div><dt>Piedra</dt><dd><span style="--v:.85"></span></dd></div>
+              <div><dt>Metal</dt><dd><span style="--v:.12"></span></dd></div>
+            </dl>
+          </article>
+          <article class="biome-card" data-biome="forest">
+            <p class="biome-kicker pixel">Centro · Templado</p>
+            <h3>Bosque</h3>
+            <p>Ni frío ni calor. Un reparto equilibrado de madera, piedra y metal: el sitio más cómodo para empezar.</p>
+            <dl class="biome-stats">
+              <div><dt>Madera</dt><dd><span style="--v:.55"></span></dd></div>
+              <div><dt>Piedra</dt><dd><span style="--v:.55"></span></dd></div>
+              <div><dt>Metal</dt><dd><span style="--v:.55"></span></dd></div>
+            </dl>
+          </article>
+          <article class="biome-card" data-biome="desert">
+            <p class="biome-kicker pixel">Sur · Calor</p>
+            <h3>Desierto</h3>
+            <p>Lleno de metal y vacío de piedra y madera. Puedes avanzar muy rápido… si aguantas el calor.</p>
+            <dl class="biome-stats">
+              <div><dt>Madera</dt><dd><span style="--v:.08"></span></dd></div>
+              <div><dt>Piedra</dt><dd><span style="--v:.1"></span></dd></div>
+              <div><dt>Metal</dt><dd><span style="--v:.95"></span></dd></div>
+            </dl>
+          </article>
+        </div>
+        <div class="thermo" aria-hidden="true">
+          <div class="thermo-scale"><span>Frío</span><span>Templado</span><span>Calor</span></div>
+          <div class="thermo-bar"><span class="thermo-needle"></span></div>
+          <p class="thermo-note">Sin la ropa adecuada, el frío o el calor te quitan vida poco a poco.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 04 muerte ============ -->
+  <section class="chapter death" id="muerte" data-chapter="4" data-scene="view" data-achievement="Segunda oportunidad">
+    <div class="container">
+      <header class="chapter-head">
+        <span class="chapter-num" aria-hidden="true" data-scramble>04</span>
+        <div>
+          <p class="eyebrow" data-reveal="up">Muerte</p>
+          <h2 data-split>Morir ya no <span class="accent">te echa.</span></h2>
+          <p class="section-sub" data-reveal="up" data-delay="0.1">Se acabó esperar a que alguien te reviva. Al morir esperas un tiempo y vuelves a jugar. Cuantas más veces mueras en el día, más larga la espera.</p>
+        </div>
+      </header>
+      <div class="death-layout">
+        <div class="death-ladder card" data-reveal="up">
+          <div class="death-clock"><span class="pixel" id="death-clock">00:15:00</span><small>tiempo de espera</small></div>
+          <ol class="ladder">
+            <li style="--w:.125"><span class="ladder-label">1ª muerte</span><span class="ladder-bar"><i></i></span><span class="ladder-time">15 min</span></li>
+            <li style="--w:.25"><span class="ladder-label">2ª muerte</span><span class="ladder-bar"><i></i></span><span class="ladder-time">30 min</span></li>
+            <li style="--w:.375"><span class="ladder-label">3ª muerte</span><span class="ladder-bar"><i></i></span><span class="ladder-time">45 min</span></li>
+            <li style="--w:.5"><span class="ladder-label">4ª muerte</span><span class="ladder-bar"><i></i></span><span class="ladder-time">1 h</span></li>
+            <li style="--w:1"><span class="ladder-label">5ª o más</span><span class="ladder-bar"><i></i></span><span class="ladder-time">2 h</span></li>
+          </ol>
+        </div>
+        <div class="death-perks">
+          <article class="perk card spot" data-reveal="up" data-delay="0.05">
+            <span class="perk-icon" data-pixel="bag"></span>
+            <div><h3>Sacos de dormir</h3><p>Colócalos como puntos de aparición y elige en cuál reaparecer. Sin ninguno, apareces en un lugar aleatorio de la isla.</p></div>
+          </article>
+          <article class="perk card spot" data-reveal="up" data-delay="0.12">
+            <span class="perk-icon" data-pixel="spoon"></span>
+            <div><h3>Cuchara de la resurrección</h3><p>¿No puedes esperar? Tu equipo puede revivirte antes con ella.</p></div>
+          </article>
+          <article class="perk card spot" data-reveal="up" data-delay="0.19">
+            <span class="perk-icon" data-pixel="heart"></span>
+            <div><h3>Un comienzo con margen</h3><p>Al empezar tienes 3 muertes sin espera, válidas durante tus primeras 4 horas de juego.</p></div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 05 clanes ============ -->
+  <section class="chapter clans" id="clanes" data-chapter="5" data-scene="view" data-achievement="Clan formado">
+    <div class="container clans-layout">
+      <div class="clans-copy">
+        <header class="chapter-head">
+          <span class="chapter-num" aria-hidden="true" data-scramble>05</span>
+          <div>
+            <p class="eyebrow" data-reveal="up">Clanes</p>
+            <h2 data-split>Empiezas solo. <span class="accent">Encuentra a los tuyos.</span></h2>
+            <p class="section-sub" data-reveal="up" data-delay="0.1">Cada jugador despierta en un punto aleatorio, lejos de sus compañeros. Recorre la isla, reúnete con ellos y forma un clan desde el propio inventario.</p>
+          </div>
+        </header>
+        <div class="clan-slots" data-reveal="up" aria-label="Máximo cuatro jugadores por clan">
+          <span class="clan-slot"><i></i></span><span class="clan-slot"><i></i></span><span class="clan-slot"><i></i></span><span class="clan-slot"><i></i></span>
+          <p><strong>Máximo 4</strong> por clan, para que ningún grupo desequilibre el servidor.</p>
+        </div>
+      </div>
+      <div class="clans-map card" data-reveal="scale" aria-hidden="true">
+        <div class="clans-map-zoom">
+          <canvas id="island-clans" width="192" height="120"></canvas>
+          <div class="clan-markers" id="clan-markers"></div>
+        </div>
+        <div class="clans-map-hud"><span class="pixel">Clan · <b id="clan-count">1</b>/4</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 06 eventos ============ -->
+  <section class="chapter events" id="eventos" data-chapter="6" data-scene="view" data-achievement="Ojo al cielo">
+    <div class="container events-layout">
+      <div class="wheel-wrap" data-reveal="scale" aria-hidden="true">
+        <svg class="wheel" id="event-wheel" viewBox="-110 -110 220 220"></svg>
+        <span class="wheel-pointer"></span>
+        <span class="wheel-hub" data-pixel="wheel"></span>
+      </div>
+      <div class="events-copy">
+        <header class="chapter-head">
+          <span class="chapter-num" aria-hidden="true" data-scramble>06</span>
+          <div>
+            <p class="eyebrow" data-reveal="up">Eventos</p>
+            <h2 data-split>La isla <span class="accent">no se está quieta.</span></h2>
+            <p class="section-sub" data-reveal="up" data-delay="0.1">Las ruletas vuelven con otro papel: cada color tiene su efecto, siempre temporal. Algunas llegan sin avisar, así que juegas a la hora que quieras.</p>
+          </div>
+        </header>
+        <ul class="event-list" id="event-list"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 07 comunidad ============ -->
+  <section class="chapter craftsmanship" id="comunidad" data-chapter="7" data-achievement="Parte de algo nuevo">
+    <div class="container">
+      <header class="chapter-head">
+        <span class="chapter-num" aria-hidden="true" data-scramble>07</span>
+        <div>
+          <p class="eyebrow" data-reveal="up">De jugadores para jugadores</p>
+          <h2 data-split>La experiencia de las grandes series, <span class="accent">abierta a cualquiera.</span></h2>
+          <p class="section-sub" data-reveal="up" data-delay="0.1">Hasta ahora, vivir un evento así estaba reservado a unos pocos creadores invitados. Aquí la inscripción está abierta a cualquier jugador, y transmitir es completamente opcional.</p>
+        </div>
+      </header>
+      <div class="pillars">
+        <article class="pillar card spot" data-reveal="up">
+          <span class="pillar-num pixel">A</span>
+          <h3>Algo nuevo, desde cero</h3>
+          <p>Mapa, reglas y sistemas pensados para esta temporada. Serás de los primeros en pisar la isla.</p>
+        </article>
+        <article class="pillar card spot" data-reveal="up" data-delay="0.08">
+          <span class="pillar-num pixel">B</span>
+          <h3>Plugin y resourcepack propios</h3>
+          <p>Todo lo que ves en el juego está hecho a medida por el equipo: mecánicas, interfaz, texturas y sonidos.</p>
+        </article>
+        <article class="pillar card spot" data-reveal="up" data-delay="0.16">
+          <span class="pillar-num pixel">C</span>
+          <h3>Sin requisitos</h3>
+          <p>No hace falta tener canal ni seguidores. Si quieres jugar, tienes sitio. Si quieres emitirlo, también.</p>
+        </article>
+      </div>
+      <p class="chapter-note" data-reveal="up"><span class="note-dot"></span>El diseño del juego sigue en desarrollo: nombres y valores pueden cambiar antes del lanzamiento.</p>
+    </div>
+  </section>
+
+  <!-- ============ anuncios (dinámico) ============ -->
+  <section class="home-news" id="anuncios" hidden>
+    <div class="container">
+      <div class="home-news-head">
+        <div>
+          <p class="eyebrow" data-reveal="up">Novedades</p>
+          <h2 data-split>Diario de la isla</h2>
+        </div>
+        <a href="/anuncios.html" class="btn btn-ghost btn-sm" data-reveal="up">Ver todos los anuncios<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </div>
+      <div class="home-news-grid" id="news-grid"></div>
+    </div>
+  </section>
+
+  <!-- ============ equipo (dinámico) ============ -->
+  <section class="home-team" id="equipo" hidden>
+    <div class="container">
+      <div class="section-head center">
+        <p class="eyebrow" data-reveal="up">El equipo</p>
+        <h2 data-split>Quién construye <span class="accent">la isla</span></h2>
+        <p class="section-sub" data-reveal="up" data-delay="0.1">Las personas que organizan, moderan y programan Desafio Xtremo.</p>
+      </div>
+      <div id="team-groups"></div>
+    </div>
+  </section>
+
+  <!-- ============ CTA final ============ -->
+  <section class="final-cta" id="unete" data-scene="view">
+    <div class="container">
+      <div class="final-cta-inner">
+        <p class="eyebrow" data-reveal="up">Todavía sin fecha</p>
+        <h2 class="final-title" data-split>¿Te atreves a <span class="accent">despertar?</span></h2>
+        <p class="section-sub" data-reveal="up" data-delay="0.1">Únete al Discord para enterarte antes que nadie de cuándo abren las inscripciones y de cada novedad del desarrollo.</p>
+        <div class="final-actions" data-reveal="up" data-delay="0.18">
+          <a href="/invite" target="_blank" rel="noopener" class="btn btn-discord">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.3 4.4A19.8 19.8 0 0015.6 3l-.3.6a14 14 0 014.1 1.6 17 17 0 00-14.8 0A14 14 0 018.7 3.6L8.4 3a19.7 19.7 0 00-4.7 1.4C1 9 .3 13.5.6 18a20 20 0 006 3l1-1.4a12.8 12.8 0 01-1.9-.9l.5-.4a14.3 14.3 0 0011.6 0l.5.4c-.6.4-1.2.6-1.9.9l1 1.4a20 20 0 006-3c.4-5.2-.9-9.7-3.1-13.6zM8.5 15c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2zm7 0c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2z"/></svg>
+            Unirse al Discord
+          </a>
+          <a href="/wiki.html" class="btn btn-ghost">Leer la wiki</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- hotbar: chapter index styled as the in-game hotbar + XP bar -->
+<nav class="hotbar" id="hotbar" aria-label="Capítulos">
+  <div class="xp-bar" aria-hidden="true"><span></span></div>
+  <ol>
+    <li><a href="#manifiesto" data-target="0" title="El concepto"><span data-pixel="map"></span><span class="sr-only">El concepto</span></a></li>
+    <li><a href="#recursos" data-target="1" title="Recursos"><span data-pixel="pickaxe"></span><span class="sr-only">Recursos</span></a></li>
+    <li><a href="#fabricacion" data-target="2" title="Fabricación"><span data-pixel="bench"></span><span class="sr-only">Fabricación</span></a></li>
+    <li><a href="#biomas" data-target="3" title="Biomas"><span data-pixel="thermo"></span><span class="sr-only">Biomas</span></a></li>
+    <li><a href="#muerte" data-target="4" title="Muerte"><span data-pixel="hourglass"></span><span class="sr-only">Muerte</span></a></li>
+    <li><a href="#clanes" data-target="5" title="Clanes"><span data-pixel="clan"></span><span class="sr-only">Clanes</span></a></li>
+    <li><a href="#eventos" data-target="6" title="Eventos"><span data-pixel="wheel"></span><span class="sr-only">Eventos</span></a></li>
+    <li><a href="#comunidad" data-target="7" title="Comunidad"><span data-pixel="heart"></span><span class="sr-only">Comunidad</span></a></li>
+  </ol>
+  <span class="hotbar-label" id="hotbar-label" aria-hidden="true">El concepto</span>
+</nav>
 
 <footer class="site-footer">
-  <div class="footer-bar">
-    <div class="container">
-      <span class="footer-ip">IP · próximamente</span>
-      <div class="footer-social">
-        <a href="/invite" target="_blank" rel="noopener" aria-label="Discord">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0015.6 3l-.3.6a14 14 0 014.1 1.6 17 17 0 00-14.8 0A14 14 0 018.7 3.6L8.4 3a19.7 19.7 0 00-4.7 1.4C1 9 .3 13.5.6 18a20 20 0 006 3l1-1.4a12.8 12.8 0 01-1.9-.9l.5-.4a14.3 14.3 0 0011.6 0l.5.4c-.6.4-1.2.6-1.9.9l1 1.4a20 20 0 006-3c.4-5.2-.9-9.7-3.1-13.6zM8.5 15c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2zm7 0c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2z"/></svg>
-        </a>
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <img src="assets/wordmark.png" alt="Desafio Xtremo" width="163" height="22" loading="lazy">
+        <p>Un evento de Minecraft por equipos, hecho por y para jugadores. Proyecto independiente.</p>
+      </div>
+      <div class="footer-col">
+        <h3>Explorar</h3>
+        <ul><li><a href="/#recursos">El juego</a></li><li><a href="/wiki.html">Wiki</a></li><li><a href="/anuncios.html">Anuncios</a></li><li><a href="/#equipo">Equipo</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h3>Comunidad</h3>
+        <ul><li><a href="/invite" target="_blank" rel="noopener">Discord</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h3>Servidor</h3>
+        <div class="server-ip"><span class="status-dot"></span><div><p class="server-ip-label">IP del servidor</p><p class="server-ip-value">Próximamente</p></div></div>
       </div>
     </div>
-  </div>
-  <div class="footer-bottom">
-    <div class="container">
-      <p class="footer-brand"><img src="assets/wordmark.png" alt="">© 2026 Desafio Xtremo</p>
+    <p class="footer-giant" aria-hidden="true">DESAFIO XTREMO</p>
+    <div class="footer-bottom">
+      <p>© 2026 Desafio Xtremo. No es un producto oficial de Minecraft. No está aprobado por Mojang ni Microsoft, ni asociado con ellos.</p>
+      <p>Hecho a mano por el equipo.</p>
     </div>
   </div>
 </footer>
 
 <script src="js/site.js"></script>
+<script src="js/motion.js"></script>
+<script src="js/pixel-icons.js"></script>
+<script src="js/island.js"></script>
 <script src="js/analytics.js"></script>
-<script src="js/home-sections.js"></script>
+<script src="js/posts.js"></script>
+<script src="js/home.js"></script>
 </body>
 </html>

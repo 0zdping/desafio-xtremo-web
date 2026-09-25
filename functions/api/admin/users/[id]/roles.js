@@ -4,6 +4,7 @@ import {
   withQuotaHandling,
 } from '../../../../../backend/lib/adminGuard.js';
 import { d1Select, d1Run, d1First } from '../../../../../backend/lib/db.js';
+import { canManageRole } from '../../../../../backend/lib/permissions.js';
 
 const DISCORD_ID = /^\d{15,25}$/;
 
@@ -19,8 +20,11 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   const roleId = Number(body?.roleId);
   if (!Number.isInteger(roleId)) return jsonResponse({ error: 'Rango inválido.' }, 400);
 
-  const role = await d1First(env, `SELECT id FROM roles WHERE id = ?`, [roleId]);
+  const role = await d1First(env, `SELECT id, is_locked, position FROM roles WHERE id = ?`, [roleId]);
   if (!role) return jsonResponse({ error: 'Rango no encontrado.' }, 404);
+  if (!canManageRole(guard.roles, role)) {
+    return jsonResponse({ error: 'Solo puedes asignar rangos por debajo del tuyo.' }, 403);
+  }
 
   // Allow assigning a role to a Discord ID that hasn't logged in yet: seed a
   // stub profile row so the FK/reporting stays consistent; the real login

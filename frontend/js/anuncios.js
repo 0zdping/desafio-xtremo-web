@@ -1,128 +1,118 @@
-/* ---------- anuncios page: full announcements feed ---------- */
+/* ==========================================================================
+   anuncios.js · announcements feed: category chips (synced to ?cat=),
+   client-side search, featured first card, "load more" paging, likes.
+   ========================================================================== */
 (function () {
-  const feed = document.getElementById('announcements-feed-list');
-  const empty = document.getElementById('announcements-empty');
-  if (!feed) return;
+  const DX = window.DX;
+  const grid = document.getElementById('feed-grid');
+  if (!grid) return;
+  const chipsEl = document.getElementById('feed-chips');
+  const searchEl = document.getElementById('feed-search');
+  const skeleton = document.getElementById('feed-skeleton');
+  const empty = document.getElementById('feed-empty');
+  const emptyTitle = document.getElementById('feed-empty-title');
+  const emptyText = document.getElementById('feed-empty-text');
+  const moreWrap = document.getElementById('feed-more');
+  const PAGE = 9;
 
-  function escapeHtml(str) {
-    return String(str == null ? '' : str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-  }
+  let all = [];
+  let liked = new Set();
+  let shown = PAGE;
+  const params = new URLSearchParams(location.search);
+  let cat = params.get('cat') || '';
+  let query = '';
 
-  function formatDate(iso) {
-    try {
-      const d = new Date(iso);
-      if (isNaN(d.getTime())) return '';
-      return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
-    } catch (err) {
-      return '';
-    }
-  }
+  const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-  const PIN_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L20 8l-4.6 4 1.4 6-4.8-3.4L7.2 18l1.4-6L4 8l6.2-.4z"/></svg>';
-  const EYE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
-  const HEART_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>';
-
-  let csrfToken = '';
-  let loggedIn = false;
-  let likedIds = [];
-
-  function loginUrl() {
-    return `/api/auth/login?return_to=${encodeURIComponent(location.pathname)}`;
-  }
-
-  function renderCard(a) {
-    const pinned = !!a.pinned;
-    const date = formatDate(a.created_at);
-    const href = a.slug ? `anuncios/${encodeURIComponent(a.slug)}` : '';
-    const tag = href ? 'a' : 'article';
-    const hrefAttr = href ? ` href="${escapeHtml(href)}"` : '';
-    const imageInner = a.hero_image_url
-      ? `<img src="${escapeHtml(a.hero_image_url)}" alt="" loading="lazy">`
-      : '';
-    const liked = likedIds.includes(a.id);
-    return `
-      <${tag} class="post-card reveal${pinned ? ' pinned' : ''}"${hrefAttr}>
-        <div class="post-card-image">
-          ${imageInner}
-          ${pinned ? `<span class="pin-badge">${PIN_ICON}Fijado</span>` : ''}
-        </div>
-        <div class="post-card-body">
-          <div class="post-card-meta">
-            ${a.category ? `<span class="category-pill">${escapeHtml(a.category)}</span>` : ''}
-            <time>${escapeHtml(date)}</time>
-          </div>
-          <h3 class="post-card-title">${escapeHtml(a.title)}</h3>
-          <p class="post-card-excerpt">${escapeHtml(a.excerpt || '')}</p>
-          <div class="post-card-stats">
-            <span class="post-card-views">${EYE_ICON}${escapeHtml(String(a.views || 0))}</span>
-            <button type="button" class="like-btn${liked ? ' liked' : ''}" data-like-id="${a.id}" aria-pressed="${liked ? 'true' : 'false'}">
-              ${HEART_ICON}<span class="like-count">${a.likes || 0}</span>
-            </button>
-          </div>
-        </div>
-      </${tag}>
-    `;
-  }
-
-  async function toggleLike(btn) {
-    const id = Number(btn.dataset.likeId);
-    if (!loggedIn) {
-      location.href = loginUrl();
-      return;
-    }
-    if (btn.disabled) return;
-    btn.disabled = true;
-    try {
-      const res = await fetch(`/api/announcements/${id}/like`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'X-CSRF-Token': csrfToken },
-      });
-      const body = await res.json().catch(() => null);
-      if (!res.ok) throw new Error((body && body.error) || `Error ${res.status}`);
-      btn.classList.toggle('liked', body.liked);
-      btn.setAttribute('aria-pressed', body.liked ? 'true' : 'false');
-      const countEl = btn.querySelector('.like-count');
-      if (countEl) countEl.textContent = body.likes;
-    } catch (err) {
-      // Silent: a failed like toggle isn't worth an alert here.
-    } finally {
-      btn.disabled = false;
-    }
-  }
-
-  function wireLikeButtons() {
-    feed.querySelectorAll('.like-btn').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleLike(btn);
-      });
+  function filtered() {
+    const q = norm(query);
+    return all.filter((a) => {
+      if (cat && (a.category || 'Anuncio') !== cat) return false;
+      if (q && !norm(a.title + ' ' + (a.excerpt || '')).includes(q)) return false;
+      return true;
     });
   }
 
-  Promise.all([
-    fetch('/api/auth/me', { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-    fetch('/api/announcements/liked', { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-    fetch('/api/announcements', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : Promise.reject())),
-  ])
-    .then(([me, liked, data]) => {
-      if (me) {
-        csrfToken = me.csrfToken || '';
-        loggedIn = !!me.user;
-      }
-      if (liked && Array.isArray(liked.ids)) likedIds = liked.ids;
+  function renderChips() {
+    const counts = new Map();
+    all.forEach((a) => {
+      const c = a.category || 'Anuncio';
+      counts.set(c, (counts.get(c) || 0) + 1);
+    });
+    if (cat && !counts.has(cat)) cat = '';
+    const chip = (value, label, n) =>
+      `<button type="button" class="filter-chip" data-cat="${DX.escapeHtml(value)}" aria-pressed="${cat === value}">${DX.escapeHtml(label)}<small>${n}</small></button>`;
+    chipsEl.innerHTML = chip('', 'Todos', all.length) + Array.from(counts.entries()).map(([c, n]) => chip(c, c, n)).join('');
+  }
 
-      const items = Array.isArray(data && data.announcements) ? data.announcements : [];
-      if (!items.length) {
-        if (empty) empty.hidden = false;
-        return;
-      }
-      feed.innerHTML = items.map(renderCard).join('');
-      wireLikeButtons();
-      window.bindReveal && window.bindReveal();
+  function render() {
+    const list = filtered();
+    const page = list.slice(0, shown);
+    const featured = !cat && !query;
+    grid.innerHTML = page.map((a, i) => DXPosts.card(a, { featured: featured && i === 0, liked: liked.has(Number(a.id)), showStats: true })).join('');
+    moreWrap.hidden = list.length <= shown;
+    const none = !list.length;
+    empty.hidden = !none;
+    if (none) {
+      const filtering = !!(cat || query);
+      emptyTitle.textContent = filtering ? 'Nada por aquí' : 'Todavía no hay anuncios';
+      emptyText.textContent = filtering ? 'Ningún anuncio coincide con ese filtro.' : 'En cuanto haya novedades del evento, aparecerán aquí.';
+    }
+    window.DXMotion && window.DXMotion.refresh();
+  }
+
+  function syncUrl() {
+    const p = new URLSearchParams(location.search);
+    if (cat) p.set('cat', cat);
+    else p.delete('cat');
+    const qs = p.toString();
+    history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
+  }
+
+  chipsEl.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cat]');
+    if (!b) return;
+    cat = b.dataset.cat;
+    shown = PAGE;
+    chipsEl.querySelectorAll('[data-cat]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.cat === cat ? 'true' : 'false'));
+    syncUrl();
+    render();
+  });
+
+  let t = null;
+  searchEl.addEventListener('input', () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      query = searchEl.value.trim();
+      shown = PAGE;
+      render();
+    }, 160);
+  });
+
+  moreWrap.querySelector('button').addEventListener('click', () => {
+    shown += PAGE;
+    render();
+  });
+
+  DXPosts.bindLikes(grid);
+
+  Promise.all([
+    // no-store: the browser would otherwise keep this JSON for its 2 min
+    // max-age and show stale like counts after liking a post and coming back
+    fetch('/api/announcements', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))),
+    DXPosts.likedIds(),
+  ])
+    .then(([data, ids]) => {
+      all = Array.isArray(data && data.announcements) ? data.announcements : [];
+      liked = new Set(ids);
+      skeleton.remove();
+      renderChips();
+      render();
     })
     .catch(() => {
-      if (empty) empty.hidden = false;
+      skeleton.remove();
+      empty.hidden = false;
+      emptyTitle.textContent = 'No se han podido cargar los anuncios';
+      emptyText.textContent = 'Vuelve a intentarlo en un momento.';
     });
 })();

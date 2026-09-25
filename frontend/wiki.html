@@ -1,112 +1,148 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="no-js">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wiki · Desafio Xtremo</title>
-<meta name="description" content="Wiki de Desafio Xtremo. Se irá completando a medida que el servidor avance.">
+<meta name="description" content="Wiki de Desafio Xtremo: mecánicas, normas y guías del evento. Se completa a medida que avanza el desarrollo.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Wiki · Desafio Xtremo">
-<meta property="og:description" content="Wiki de Desafio Xtremo. Se irá completando a medida que el servidor avance.">
+<meta property="og:description" content="Mecánicas, normas y guías del evento.">
 <meta property="og:image" content="https://desafioxtremo.site/assets/banner.png">
 <meta property="og:url" content="https://desafioxtremo.site/wiki.html">
 <meta property="og:site_name" content="Desafio Xtremo">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Wiki · Desafio Xtremo">
-<meta name="twitter:description" content="Wiki de Desafio Xtremo. Se irá completando a medida que el servidor avance.">
-<meta name="twitter:image" content="https://desafioxtremo.site/assets/banner.png">
-<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="canonical" href="https://desafioxtremo.site/wiki.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#030b0a">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/tokens.css">
-<link rel="stylesheet" href="css/home.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js" integrity="sha512-xeUh+KxNyTufZOje++oQHstlMQ8/rpyzPuM+gjMFYK3z5ILJGE7l2NvYL+XfliKURMpBIKKp1XoPN/qswlSMFA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js" integrity="sha512-JatFEe90fJU2nrgf27fUz2hWRvdYrSlTEV8esFuqCtfiqWN8phkS1fUl/xCfYyrLDQcNf3YyS0V9hG7U4RHNmQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="stylesheet" href="/css/content.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js" integrity="sha512-xeUh+KxNyTufZOje++oQHstlMQ8/rpyzPuM+gjMFYK3z5ILJGE7l2NvYL+XfliKURMpBIKKp1XoPN/qswlSMFA==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js" integrity="sha512-JatFEe90fJU2nrgf27fUz2hWRvdYrSlTEV8esFuqCtfiqWN8phkS1fUl/xCfYyrLDQcNf3YyS0V9hG7U4RHNmQ==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 </head>
-<body>
+<body class="page-wiki">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<div class="scroll-progress" aria-hidden="true"></div>
+<div class="backdrop" aria-hidden="true"></div>
+<canvas id="dust" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
 
-<div class="scroll-progress" id="scroll-progress"></div>
-<div id="field"></div>
-<div class="nebula-field" id="nebula-field">
-  <div class="nebula nebula-1"></div>
-  <div class="nebula nebula-2"></div>
-  <div class="nebula nebula-3"></div>
-  <div class="nebula nebula-4"></div>
-</div>
-<div class="grain"></div>
-
-<div id="account-corner" class="account-corner"></div>
-
-<div class="nav-wrap">
-  <nav class="nav glass">
-    <a href="index.html" class="nav-logo"><img src="assets/wordmark.png" alt="Desafio Xtremo"></a>
+<header class="site-nav">
+  <div class="container">
+    <a href="/" class="nav-logo" aria-label="Desafio Xtremo, inicio"><img src="/assets/wordmark.png" alt="Desafio Xtremo" width="148" height="20"></a>
     <ul class="nav-links">
-      <li><a href="index.html">Inicio</a></li>
-      <li><a href="index.html#mecanicas">Mecánicas</a></li>
-      <li><a href="wiki.html">Wiki</a></li>
-      <li><a href="anuncios.html">Anuncios</a></li>
-      <li><a href="index.html#equipo">Equipo</a></li>
-      <li><a href="/invite" target="_blank" rel="noopener">Discord</a></li>
+      <li><a href="/">Inicio</a></li>
+      <li><a href="/#recursos">El juego</a></li>
+      <li><a href="/wiki.html">Wiki</a></li>
+      <li><a href="/anuncios.html">Anuncios</a></li>
+      <li><a href="/#equipo">Equipo</a></li>
     </ul>
     <div class="nav-right">
-      <button class="nav-toggle" aria-label="Abrir menú">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-      </button>
+      <div id="account-slot"></div>
+      <a href="/invite" target="_blank" rel="noopener" class="btn btn-discord btn-sm nav-cta">Discord</a>
+      <button class="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu"><span></span><span></span><span></span></button>
     </div>
+  </div>
+</header>
+<div class="mobile-menu" id="mobile-menu">
+  <nav aria-label="Menú móvil">
+    <a href="/"><small>01</small>Inicio</a>
+    <a href="/#recursos"><small>02</small>El juego</a>
+    <a href="/wiki.html"><small>03</small>Wiki</a>
+    <a href="/anuncios.html"><small>04</small>Anuncios</a>
+    <a href="/invite" target="_blank" rel="noopener"><small>05</small>Discord</a>
   </nav>
+  <div class="mobile-menu-account" id="mobile-account"></div>
 </div>
 
-<div class="mobile-sheet">
-  <a href="index.html">Inicio</a>
-  <a href="index.html#mecanicas">Mecánicas</a>
-  <a href="wiki.html">Wiki</a>
-  <a href="anuncios.html">Anuncios</a>
-  <a href="index.html#equipo">Equipo</a>
-  <a href="/invite" target="_blank" rel="noopener">Discord</a>
-</div>
-
-<section class="wiki-section" id="wiki-section">
-  <div class="container wiki-layout">
-    <aside class="wiki-sidebar glass" id="wiki-sidebar"></aside>
-    <div class="wiki-content" id="wiki-content">
-      <p class="wiki-content-msg">Cargando…</p>
+<main id="main">
+  <section class="page-head">
+    <div class="container">
+      <p class="eyebrow" data-reveal="up">Guía del jugador</p>
+      <h1 data-split>Wiki</h1>
+      <p data-reveal="up" data-delay="0.1">Todo lo que necesitas saber para sobrevivir en la isla. Se va completando a medida que avanza el desarrollo.</p>
     </div>
-  </div>
-</section>
+  </section>
 
-<section class="placeholder-section" id="wiki-empty" hidden>
-  <div class="container">
-    <div class="placeholder-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3-7 3V5z"/></svg>
+  <section class="container">
+    <div class="wiki-shell" id="wiki-shell">
+      <aside class="wiki-side" id="wiki-side" aria-label="Páginas de la wiki">
+        <button type="button" class="wiki-mobile-toggle" aria-expanded="false" aria-controls="wiki-nav">
+          <span>Páginas</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="wiki-nav" id="wiki-nav">
+          <label class="wiki-search">
+            <span class="sr-only">Buscar en la wiki</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input type="search" id="wiki-filter" placeholder="Buscar página…" autocomplete="off">
+            <kbd aria-hidden="true">/</kbd>
+          </label>
+          <nav id="wiki-links"></nav>
+        </div>
+      </aside>
+
+      <article class="wiki-article" id="wiki-article" aria-live="polite">
+        <div class="wiki-skeleton" aria-hidden="true">
+          <div class="skeleton" style="height:14px;width:30%"></div>
+          <div class="skeleton" style="height:44px;width:70%"></div>
+          <div class="skeleton" style="height:14px;width:100%"></div>
+          <div class="skeleton" style="height:14px;width:92%"></div>
+          <div class="skeleton" style="height:14px;width:96%"></div>
+        </div>
+      </article>
+
+      <aside class="wiki-toc" id="wiki-toc" aria-label="En esta página" hidden>
+        <h2>En esta página</h2>
+        <ol id="wiki-toc-list"></ol>
+      </aside>
     </div>
-    <h1 class="reveal">Wiki en construcción</h1>
-    <p class="reveal">Todavía no hay nada confirmado para mostrar aquí. A medida que el servidor avance, se irá completando con información real.</p>
-  </div>
-</section>
+
+    <div class="empty-state" id="wiki-empty" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3-7 3V5z"/></svg>
+      <strong>Wiki en construcción</strong>
+      <span>Todavía no hay nada confirmado para mostrar aquí. Se irá completando con información real a medida que avance el servidor.</span>
+    </div>
+  </section>
+</main>
 
 <footer class="site-footer">
-  <div class="footer-bar">
-    <div class="container">
-      <span class="footer-ip">IP · próximamente</span>
-      <div class="footer-social">
-        <a href="/invite" target="_blank" rel="noopener" aria-label="Discord">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0015.6 3l-.3.6a14 14 0 014.1 1.6 17 17 0 00-14.8 0A14 14 0 018.7 3.6L8.4 3a19.7 19.7 0 00-4.7 1.4C1 9 .3 13.5.6 18a20 20 0 006 3l1-1.4a12.8 12.8 0 01-1.9-.9l.5-.4a14.3 14.3 0 0011.6 0l.5.4c-.6.4-1.2.6-1.9.9l1 1.4a20 20 0 006-3c.4-5.2-.9-9.7-3.1-13.6zM8.5 15c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2zm7 0c-1 0-1.8-1-1.8-2s.8-2 1.8-2 1.9 1 1.8 2c0 1-.8 2-1.8 2z"/></svg>
-        </a>
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <img src="/assets/wordmark.png" alt="Desafio Xtremo" width="163" height="22" loading="lazy">
+        <p>Un evento de Minecraft por equipos, hecho por y para jugadores. Proyecto independiente.</p>
+      </div>
+      <div class="footer-col">
+        <h3>Explorar</h3>
+        <ul><li><a href="/#recursos">El juego</a></li><li><a href="/wiki.html">Wiki</a></li><li><a href="/anuncios.html">Anuncios</a></li><li><a href="/#equipo">Equipo</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h3>Comunidad</h3>
+        <ul><li><a href="/invite" target="_blank" rel="noopener">Discord</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h3>Servidor</h3>
+        <div class="server-ip"><span class="status-dot"></span><div><p class="server-ip-label">IP del servidor</p><p class="server-ip-value">Próximamente</p></div></div>
       </div>
     </div>
-  </div>
-  <div class="footer-bottom">
-    <div class="container">
-      <p class="footer-brand"><img src="assets/wordmark.png" alt="">© 2026 Desafio Xtremo</p>
+    <p class="footer-giant" aria-hidden="true">DESAFIO XTREMO</p>
+    <div class="footer-bottom">
+      <p>© 2026 Desafio Xtremo. No es un producto oficial de Minecraft. No está aprobado por Mojang ni Microsoft, ni asociado con ellos.</p>
+      <p>Hecho a mano por el equipo.</p>
     </div>
   </div>
 </footer>
 
-<script src="js/site.js"></script>
-<script src="js/analytics.js"></script>
-<script src="js/wiki.js"></script>
+<script src="/js/site.js"></script>
+<script src="/js/motion.js"></script>
+<script src="/js/analytics.js"></script>
+<script src="/js/wiki.js" defer></script>
 </body>
 </html>

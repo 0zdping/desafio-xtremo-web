@@ -19,8 +19,9 @@ export const onRequestGet = withQuotaHandling(async (context) => {
   return jsonResponse({ spec });
 });
 
-// Upsert: crea la spec si el slug no existe, la actualiza si ya existe. Una
-// spec por sistema no necesita un endpoint de creación separado.
+// Upsert: crea la spec si el slug no existe, la actualiza si ya existe,
+// salvo que el cliente pida create:true (formulario "Nueva spec"), en cuyo
+// caso un slug ya usado es un 409 en vez de pisar la spec existente.
 export const onRequestPut = withQuotaHandling(async (context) => {
   const { request, env, params } = context;
   const guard = await requirePermissionAndCsrf(request, env, 'devzone.manage');
@@ -41,9 +42,16 @@ export const onRequestPut = withQuotaHandling(async (context) => {
   if (system.length > 40) return jsonResponse({ error: 'Sistema inválido.' }, 400);
   if (sourceNote.length > 200) return jsonResponse({ error: 'Nota de origen demasiado larga.' }, 400);
 
+  if (rawContent.length > 100000) return jsonResponse({ error: 'Contenido demasiado largo (máx. 100.000 caracteres).' }, 400);
+
   const content = await stripDangerousHtml(rawContent);
 
   const existing = await d1First(env, `SELECT id FROM devzone_specs WHERE slug = ?`, [slug]);
+  // "Nueva spec" sends create:true: never let it silently overwrite an
+  // existing spec that happens to share the slug someone typed.
+  if (existing && body?.create === true) {
+    return jsonResponse({ error: 'Ya existe una spec con ese slug. Elige otro o edita la existente.' }, 409);
+  }
   if (existing) {
     await d1Run(
       env,
@@ -60,4 +68,16 @@ export const onRequestPut = withQuotaHandling(async (context) => {
 
   const spec = await d1First(env, `SELECT * FROM devzone_specs WHERE slug = ?`, [slug]);
   return jsonResponse({ spec });
+});
+
+export const onRequestDelete = withQuotaHandling(async (context) => {
+  const { request, env, params } = context;
+  const guard = await requirePermissionAndCsrf(request, env, 'devzone.manage');
+  if (!guard.ok) return jsonResponse(guard.body, guard.status);
+
+  const existing = await d1First(env, `SELECT id FROM devzone_specs WHERE slug = ?`, [params.slug]);
+  if (!existing) return jsonResponse({ error: 'Spec no encontrada.' }, 404);
+
+  await d1Run(env, `DELETE FROM devzone_specs WHERE id = ?`, [existing.id]);
+  return jsonResponse({ ok: true });
 });

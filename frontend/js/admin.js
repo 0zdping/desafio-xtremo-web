@@ -1,1298 +1,1013 @@
-/* Dark, in-page replacement for window.confirm(): the native dialog is an
- * unstyled OS-chrome white box that also freezes the tab for any outside
- * automation, unlike this one. */
+/* ==========================================================================
+   admin.js · staff panel (/admin.html), built on app-ui.js.
+   Sections: Resumen, Anuncios, Wiki, Equipo, Sanciones, Estadísticas,
+   Uso de recursos, Rangos y permisos. Every mutation is also enforced
+   server-side; the permission checks here only decide what to show.
+   ========================================================================== */
 (function () {
-  const overlay = document.getElementById('zd-confirm-overlay');
-  if (!overlay) return;
-  const messageEl = document.getElementById('zd-confirm-message');
-  const okBtn = document.getElementById('zd-confirm-ok');
-  const cancelBtn = document.getElementById('zd-confirm-cancel');
-  let pendingResolve = null;
-
-  function close(result) {
-    overlay.hidden = true;
-    if (pendingResolve) {
-      const resolve = pendingResolve;
-      pendingResolve = null;
-      resolve(result);
-    }
-  }
-
-  okBtn.addEventListener('click', () => close(true));
-  cancelBtn.addEventListener('click', () => close(false));
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) close(false);
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !overlay.hidden) close(false);
-  });
-
-  window.zdConfirm = function (message) {
-    messageEl.textContent = message;
-    overlay.hidden = false;
-    return new Promise((resolve) => {
-      pendingResolve = resolve;
-    });
-  };
-})();
-
-(function () {
-  const root = document.getElementById('panel-root');
-  let csrfToken = '';
+  const DX = window.DX;
+  const { api, drawer, shell, icon, mdEditor, MD_TOOLBAR, lineChart, denied } = window.DXApp;
+  const esc = DX.escapeHtml;
+  const root = document.getElementById('app-root');
   let me = null;
-  let permissionRegistry = [];
-  let editingRoleId = null;
+  let app = null;
+  const can = (k) => DX.hasPerm(me, k);
 
-  function escapeHtml(str) {
-    return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  const slugify = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60);
+  const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const num = (n) => (Number(n) || 0).toLocaleString('es-ES');
+  const face = (m, size) => `https://vzge.me/face/${size || 64}/${encodeURIComponent(m.mc_uuid || m.mc_nick || 'steve')}`;
+
+  function head(title, sub, actions) {
+    return `<div class="view-head"><div><h1>${esc(title)}</h1>${sub ? `<p>${sub}</p>` : ''}</div><div class="view-actions">${actions || ''}</div></div>`;
+  }
+  function searchBox(id, ph) {
+    return `<label class="search-input">${icon('search')}<span class="sr-only">${esc(ph)}</span><input type="search" id="${id}" placeholder="${esc(ph)}" autocomplete="off"></label>`;
+  }
+  function emptyRow(cols, text) {
+    return `<tr><td colspan="${cols}"><div class="empty-state">${esc(text)}</div></td></tr>`;
+  }
+  function charCounter(input, max) {
+    const hint = input.parentElement.querySelector('.field-hint[data-count]');
+    if (!hint) return;
+    const upd = () => (hint.textContent = `${input.value.length}/${max}`);
+    input.addEventListener('input', upd);
+    upd();
   }
 
-  function denied(message, showLogin) {
-    root.innerHTML = `
-      <div class="panel-denied">
-        <h1>Panel de Desafio Xtremo</h1>
-        <p>${escapeHtml(message)}</p>
-        ${showLogin ? `<a class="btn btn-discord" href="/api/auth/login?return_to=/admin.html">Iniciar sesión con Discord</a>` : `<a class="btn btn-ghost" href="index.html">Volver al sitio</a>`}
-      </div>`;
-  }
+  /* =====================================================================
+     RESUMEN
+     ===================================================================== */
+  async function renderOverview(view, alive) {
+    const tasks = [
+      api('/api/admin/announcements').catch(() => null),
+      api('/api/admin/wiki').catch(() => null),
+      api('/api/admin/team').catch(() => null),
+      can('panel.view_stats') ? api('/api/admin/stats?range=7d').catch(() => null) : null,
+      can('sanctions.access') ? api('/api/staff/sanctions').catch(() => null) : null,
+    ];
+    const [ann, wiki, team, stats, sanc] = await Promise.all(tasks);
+    if (!alive()) return;
+    const hour = new Date().getHours();
+    const hello = hour < 7 ? 'Buenas noches' : hour < 14 ? 'Buenos días' : hour < 21 ? 'Buenas tardes' : 'Buenas noches';
+    const anns = (ann && ann.announcements) || [];
+    const kpis = [];
+    if (stats) kpis.push(['Visitas · 7 días', num(stats.totals.pageviews), '#estadisticas']);
+    if (stats) kpis.push(['Visitantes únicos', num(stats.totals.uniques), '#estadisticas']);
+    kpis.push(['Anuncios', num(anns.length), '#anuncios']);
+    kpis.push(['Páginas de wiki', num(((wiki && wiki.pages) || []).length), '#wiki']);
+    kpis.push(['Miembros del equipo', num(((team && team.members) || []).length), '#equipo']);
+    if (sanc) kpis.push(['Sanciones', num((sanc.sanctions || []).length), '#sanciones']);
 
-  async function api(path, options = {}) {
-    const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
-    if (options.method && options.method !== 'GET') headers['X-CSRF-Token'] = csrfToken;
-    const res = await fetch(path, { credentials: 'include', ...options, headers });
-    const isJson = res.headers.get('content-type')?.includes('application/json');
-    const body = isJson ? await res.json().catch(() => null) : null;
-    if (!res.ok) {
-      const err = new Error((body && body.error) || `Error ${res.status}`);
-      err.status = res.status;
-      err.body = body;
-      throw err;
-    }
-    return body;
-  }
-
-  function hasPerm(key) {
-    return !!(me && me.permissions && me.permissions.includes(key));
-  }
-
-  function initShell() {
-    const tpl = document.getElementById('tpl-panel');
-    root.innerHTML = '';
-    root.appendChild(tpl.content.cloneNode(true));
-
-    document.getElementById('panel-user-avatar').src =
-      me.avatar ||
-      'data:image/svg+xml;utf8,' +
-        encodeURIComponent(
-          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#172038"/><circle cx="12" cy="9.5" r="3.5" fill="#54607f"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" fill="#54607f"/></svg>'
-        );
-    document.getElementById('panel-user-name').textContent = me.username || me.id;
-
-    const overviewRoles = document.getElementById('overview-roles');
-    overviewRoles.innerHTML = (me.roles || [])
-      .map(
-        (r) =>
-          `<span class="perm-chip" style="border-color:${r.color}55;color:${r.color}"><span class="role-swatch" style="display:inline-block;background:${r.color};width:7px;height:7px;border-radius:50%;margin-right:6px;"></span>${escapeHtml(r.name)}</span>`
-      )
-      .join('') || '<span class="panel-section-sub">Sin rangos asignados.</span>';
-
-    if (hasPerm('panel.access')) document.getElementById('nav-roles').hidden = false;
-    if (hasPerm('panel.view_stats')) document.getElementById('nav-stats').hidden = false;
-    if (hasPerm('panel.view_usage')) document.getElementById('nav-usage').hidden = false;
-    if (hasPerm('panel.access')) document.getElementById('nav-wiki').hidden = false;
-    if (hasPerm('panel.access')) document.getElementById('nav-announcements').hidden = false;
-    if (hasPerm('panel.access')) document.getElementById('nav-team').hidden = false;
-    if (hasPerm('sanctions.access')) document.getElementById('nav-sanctions').hidden = false;
-
-    document.querySelectorAll('.panel-nav-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.panel-nav-btn').forEach((b) => b.classList.remove('active'));
-        document.querySelectorAll('.panel-section').forEach((s) => s.classList.remove('active'));
-        btn.classList.add('active');
-        const section = document.getElementById('section-' + btn.dataset.section);
-        section.classList.add('active');
-        if (btn.dataset.section === 'roles') loadRoles();
-        if (btn.dataset.section === 'stats') loadStats();
-        if (btn.dataset.section === 'usage') loadUsage();
-        if (btn.dataset.section === 'wiki') loadWiki();
-        if (btn.dataset.section === 'announcements') loadAnnouncements();
-        if (btn.dataset.section === 'team') loadTeam();
-        if (btn.dataset.section === 'sanctions') loadSanctions();
-      });
-    });
-
-    wireRoleForm();
-    wireStatsRange();
-    wireUserSearch();
-    wireWikiForm();
-    wireAnnouncementForm();
-    wireTeamForm();
-    wireSanctionForm();
-  }
-
-  function renderMarkdownPreview(el, content) {
-    if (!el) return;
-    try {
-      const raw = typeof marked !== 'undefined' ? marked.parse(content || '') : escapeHtml(content || '');
-      el.innerHTML = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(raw) : escapeHtml(content || '');
-    } catch (err) {
-      el.textContent = content || '';
-    }
-  }
-
-  /* ---------- Roles & permissions ---------- */
-
-  function roleMsg(text, type) {
-    const el = document.getElementById('roles-msg');
-    el.innerHTML = text ? `<div class="panel-msg ${type}">${escapeHtml(text)}</div>` : '';
-  }
-
-  async function loadRoles() {
-    try {
-      const [{ roles }, permRes] = await Promise.all([
-        api('/api/admin/roles'),
-        permissionRegistry.length ? Promise.resolve({ permissions: permissionRegistry }) : api('/api/admin/permissions'),
-      ]);
-      permissionRegistry = permRes.permissions;
-      renderRoles(roles);
-    } catch (err) {
-      roleMsg(err.message, 'error');
-    }
-  }
-
-  function renderRoles(roles) {
-    const grid = document.getElementById('roles-grid');
-    const canManage = hasPerm('panel.manage_roles');
-    grid.innerHTML = roles
-      .map((r) => {
-        const perms = r.permissions.length
-          ? r.permissions.map((k) => `<span class="perm-chip">${escapeHtml(k)}</span>`).join('')
-          : '<span class="perm-chip">sin permisos</span>';
-        const actions =
-          canManage && !r.is_locked
-            ? `<div class="role-card-actions">
-                 <button class="btn btn-ghost btn-sm" data-edit="${r.id}">Editar</button>
-                 <button class="btn btn-ghost btn-sm" data-delete="${r.id}">Eliminar</button>
-               </div>`
-            : '';
-        return `
-          <div class="role-card">
-            <div class="role-card-head">
-              <span class="role-swatch" style="background:${r.color}"></span>
-              <span class="role-card-name">${escapeHtml(r.name)}</span>
-              ${r.is_locked ? '<span class="role-locked-badge">Fijo</span>' : ''}
-            </div>
-            <div class="role-perms">${perms}</div>
-            ${actions}
-          </div>`;
-      })
-      .join('');
-
-    grid.querySelectorAll('[data-edit]').forEach((btn) =>
-      btn.addEventListener('click', () => openRoleForm(roles.find((r) => r.id === Number(btn.dataset.edit))))
-    );
-    grid.querySelectorAll('[data-delete]').forEach((btn) =>
-      btn.addEventListener('click', () => deleteRole(Number(btn.dataset.delete)))
-    );
-
-    document.getElementById('role-form-open').style.display = canManage ? '' : 'none';
-  }
-
-  function wireRoleForm() {
-    document.getElementById('role-form-open').addEventListener('click', () => openRoleForm(null));
-    document.getElementById('role-form-cancel').addEventListener('click', closeRoleForm);
-    document.getElementById('role-form-color').addEventListener('input', (e) => {
-      document.getElementById('role-form-color-hex').textContent = e.target.value;
-    });
-    document.getElementById('role-form-save').addEventListener('click', saveRole);
-  }
-
-  function openRoleForm(role) {
-    editingRoleId = role ? role.id : null;
-    document.getElementById('role-form-title').textContent = role ? `Editar ${role.name}` : 'Crear rango';
-    document.getElementById('role-form-name').value = role ? role.name : '';
-    document.getElementById('role-form-color').value = role ? role.color : '#6fb3ff';
-    document.getElementById('role-form-color-hex').textContent = role ? role.color : '#6fb3ff';
-    document.getElementById('role-form-position').value = role ? role.position : 0;
-
-    const permsWrap = document.getElementById('role-form-perms');
-    const activeKeys = role ? role.permissions : [];
-    permsWrap.innerHTML = permissionRegistry
-      .map(
-        (p) => `
-        <label class="perm-check">
-          <input type="checkbox" value="${escapeHtml(p.key)}" ${activeKeys.includes(p.key) ? 'checked' : ''}>
-          <span><span class="perm-label">${escapeHtml(p.label)}</span><span class="perm-desc">${escapeHtml(p.description || '')}</span></span>
-        </label>`
-      )
-      .join('');
-
-    document.getElementById('role-form-card').hidden = false;
-  }
-
-  function closeRoleForm() {
-    document.getElementById('role-form-card').hidden = true;
-    editingRoleId = null;
-  }
-
-  async function saveRole() {
-    const name = document.getElementById('role-form-name').value.trim();
-    const color = document.getElementById('role-form-color').value;
-    const position = Number(document.getElementById('role-form-position').value) || 0;
-    const permissionKeys = Array.from(
-      document.querySelectorAll('#role-form-perms input[type="checkbox"]:checked')
-    ).map((el) => el.value);
-
-    try {
-      if (editingRoleId) {
-        await api(`/api/admin/roles/${editingRoleId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ name, color, position, permissionKeys }),
-        });
-        roleMsg('Rango actualizado.', 'ok');
-      } else {
-        await api('/api/admin/roles', {
-          method: 'POST',
-          body: JSON.stringify({ name, color, position, permissionKeys }),
-        });
-        roleMsg('Rango creado.', 'ok');
-      }
-      closeRoleForm();
-      loadRoles();
-    } catch (err) {
-      roleMsg(err.message, 'error');
-    }
-  }
-
-  async function deleteRole(id) {
-    const ok = window.zdConfirm ? await window.zdConfirm('¿Eliminar este rango? Esta acción no se puede deshacer.') : confirm('¿Eliminar este rango?');
-    if (!ok) return;
-    try {
-      await api(`/api/admin/roles/${id}`, { method: 'DELETE' });
-      roleMsg('Rango eliminado.', 'ok');
-      loadRoles();
-    } catch (err) {
-      roleMsg(err.message, 'error');
-    }
-  }
-
-  /* ---------- User role assignment ---------- */
-
-  function wireUserSearch() {
-    document.getElementById('user-search-btn').addEventListener('click', searchUsers);
-    document.getElementById('user-search-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') searchUsers();
-    });
-  }
-
-  const DISCORD_ID_RE = /^\d{15,25}$/;
-
-  async function searchUsers() {
-    const q = document.getElementById('user-search-input').value.trim();
-    const wrap = document.getElementById('user-results');
-    wrap.innerHTML = '<span class="panel-section-sub">Buscando…</span>';
-    try {
-      const { users } = await api(`/api/admin/users?q=${encodeURIComponent(q)}`);
-      const [{ roles: allRoles }] = await Promise.all([api('/api/admin/roles')]);
-      renderUserResults(users, allRoles, q);
-    } catch (err) {
-      wrap.innerHTML = `<div class="panel-msg error">${escapeHtml(err.message)}</div>`;
-    }
-  }
-
-  function renderUserResults(users, allRoles, q) {
-    const wrap = document.getElementById('user-results');
-    const canManage = hasPerm('panel.manage_roles');
-
-    // A search by a not-yet-seen Discord ID returns nothing from `users`,
-    // but you can still assign it a role, so synthesize a stub row: that way
-    // there's an actual control to do it, instead of just saying it's possible.
-    if (!users.length && DISCORD_ID_RE.test(q)) {
-      users = [{ id: q, username: null, avatar: null, roles: [] }];
-    }
-
-    if (!users.length) {
-      wrap.innerHTML = '<span class="panel-section-sub">Sin resultados. Prueba con el ID de Discord completo para asignarle un rango a alguien que todavía no ha iniciado sesión.</span>';
-    } else {
-      wrap.innerHTML = users.map((u) => renderUserRow(u, allRoles, canManage)).join('');
-    }
-
-    wrap.querySelectorAll('[data-remove-role]').forEach((btn) =>
-      btn.addEventListener('click', async () => {
-        const [userId, roleId] = btn.dataset.removeRole.split(':');
-        try {
-          await api(`/api/admin/users/${userId}/roles/${roleId}`, { method: 'DELETE' });
-          searchUsers();
-        } catch (err) {
-          alert(err.message);
-        }
-      })
-    );
-    wrap.querySelectorAll('[data-assign-user]').forEach((btn) =>
-      btn.addEventListener('click', async () => {
-        const userId = btn.dataset.assignUser;
-        const select = wrap.querySelector(`select[data-assign-select="${userId}"]`);
-        const roleId = Number(select.value);
-        if (!roleId) return;
-        try {
-          await api(`/api/admin/users/${userId}/roles`, { method: 'POST', body: JSON.stringify({ roleId }) });
-          searchUsers();
-        } catch (err) {
-          alert(err.message);
-        }
-      })
-    );
-  }
-
-  function renderUserRow(u, allRoles, canManage) {
-    // u.avatar is another user's stored avatar URL (see comment on
-    // avatarSrc in site.js), so escape it here too: this renders other
-    // people's data in a privileged staff view.
-    const avatar = escapeHtml(
-      u.avatar ||
-      'data:image/svg+xml;utf8,' +
-        encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#172038"/><circle cx="12" cy="9.5" r="3.5" fill="#54607f"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" fill="#54607f"/></svg>')
-    );
-    const roles = (u.roles || [])
-      .map(
-        (r) => `
-        <span class="role-pill" style="border-color:${r.color}55;color:${r.color}">
-          <span class="role-swatch" style="background:${r.color}"></span>${escapeHtml(r.name)}
-          ${canManage ? `<button data-remove-role="${u.id}:${r.id}" title="Quitar">×</button>` : ''}
-        </span>`
-      )
-      .join('');
-    const options = allRoles.map((r) => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
-
-    return `
-      <div class="user-result">
-        <img src="${avatar}" alt="">
-        <span class="user-result-name">${escapeHtml(u.username || '(sin nombre aún)')}</span>
-        <span class="user-result-id">${escapeHtml(u.id)}</span>
-        <div class="user-result-roles">${roles}</div>
-      </div>
-      ${
-        canManage
-          ? `<div class="user-assign-row">
-               <select data-assign-select="${u.id}"><option value="">Asignar rango…</option>${options}</select>
-               <button class="btn btn-ghost btn-sm" data-assign-user="${u.id}">Asignar</button>
-             </div>`
-          : ''
-      }`;
-  }
-
-  /* ---------- Stats (page views, unique visitors, clicks) ---------- */
-
-  let currentStatsRange = '7d';
-
-  function wireStatsRange() {
-    const wrap = document.getElementById('stats-range');
-    wrap.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-range]');
-      if (!btn) return;
-      loadStats(btn.dataset.range);
-    });
-  }
-
-  function statsMsg(text, type) {
-    const el = document.getElementById('stats-msg');
-    el.innerHTML = text ? `<div class="panel-msg ${type}">${escapeHtml(text)}</div>` : '';
-  }
-
-  async function loadStats(range) {
-    if (range) currentStatsRange = range;
-    document.querySelectorAll('#stats-range button').forEach((b) => b.classList.toggle('active', b.dataset.range === currentStatsRange));
-    statsMsg('', 'ok');
-    document.getElementById('stats-kpis').innerHTML = '<span class="panel-section-sub">Cargando…</span>';
-    try {
-      const data = await api(`/api/admin/stats?range=${encodeURIComponent(currentStatsRange)}`);
-      renderStats(data);
-    } catch (err) {
-      document.getElementById('stats-kpis').innerHTML = '';
-      statsMsg(err.message, 'error');
-    }
-  }
-
-  function pctDelta(curr, prev) {
-    curr = Number(curr) || 0;
-    prev = Number(prev) || 0;
-    if (!prev) return curr > 0 ? { text: 'Nuevo', cls: 'up' } : null;
-    const delta = ((curr - prev) / prev) * 100;
-    const cls = delta > 0.5 ? 'up' : delta < -0.5 ? 'down' : '';
-    const sign = delta > 0 ? '+' : '';
-    return { text: `${sign}${delta.toFixed(1)}%`, cls };
-  }
-
-  function kpiCard(label, value, delta) {
-    return `
-      <div class="stat-kpi">
-        <span class="stat-kpi-label">${label}</span>
-        <span class="stat-kpi-value">${(Number(value) || 0).toLocaleString('es')}</span>
-        ${delta ? `<span class="stat-kpi-delta ${delta.cls}">${delta.text}<span class="stat-kpi-delta-sub">vs. periodo anterior</span></span>` : '<span class="stat-kpi-delta-sub">sin datos del periodo anterior</span>'}
-      </div>`;
-  }
-
-  function renderChart(daily) {
-    const wrap = document.getElementById('stats-chart');
-    if (!daily || !daily.length) {
-      wrap.innerHTML = '<span class="panel-section-sub" style="margin:0;">Todavía no hay datos suficientes en este periodo.</span>';
-      return;
-    }
-    const W = 760, H = 220, PAD = 10;
-    const maxVal = Math.max(1, ...daily.map((d) => Number(d.views) || 0));
-    const stepX = daily.length > 1 ? (W - PAD * 2) / (daily.length - 1) : 0;
-    const plot = (key) =>
-      daily.map((d, i) => {
-        const x = PAD + i * stepX;
-        const y = H - PAD - ((Number(d[key]) || 0) / maxVal) * (H - PAD * 2);
-        return [x, y];
-      });
-    const pointsViews = plot('views');
-    const pointsUniques = plot('uniques');
-    const line = (pts) => pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
-    const area = (pts) => `${line(pts)} L${pts[pts.length - 1][0].toFixed(1)},${H - PAD} L${pts[0][0].toFixed(1)},${H - PAD} Z`;
-
-    const labelEvery = Math.max(1, Math.ceil(daily.length / 7));
-    const labels = daily.map((d, i) => {
-      if (i % labelEvery !== 0 && i !== daily.length - 1) return '';
-      try {
-        return new Date(d.day + 'T00:00:00Z').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-      } catch (err) {
-        return d.day;
-      }
-    });
-
-    wrap.innerHTML = `
-      <svg viewBox="0 0 ${W} ${H}" class="stats-svg" preserveAspectRatio="none">
-        <path d="${area(pointsViews)}" class="stats-area"></path>
-        <path d="${line(pointsViews)}" class="stats-line stats-line-views"></path>
-        <path d="${line(pointsUniques)}" class="stats-line stats-line-uniques"></path>
-      </svg>
-      <div class="stats-chart-labels">${labels.map((l) => `<span>${escapeHtml(l)}</span>`).join('')}</div>
-      <div class="stats-chart-legend">
-        <span><i class="stats-legend-dot views"></i>Visitas</span>
-        <span><i class="stats-legend-dot uniques"></i>Únicos</span>
-      </div>`;
-  }
-
-  function flagEmoji(code) {
-    if (!code || code.length !== 2) return '';
-    try {
-      return String.fromCodePoint(...[...code.toUpperCase()].map((c) => 127397 + c.charCodeAt(0)));
-    } catch (err) {
-      return '';
-    }
-  }
-
-  function renderBarList(elId, rows, opts) {
-    const el = document.getElementById(elId);
-    if (!rows || !rows.length) {
-      el.innerHTML = '<span class="panel-section-sub" style="margin:0;">Sin datos en este periodo.</span>';
-      return;
-    }
-    const max = Math.max(1, ...rows.map((r) => Number(r[opts.valueKey]) || 0));
-    el.innerHTML = rows
-      .map((r) => {
-        const val = Number(r[opts.valueKey]) || 0;
-        const pct = (val / max) * 100;
-        const label = opts.formatLabel ? opts.formatLabel(r[opts.labelKey]) : escapeHtml(r[opts.labelKey] || 'Desconocido');
-        return `
-        <div class="stats-bar-row">
-          <span class="stats-bar-label" title="${escapeHtml(String(r[opts.labelKey] || ''))}">${label}</span>
-          <div class="stats-bar-track"><div class="stats-bar-fill" style="width:${pct}%"></div></div>
-          <span class="stats-bar-value">${val.toLocaleString('es')}</span>
-        </div>`;
-      })
-      .join('');
-  }
-
-  function renderStats(data) {
-    const t = data.totals || {};
-    const p = data.previous || {};
-    document.getElementById('stats-kpis').innerHTML = [
-      kpiCard('Visitas totales', t.pageviews, pctDelta(t.pageviews, p.pageviews)),
-      kpiCard('Visitantes únicos', t.uniques, pctDelta(t.uniques, p.uniques)),
-      kpiCard('Clics registrados', t.clicks, pctDelta(t.clicks, p.clicks)),
+    const quick = [
+      can('announcements.manage') ? `<a class="btn btn-accent btn-sm" href="#anuncios/new">${icon('plus')}Nuevo anuncio</a>` : '',
+      can('wiki.manage') ? `<a class="btn btn-ghost btn-sm" href="#wiki/new">${icon('book')}Nueva página</a>` : '',
+      can('sanctions.access') ? `<a class="btn btn-ghost btn-sm" href="#sanciones/new">${icon('gavel')}Registrar sanción</a>` : '',
     ].join('');
 
-    renderChart(data.daily || []);
-    renderBarList('stats-top-pages', data.topPages, { valueKey: 'views', labelKey: 'path' });
-    renderBarList('stats-top-clicks', data.topClicks, { valueKey: 'clicks', labelKey: 'target' });
-    renderBarList('stats-referrers', data.referrers, {
-      valueKey: 'views',
-      labelKey: 'referrer',
-      formatLabel: (v) => escapeHtml(v === 'direct' ? 'Directo / interno' : v),
-    });
-    renderBarList('stats-devices', data.devices, {
-      valueKey: 'views',
-      labelKey: 'device',
-      formatLabel: (v) => escapeHtml(v === 'mobile' ? 'Móvil' : 'Escritorio'),
-    });
-    renderBarList('stats-countries', data.countries, {
-      valueKey: 'views',
-      labelKey: 'country',
-      formatLabel: (v) => `${flagEmoji(v)} ${escapeHtml(v || 'Desconocido')}`,
-    });
+    view.innerHTML = `
+      ${head(`${hello}, ${me.username || 'staff'}`, 'Esto es lo que está pasando en la web del evento.', quick)}
+      <div class="kpis">${kpis.map(([l, v, h]) => `<a class="kpi" href="${h}"><span class="kpi-label">${esc(l)}</span><span class="kpi-value">${v}</span></a>`).join('')}</div>
+      <div class="grid-2">
+        <section class="panel">
+          <h2>Últimos anuncios <a class="btn btn-ghost btn-sm" href="#anuncios">Ver todos</a></h2>
+          ${
+            anns.length
+              ? `<div class="barlist">${anns
+                  .slice(0, 5)
+                  .map((a) => `<a class="bar-row" style="--w:0;text-decoration:none" href="/anuncios/${encodeURIComponent(a.slug || '')}" target="_blank" rel="noopener"><span>${a.pinned ? '★ ' : ''}${esc(a.title)}</span><b>${esc(DX.relTime(a.created_at))}</b></a>`)
+                  .join('')}</div>`
+              : '<p class="panel-sub">Todavía no hay anuncios.</p>'
+          }
+        </section>
+        <section class="panel">
+          <h2>Tus rangos</h2>
+          <div>${(me.roles || []).map((r) => `<span class="role-pill"><span class="swatch" style="background:${DX.safeColor(r.color)}"></span>${esc(r.name)}</span>`).join('') || '<p class="panel-sub">Sin rangos asignados.</p>'}</div>
+          <h2 style="margin-top:18px">Permisos activos</h2>
+          <div>${(me.permissions || []).map((p) => `<span class="badge" style="margin:0 4px 4px 0">${esc(p)}</span>`).join('')}</div>
+        </section>
+      </div>`;
   }
 
-  /* ---------- Usage monitor ---------- */
-
-  const RESOURCE_LABELS = {
-    d1_reads: 'D1 · filas leídas hoy',
-    d1_writes: 'D1 · filas escritas hoy',
-    kv_reads: 'KV · lecturas hoy',
-    kv_writes: 'KV · escrituras hoy',
-    kv_deletes: 'KV · borrados hoy',
-  };
-
-  async function loadUsage() {
-    const grid = document.getElementById('usage-grid');
-    grid.innerHTML = '<span class="panel-section-sub">Cargando…</span>';
-    try {
-      const { usage } = await api('/api/admin/usage');
-      grid.innerHTML = Object.entries(usage)
-        .map(([key, { current, limit }]) => {
-          const pct = limit ? Math.min(100, (current / limit) * 100) : 0;
-          const blocked = current >= limit - 1;
-          const cls = blocked || pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : '';
-          return `
-            <div class="usage-card">
-              <div class="usage-card-head">
-                <span class="usage-card-title">${RESOURCE_LABELS[key] || key}</span>
-                ${blocked ? '<span class="usage-blocked">BLOQUEADO</span>' : ''}
-              </div>
-              <div class="usage-bar"><div class="usage-bar-fill ${cls}" style="width:${pct}%"></div></div>
-              <div class="usage-card-nums">${current.toLocaleString('es')} / ${limit.toLocaleString('es')} (${pct.toFixed(1)}%)</div>
-            </div>`;
-        })
-        .join('');
-    } catch (err) {
-      grid.innerHTML = `<div class="panel-msg error">${escapeHtml(err.message)}</div>`;
+  /* =====================================================================
+     ANUNCIOS
+     ===================================================================== */
+  let annCache = [];
+  async function renderAnnouncements(view, alive) {
+    const data = await api('/api/admin/announcements');
+    if (!alive()) return;
+    annCache = data.announcements || [];
+    app.setCount('anuncios', annCache.length);
+    const manage = can('announcements.manage');
+    const cats = [...new Set(annCache.map((a) => a.category || 'Anuncio'))];
+    view.innerHTML = `
+      ${head('Anuncios', 'Posts del diario público. Los fijados aparecen primero en la web.', manage ? `<button class="btn btn-ghost btn-sm" data-act="cleanup">${icon('broom')}Limpiar imágenes</button><button class="btn btn-accent btn-sm" data-act="new">${icon('plus')}Nuevo anuncio</button>` : '')}
+      <div class="toolbar">${searchBox('ann-q', 'Buscar anuncios…')}
+        <select class="input" id="ann-cat" style="max-width:200px"><option value="">Todas las categorías</option>${cats.map((c) => `<option>${esc(c)}</option>`).join('')}</select>
+      </div>
+      <div class="table-wrap"><table class="table"><thead><tr><th>Anuncio</th><th class="hide-sm">Categoría</th><th class="hide-sm">Publicado</th><th class="num">Visitas</th><th class="actions"></th></tr></thead><tbody id="ann-rows"></tbody></table></div>`;
+    const rows = view.querySelector('#ann-rows');
+    const q = view.querySelector('#ann-q');
+    const cat = view.querySelector('#ann-cat');
+    function draw() {
+      const needle = norm(q.value.trim());
+      const list = annCache.filter((a) => (!cat.value || (a.category || 'Anuncio') === cat.value) && (!needle || norm(a.title + ' ' + a.slug).includes(needle)));
+      rows.innerHTML = list.length
+        ? list
+            .map(
+              (a) => `<tr class="${manage ? 'clickable' : ''}" data-id="${a.id}">
+            <td><div class="cell-title">${a.hero_image_url ? `<img class="thumb" src="${esc(a.hero_image_url)}" alt="" loading="lazy">` : '<span class="thumb thumb-ph">DX</span>'}<div><b>${esc(a.title)}</b><small>/anuncios/${esc(a.slug || '')}</small></div></div></td>
+            <td class="hide-sm"><span class="badge badge-accent">${esc(a.category || 'Anuncio')}</span></td>
+            <td class="hide-sm muted" title="${esc(DX.formatDate(a.created_at))}">${esc(DX.relTime(a.created_at))}</td>
+            <td class="num">${num(a.views)}</td>
+            <td class="actions">
+              ${manage ? `<button class="icon-btn" data-pin="${a.id}" aria-pressed="${a.pinned ? 'true' : 'false'}" title="${a.pinned ? 'Quitar de fijados' : 'Fijar'}">${icon('pin')}</button>` : ''}
+              ${a.slug ? `<a class="icon-btn" href="/anuncios/${encodeURIComponent(a.slug)}" target="_blank" rel="noopener" title="Ver en la web">${icon('ext')}</a>` : ''}
+              ${manage ? `<button class="icon-btn danger" data-del="${a.id}" title="Eliminar">${icon('trash')}</button>` : ''}
+            </td></tr>`
+            )
+            .join('')
+        : emptyRow(5, annCache.length ? 'Ningún anuncio coincide con el filtro.' : 'Todavía no hay anuncios.');
     }
-  }
-
-  /* ---------- Wiki ---------- */
-
-  let editingWikiId = null;
-
-  function wikiMsg(text, type) {
-    const el = document.getElementById('wiki-msg');
-    el.innerHTML = text ? `<div class="panel-msg ${type}">${escapeHtml(text)}</div>` : '';
-  }
-
-  async function loadWiki() {
-    const grid = document.getElementById('wiki-grid');
-    grid.innerHTML = '<span class="panel-section-sub">Cargando…</span>';
-    try {
-      const { pages } = await api('/api/admin/wiki');
-      renderWiki(pages || []);
-    } catch (err) {
-      grid.innerHTML = '';
-      wikiMsg(err.message, 'error');
-    }
-  }
-
-  function renderWiki(pages) {
-    const grid = document.getElementById('wiki-grid');
-    const canManage = hasPerm('wiki.manage');
-    document.getElementById('wiki-form-open').style.display = canManage ? '' : 'none';
-
-    if (!pages.length) {
-      grid.innerHTML = '<span class="panel-section-sub">Todavía no hay páginas.</span>';
-      return;
-    }
-
-    const byCategory = new Map();
-    pages
-      .slice()
-      .sort((a, b) => (a.position || 0) - (b.position || 0))
-      .forEach((p) => {
-        const cat = p.category || 'Sin categoría';
-        if (!byCategory.has(cat)) byCategory.set(cat, []);
-        byCategory.get(cat).push(p);
-      });
-
-    grid.innerHTML = Array.from(byCategory.entries())
-      .map(
-        ([cat, list]) => `
-        <div class="wiki-category-block">
-          <h3 class="wiki-category-title">${escapeHtml(cat)}</h3>
-          <div class="role-grid">
-            ${list
-              .map(
-                (p) => `
-              <div class="role-card">
-                <div class="role-card-head">
-                  <span class="role-card-name">${escapeHtml(p.title)}</span>
-                  <span class="role-locked-badge">${escapeHtml(p.slug)}</span>
-                </div>
-                ${
-                  canManage
-                    ? `<div class="role-card-actions">
-                         <button class="btn btn-ghost btn-sm" data-edit="${p.id}">Editar</button>
-                         <button class="btn btn-ghost btn-sm" data-delete="${p.id}">Eliminar</button>
-                       </div>`
-                    : ''
-                }
-              </div>`
-              )
-              .join('')}
-          </div>
-        </div>`
-      )
-      .join('');
-
-    grid.querySelectorAll('[data-edit]').forEach((btn) =>
-      btn.addEventListener('click', () => openWikiForm(pages.find((p) => p.id === Number(btn.dataset.edit))))
-    );
-    grid.querySelectorAll('[data-delete]').forEach((btn) =>
-      btn.addEventListener('click', () => deleteWiki(Number(btn.dataset.delete)))
-    );
-  }
-
-  function wireWikiForm() {
-    document.getElementById('wiki-form-open').addEventListener('click', () => openWikiForm(null));
-    document.getElementById('wiki-form-cancel').addEventListener('click', closeWikiForm);
-    document.getElementById('wiki-form-save').addEventListener('click', saveWiki);
-    document.getElementById('wiki-form-content').addEventListener('input', (e) => {
-      renderMarkdownPreview(document.getElementById('wiki-form-preview'), e.target.value);
-    });
-  }
-
-  function openWikiForm(page) {
-    editingWikiId = page ? page.id : null;
-    document.getElementById('wiki-form-heading').textContent = page ? `Editar ${page.title}` : 'Crear página';
-    document.getElementById('wiki-form-slug').value = page ? page.slug : '';
-    document.getElementById('wiki-form-title').value = page ? page.title : '';
-    document.getElementById('wiki-form-category').value = page ? page.category || '' : '';
-    document.getElementById('wiki-form-position').value = page ? page.position : 0;
-    document.getElementById('wiki-form-content').value = page ? page.content || '' : '';
-    renderMarkdownPreview(document.getElementById('wiki-form-preview'), page ? page.content : '');
-    document.getElementById('wiki-form-card').hidden = false;
-  }
-
-  function closeWikiForm() {
-    document.getElementById('wiki-form-card').hidden = true;
-    editingWikiId = null;
-  }
-
-  async function saveWiki() {
-    const slug = document.getElementById('wiki-form-slug').value.trim();
-    const title = document.getElementById('wiki-form-title').value.trim();
-    const category = document.getElementById('wiki-form-category').value.trim();
-    const position = Number(document.getElementById('wiki-form-position').value) || 0;
-    const content = document.getElementById('wiki-form-content').value;
-
-    try {
-      if (editingWikiId) {
-        await api(`/api/admin/wiki/${editingWikiId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ slug, title, category, content, position }),
-        });
-        wikiMsg('Página actualizada.', 'ok');
-      } else {
-        await api('/api/admin/wiki', {
-          method: 'POST',
-          body: JSON.stringify({ slug, title, category, content, position }),
-        });
-        wikiMsg('Página creada.', 'ok');
+    q.addEventListener('input', draw);
+    cat.addEventListener('change', draw);
+    draw();
+    rows.addEventListener('click', async (e) => {
+      const pin = e.target.closest('[data-pin]');
+      const del = e.target.closest('[data-del]');
+      if (e.target.closest('a')) return;
+      if (pin) {
+        const a = annCache.find((x) => x.id === Number(pin.dataset.pin));
+        try {
+          await api(`/api/admin/announcements/${a.id}`, { method: 'PATCH', body: annPayload(a, { pinned: !a.pinned }) });
+          a.pinned = a.pinned ? 0 : 1;
+          DX.toast(a.pinned ? 'Anuncio fijado.' : 'Anuncio desfijado.');
+          renderAnnouncements(view, alive);
+        } catch (err) {
+          DX.toast(err.message, 'error');
+        }
+        return;
       }
-      closeWikiForm();
-      loadWiki();
-    } catch (err) {
-      wikiMsg(err.message, 'error');
-    }
-  }
-
-  async function deleteWiki(id) {
-    const ok = window.zdConfirm
-      ? await window.zdConfirm('¿Eliminar esta página? Esta acción no se puede deshacer.')
-      : confirm('¿Eliminar esta página?');
-    if (!ok) return;
-    try {
-      await api(`/api/admin/wiki/${id}`, { method: 'DELETE' });
-      wikiMsg('Página eliminada.', 'ok');
-      loadWiki();
-    } catch (err) {
-      wikiMsg(err.message, 'error');
-    }
-  }
-
-  /* ---------- Announcements ---------- */
-
-  let editingAnnId = null;
-  let heroImageUrl = null;
-  let quillEditor = null;
-  const PIN_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L20 8l-4.6 4 1.4 6-4.8-3.4L7.2 18l1.4-6L4 8l6.2-.4z"/></svg>';
-
-  async function uploadMediaFile(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await fetch('/api/admin/media', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'X-CSRF-Token': csrfToken },
-      body: formData,
+      if (del) {
+        const a = annCache.find((x) => x.id === Number(del.dataset.del));
+        if (!(await DX.confirm(`Se eliminará "${a.title}" de la web. No se puede deshacer.`, { title: '¿Eliminar anuncio?' }))) return;
+        try {
+          await api(`/api/admin/announcements/${a.id}`, { method: 'DELETE' });
+          DX.toast('Anuncio eliminado.');
+          renderAnnouncements(view, alive);
+        } catch (err) {
+          DX.toast(err.message, 'error');
+        }
+        return;
+      }
+      const tr = e.target.closest('tr[data-id]');
+      if (tr && manage) openAnnouncement(annCache.find((x) => x.id === Number(tr.dataset.id)));
     });
-    const isJson = res.headers.get('content-type')?.includes('application/json');
-    const body = isJson ? await res.json().catch(() => null) : null;
-    if (!res.ok) throw new Error((body && body.error) || `Error ${res.status}`);
-    return body.url;
+    const act = view.querySelector('.view-actions');
+    act.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-act]');
+      if (!b) return;
+      if (b.dataset.act === 'new') openAnnouncement(null);
+      if (b.dataset.act === 'cleanup') cleanupMedia();
+    });
   }
 
-  function getQuillEditor() {
-    if (quillEditor) return quillEditor;
-    quillEditor = new Quill('#ann-form-quill', {
-      theme: 'snow',
-      modules: {
-        toolbar: {
-          container: [
-            [{ header: [2, 3, false] }],
-            ['bold', 'italic', 'underline'],
-            [{ list: 'ordered' }, { list: 'bullet' }],
-            ['blockquote', 'link', 'image'],
-            ['clean'],
-          ],
-          handlers: { image: handleQuillImageUpload },
-        },
+  function annPayload(a, over) {
+    return Object.assign(
+      { title: a.title, slug: a.slug || '', category: a.category || '', excerpt: a.excerpt || '', hero_image_url: a.hero_image_url || null, pinned: !!a.pinned, body: a.body || '' },
+      over || {}
+    );
+  }
+
+  async function cleanupMedia() {
+    try {
+      const dry = await api('/api/admin/media/cleanup?dry=1', { method: 'POST' });
+      if (!dry.deletedCount) {
+        DX.toast('No hay imágenes huérfanas: todo lo subido se está usando.', 'info');
+        return;
+      }
+      const ok = await DX.confirm(`Hay ${dry.deletedCount} imagen(es) subidas que ya no usa ningún anuncio (se conservan ${dry.keptCount}). ¿Borrarlas del almacenamiento?`, { title: 'Limpiar imágenes', okLabel: 'Borrar' });
+      if (!ok) return;
+      const res = await api('/api/admin/media/cleanup', { method: 'POST' });
+      DX.toast(`${res.deletedCount} imagen(es) eliminadas.`);
+    } catch (err) {
+      DX.toast(err.message, 'error');
+    }
+  }
+
+  async function uploadMedia(file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await api('/api/admin/media', { method: 'POST', form: fd });
+    return res.url;
+  }
+
+  function openAnnouncement(a) {
+    const isEdit = !!a;
+    const cats = [...new Set(annCache.map((x) => x.category || 'Anuncio'))];
+    let heroUrl = (a && a.hero_image_url) || null;
+    let slugTouched = isEdit;
+    let quill = null;
+    const d = drawer({
+      title: isEdit ? 'Editar anuncio' : 'Nuevo anuncio',
+      subtitle: isEdit ? `/anuncios/${a.slug}` : 'Se publica en cuanto guardes.',
+      wide: true,
+      saveLabel: isEdit ? 'Guardar cambios' : 'Publicar',
+      body: `
+        <div class="field"><label for="f-title">Título</label><input id="f-title" name="title" type="text" maxlength="140" required value="${esc(a ? a.title : '')}"></div>
+        <div class="field-row-2">
+          <div class="field"><label for="f-slug">Slug (URL)</label><input id="f-slug" name="slug" type="text" maxlength="120" value="${esc(a ? a.slug || '' : '')}" placeholder="se genera desde el título"><span class="field-hint">Cambiarlo rompe los enlaces ya compartidos.</span></div>
+          <div class="field"><label for="f-cat">Categoría</label><input id="f-cat" name="category" type="text" maxlength="40" list="cat-list" value="${esc(a ? a.category || '' : '')}" placeholder="Novedades"><datalist id="cat-list">${cats.map((c) => `<option value="${esc(c)}">`).join('')}</datalist></div>
+        </div>
+        <div class="field"><label for="f-ex">Extracto</label><textarea id="f-ex" name="excerpt" maxlength="220" style="min-height:70px;font-family:var(--f-body)">${esc(a ? a.excerpt || '' : '')}</textarea><span class="field-hint" data-count></span></div>
+        <div class="field"><span class="field-label">Portada</span>
+          <div class="upload" id="hero-box"></div>
+        </div>
+        <div class="field"><label class="check-inline"><input type="checkbox" name="pinned" ${a && a.pinned ? 'checked' : ''}> Fijar arriba en la web</label></div>
+        <div class="field"><span class="field-label">Cuerpo</span><div id="f-body"></div><span class="field-hint">Pega o arrastra imágenes: se suben solas. Máximo 50.000 caracteres.</span></div>`,
+      onOpen(dr) {
+        const f = dr.form;
+        const title = f.elements.title;
+        const slug = f.elements.slug;
+        title.addEventListener('input', () => {
+          if (!slugTouched) slug.value = slugify(title.value);
+        });
+        slug.addEventListener('input', () => (slugTouched = true));
+        charCounter(f.elements.excerpt, 220);
+        const box = f.querySelector('#hero-box');
+        function drawHero(status) {
+          box.innerHTML = `${heroUrl ? `<img src="${esc(heroUrl)}" alt="Portada">` : '<div class="upload-ph">Sin portada</div>'}
+            <div><input type="file" class="file-input" accept="image/png,image/jpeg,image/webp,image/gif">
+            ${heroUrl ? `<button type="button" class="btn btn-ghost btn-sm" data-rm style="margin-top:8px">Quitar portada</button>` : ''}</div>
+            <span class="field-hint">${esc(status || 'PNG, JPG, WEBP o GIF, hasta 5 MB. Recomendado 1600×900.')}</span>`;
+          box.querySelector('input').addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            drawHero('Subiendo…');
+            try {
+              heroUrl = await uploadMedia(file);
+              dr.markDirty();
+              drawHero('Portada subida.');
+            } catch (err) {
+              drawHero('');
+              dr.setError(err.message);
+            }
+          });
+          const rm = box.querySelector('[data-rm]');
+          if (rm)
+            rm.addEventListener('click', () => {
+              heroUrl = null;
+              dr.markDirty();
+              drawHero();
+            });
+        }
+        drawHero();
+        if (!window.Quill) {
+          f.querySelector('#f-body').innerHTML = '<div class="banner banner-danger">No se pudo cargar el editor. Recarga la página.</div>';
+          return;
+        }
+        quill = new Quill(f.querySelector('#f-body'), {
+          theme: 'snow',
+          placeholder: 'Escribe el anuncio…',
+          modules: {
+            toolbar: {
+              container: [[{ header: [2, 3, false] }], ['bold', 'italic', 'underline'], [{ list: 'ordered' }, { list: 'bullet' }], ['blockquote', 'link', 'image'], ['clean']],
+              handlers: {
+                image() {
+                  const inp = document.createElement('input');
+                  inp.type = 'file';
+                  inp.accept = 'image/png,image/jpeg,image/webp,image/gif';
+                  inp.addEventListener('change', () => inp.files[0] && insertImage(inp.files[0]));
+                  inp.click();
+                },
+              },
+            },
+          },
+        });
+        if (a && a.body) quill.clipboard.dangerouslyPasteHTML(a.body, 'silent');
+        quill.on('text-change', (delta, old, source) => source === 'user' && dr.markDirty());
+        async function insertImage(file) {
+          const range = quill.getSelection(true) || { index: quill.getLength() };
+          try {
+            const url = await uploadMedia(file);
+            quill.insertEmbed(range.index, 'image', url, 'user');
+            quill.setSelection(range.index + 1);
+          } catch (err) {
+            DX.toast(err.message, 'error');
+          }
+        }
+        // Pasted/dropped images would otherwise be embedded as huge base64
+        // strings; route them through the R2 upload instead.
+        const intercept = (e) => {
+          const files = (e.clipboardData || e.dataTransfer || {}).files;
+          const img = files && Array.from(files).find((x) => x.type.startsWith('image/'));
+          if (!img) return;
+          e.preventDefault();
+          e.stopPropagation();
+          insertImage(img);
+        };
+        quill.root.addEventListener('paste', intercept, true);
+        quill.root.addEventListener('drop', intercept, true);
+      },
+      async onSave(dr) {
+        const f = dr.form;
+        if (!quill) throw new Error('El editor no está disponible.');
+        const html = quill.root.innerHTML;
+        const payload = {
+          title: f.elements.title.value.trim(),
+          slug: f.elements.slug.value.trim(),
+          category: f.elements.category.value.trim(),
+          excerpt: f.elements.excerpt.value.trim(),
+          hero_image_url: heroUrl,
+          pinned: f.elements.pinned.checked,
+          body: window.DOMPurify ? DOMPurify.sanitize(html) : html,
+        };
+        if (!payload.title) throw new Error('Falta el título.');
+        if (quill.getText().trim().length === 0 && !/<img/i.test(html)) throw new Error('El cuerpo está vacío.');
+        if (payload.body.length > 50000) throw new Error(`El cuerpo es demasiado largo (${payload.body.length.toLocaleString('es-ES')} caracteres, máx. 50.000).`);
+        if (isEdit) await api(`/api/admin/announcements/${a.id}`, { method: 'PATCH', body: payload });
+        else await api('/api/admin/announcements', { method: 'POST', body: payload });
+        DX.toast(isEdit ? 'Anuncio actualizado.' : 'Anuncio publicado.');
+        app.rerender();
+      },
+      onDelete: isEdit
+        ? async () => {
+            await api(`/api/admin/announcements/${a.id}`, { method: 'DELETE' });
+            DX.toast('Anuncio eliminado.');
+            app.rerender();
+          }
+        : null,
+      deleteTitle: '¿Eliminar anuncio?',
+    });
+    return d;
+  }
+
+  /* =====================================================================
+     WIKI
+     ===================================================================== */
+  let wikiCache = [];
+  async function renderWiki(view, alive) {
+    const data = await api('/api/admin/wiki');
+    if (!alive()) return;
+    wikiCache = data.pages || [];
+    app.setCount('wiki', wikiCache.length);
+    const manage = can('wiki.manage');
+    view.innerHTML = `
+      ${head('Wiki', 'Páginas en Markdown agrupadas por categoría. Admite callouts: <code>&gt; [!TIP]</code>, <code>[!WARNING]</code>, <code>[!NOTE]</code>, <code>[!DANGER]</code>.', manage ? `<button class="btn btn-accent btn-sm" data-act="new">${icon('plus')}Nueva página</button>` : '')}
+      <div class="toolbar">${searchBox('wiki-q', 'Buscar páginas…')}</div>
+      <div class="table-wrap"><table class="table"><thead><tr><th>Página</th><th>Categoría</th><th class="num hide-sm">Orden</th><th class="hide-sm">Actualizada</th><th class="actions"></th></tr></thead><tbody id="wiki-rows"></tbody></table></div>`;
+    const rows = view.querySelector('#wiki-rows');
+    const q = view.querySelector('#wiki-q');
+    function draw() {
+      const needle = norm(q.value.trim());
+      const list = wikiCache.filter((p) => !needle || norm(p.title + ' ' + p.slug + ' ' + p.category).includes(needle));
+      rows.innerHTML = list.length
+        ? list
+            .map(
+              (p) => `<tr class="${manage ? 'clickable' : ''}" data-id="${p.id}">
+          <td><div class="cell-title"><div><b>${esc(p.title)}</b><small>?p=${esc(p.slug)}</small></div></div></td>
+          <td><span class="badge">${esc(p.category || 'General')}</span></td>
+          <td class="num hide-sm">${Number(p.position) || 0}</td>
+          <td class="muted hide-sm" title="${esc(DX.formatDate(p.updated_at))}">${esc(DX.relTime(p.updated_at))}</td>
+          <td class="actions"><a class="icon-btn" href="/wiki.html?p=${encodeURIComponent(p.slug)}" target="_blank" rel="noopener" title="Ver en la web">${icon('ext')}</a>
+          ${manage ? `<button class="icon-btn danger" data-del="${p.id}" title="Eliminar">${icon('trash')}</button>` : ''}</td></tr>`
+            )
+            .join('')
+        : emptyRow(5, wikiCache.length ? 'Ninguna página coincide.' : 'Todavía no hay páginas.');
+    }
+    q.addEventListener('input', draw);
+    draw();
+    rows.addEventListener('click', async (e) => {
+      if (e.target.closest('a')) return;
+      const del = e.target.closest('[data-del]');
+      if (del) {
+        const p = wikiCache.find((x) => x.id === Number(del.dataset.del));
+        if (!(await DX.confirm(`Se eliminará "${p.title}" de la wiki pública.`, { title: '¿Eliminar página?' }))) return;
+        try {
+          await api(`/api/admin/wiki/${p.id}`, { method: 'DELETE' });
+          DX.toast('Página eliminada.');
+          renderWiki(view, alive);
+        } catch (err) {
+          DX.toast(err.message, 'error');
+        }
+        return;
+      }
+      const tr = e.target.closest('tr[data-id]');
+      if (tr && manage) openWikiPage(wikiCache.find((x) => x.id === Number(tr.dataset.id)));
+    });
+    const newBtn = view.querySelector('[data-act="new"]');
+    if (newBtn) newBtn.addEventListener('click', () => openWikiPage(null));
+  }
+
+  function openWikiPage(p) {
+    const isEdit = !!p;
+    const cats = [...new Set(wikiCache.map((x) => x.category || 'General'))];
+    let slugTouched = isEdit;
+    drawer({
+      title: isEdit ? 'Editar página' : 'Nueva página',
+      subtitle: isEdit ? `wiki.html?p=${p.slug}` : '',
+      wide: true,
+      body: `
+        <div class="field-row-2">
+          <div class="field"><label for="w-title">Título</label><input id="w-title" name="title" type="text" maxlength="120" value="${esc(p ? p.title : '')}"></div>
+          <div class="field"><label for="w-slug">Slug</label><input id="w-slug" name="slug" type="text" maxlength="60" value="${esc(p ? p.slug : '')}" placeholder="reglas-generales"></div>
+        </div>
+        <div class="field-row-2">
+          <div class="field"><label for="w-cat">Categoría</label><input id="w-cat" name="category" type="text" maxlength="60" list="wcat" value="${esc(p ? p.category || '' : '')}" placeholder="General"><datalist id="wcat">${cats.map((c) => `<option value="${esc(c)}">`).join('')}</datalist></div>
+          <div class="field"><label for="w-pos">Orden dentro de la categoría</label><input id="w-pos" name="position" type="number" value="${p ? Number(p.position) || 0 : 0}"></div>
+        </div>
+        <div class="field"><span class="field-label">Contenido (Markdown)</span>
+          <div class="md-editor"><div>${MD_TOOLBAR}<textarea name="content" spellcheck="true">${esc(p ? p.content || '' : '')}</textarea></div><div class="md-preview md-content" aria-label="Vista previa"></div></div>
+        </div>`,
+      onOpen(dr) {
+        const f = dr.form;
+        f.elements.title.addEventListener('input', () => {
+          if (!slugTouched) f.elements.slug.value = slugify(f.elements.title.value);
+        });
+        f.elements.slug.addEventListener('input', () => (slugTouched = true));
+        mdEditor(f.elements.content, f.querySelector('.md-preview'));
+      },
+      async onSave(dr) {
+        const f = dr.form;
+        const payload = {
+          title: f.elements.title.value.trim(),
+          slug: f.elements.slug.value.trim(),
+          category: f.elements.category.value.trim(),
+          position: Number(f.elements.position.value) || 0,
+          content: f.elements.content.value,
+        };
+        if (!payload.title) throw new Error('Falta el título.');
+        if (!/^[a-z0-9-]+$/.test(payload.slug)) throw new Error('Slug inválido: solo minúsculas, números y guiones.');
+        if (isEdit) await api(`/api/admin/wiki/${p.id}`, { method: 'PATCH', body: payload });
+        else await api('/api/admin/wiki', { method: 'POST', body: payload });
+        DX.toast(isEdit ? 'Página actualizada.' : 'Página creada.');
+        app.rerender();
+      },
+      onDelete: isEdit
+        ? async () => {
+            await api(`/api/admin/wiki/${p.id}`, { method: 'DELETE' });
+            DX.toast('Página eliminada.');
+            app.rerender();
+          }
+        : null,
+      deleteTitle: '¿Eliminar página?',
+    });
+  }
+
+  /* =====================================================================
+     EQUIPO
+     ===================================================================== */
+  let teamCache = [];
+  const TEAM_LABEL = { staff: 'Staff', dev: 'Desarrollo' };
+  async function renderTeam(view, alive) {
+    const data = await api('/api/admin/team');
+    if (!alive()) return;
+    teamCache = (data.members || []).slice().sort((a, b) => (a.team > b.team ? 1 : a.team < b.team ? -1 : (b.position || 0) - (a.position || 0)));
+    app.setCount('equipo', teamCache.length);
+    const manage = can('team.manage');
+    view.innerHTML = `
+      ${head('Equipo', 'Tarjetas de la sección "El equipo" de la home. El orden va de mayor a menor posición.', manage ? `<button class="btn btn-accent btn-sm" data-act="new">${icon('plus')}Añadir miembro</button>` : '')}
+      <div class="table-wrap"><table class="table"><thead><tr><th>Miembro</th><th>Rango</th><th class="hide-sm">Función</th><th>Equipo</th><th class="num hide-sm">Posición</th><th class="actions"></th></tr></thead><tbody>
+      ${
+        teamCache.length
+          ? teamCache
+              .map((m) => {
+                const c = DX.safeColor(m.rank_color);
+                return `<tr class="${manage ? 'clickable' : ''}" data-id="${m.id}">
+            <td><div class="cell-title"><img class="face" src="${esc(face(m, 64))}" alt="" loading="lazy"><div><b>${esc(m.mc_nick)}</b><small>${m.mc_uuid ? 'UUID resuelto' : 'sin UUID (skin por nick)'}</small></div></div></td>
+            <td><span class="role-pill" style="color:${c}"><span class="swatch" style="background:${c}"></span>${esc(m.rank_label)}</span></td>
+            <td class="muted hide-sm">${esc(m.function_text || '')}</td>
+            <td><span class="badge">${esc(TEAM_LABEL[m.team] || m.team)}</span></td>
+            <td class="num hide-sm">${Number(m.position) || 0}</td>
+            <td class="actions">${manage ? `<button class="icon-btn danger" data-del="${m.id}" title="Eliminar">${icon('trash')}</button>` : ''}</td></tr>`;
+              })
+              .join('')
+          : emptyRow(6, 'Todavía no hay miembros.')
+      }</tbody></table></div>`;
+    view.querySelector('tbody').addEventListener('click', async (e) => {
+      const del = e.target.closest('[data-del]');
+      if (del) {
+        const m = teamCache.find((x) => x.id === Number(del.dataset.del));
+        if (!(await DX.confirm(`${m.mc_nick} dejará de aparecer en la web.`, { title: '¿Quitar del equipo?', okLabel: 'Quitar' }))) return;
+        try {
+          await api(`/api/admin/team/${m.id}`, { method: 'DELETE' });
+          DX.toast('Miembro eliminado.');
+          renderTeam(view, alive);
+        } catch (err) {
+          DX.toast(err.message, 'error');
+        }
+        return;
+      }
+      const tr = e.target.closest('tr[data-id]');
+      if (tr && manage) openMember(teamCache.find((x) => x.id === Number(tr.dataset.id)));
+    });
+    const nb = view.querySelector('[data-act="new"]');
+    if (nb) nb.addEventListener('click', () => openMember(null));
+  }
+
+  function openMember(m) {
+    const isEdit = !!m;
+    const color = m ? DX.safeColor(m.rank_color, '#37d6b4') : '#37d6b4';
+    drawer({
+      title: isEdit ? `Editar ${m.mc_nick}` : 'Añadir miembro',
+      body: `
+        <div class="field" style="flex-direction:row;align-items:flex-end;gap:14px">
+          <div style="flex:1" class="field" ><label for="t-nick">Nick de Minecraft</label><input id="t-nick" name="mc_nick" type="text" maxlength="16" value="${esc(m ? m.mc_nick : '')}" placeholder="Steve123" autocomplete="off"><span class="field-hint">Se resuelve su UUID con Mojang al guardar para mostrar la skin actual.</span></div>
+          <img class="face" id="t-face" style="width:64px;height:64px;border-radius:10px" src="${m ? esc(face(m, 128)) : ''}" alt="" ${m ? '' : 'hidden'}>
+        </div>
+        <div class="field-row-2">
+          <div class="field"><label for="t-rank">Rango</label><input id="t-rank" name="rank_label" type="text" maxlength="40" value="${esc(m ? m.rank_label : '')}" placeholder="Administrador"></div>
+          <div class="field"><label for="t-color">Color del rango</label><div style="display:flex;gap:10px;align-items:center"><input id="t-color" name="rank_color" type="color" value="${esc(color)}"><code id="t-hex" class="mono" style="font-size:12px;color:var(--text-dim)">${esc(color)}</code></div></div>
+        </div>
+        <div class="field"><label for="t-fn">Función</label><input id="t-fn" name="function_text" type="text" maxlength="140" value="${esc(m ? m.function_text || '' : '')}" placeholder="Organización general"><span class="field-hint" data-count></span></div>
+        <div class="field-row-2">
+          <div class="field"><label for="t-team">Equipo</label><select id="t-team" name="team"><option value="staff" ${!m || m.team === 'staff' ? 'selected' : ''}>Staff</option><option value="dev" ${m && m.team === 'dev' ? 'selected' : ''}>Desarrollo</option></select></div>
+          <div class="field"><label for="t-pos">Posición (mayor = antes)</label><input id="t-pos" name="position" type="number" value="${m ? Number(m.position) || 0 : 0}"></div>
+        </div>`,
+      onOpen(dr) {
+        const f = dr.form;
+        const img = f.querySelector('#t-face');
+        let t = null;
+        f.elements.mc_nick.addEventListener('input', () => {
+          clearTimeout(t);
+          t = setTimeout(() => {
+            const nick = f.elements.mc_nick.value.trim();
+            img.hidden = !nick;
+            if (nick) img.src = `https://vzge.me/face/128/${encodeURIComponent(nick)}`;
+          }, 350);
+        });
+        f.elements.rank_color.addEventListener('input', () => (f.querySelector('#t-hex').textContent = f.elements.rank_color.value));
+        charCounter(f.elements.function_text, 140);
+      },
+      async onSave(dr) {
+        const f = dr.form;
+        const payload = {
+          mc_nick: f.elements.mc_nick.value.trim(),
+          rank_label: f.elements.rank_label.value.trim(),
+          rank_color: f.elements.rank_color.value,
+          function_text: f.elements.function_text.value.trim(),
+          team: f.elements.team.value,
+          position: Number(f.elements.position.value) || 0,
+        };
+        if (!/^[A-Za-z0-9_]{1,16}$/.test(payload.mc_nick)) throw new Error('Nick de Minecraft inválido (letras, números y _; máx. 16).');
+        if (!payload.rank_label) throw new Error('Falta el rango.');
+        if (isEdit) await api(`/api/admin/team/${m.id}`, { method: 'PATCH', body: payload });
+        else await api('/api/admin/team', { method: 'POST', body: payload });
+        DX.toast(isEdit ? 'Miembro actualizado.' : 'Miembro añadido.');
+        app.rerender();
+      },
+      onDelete: isEdit
+        ? async () => {
+            await api(`/api/admin/team/${m.id}`, { method: 'DELETE' });
+            DX.toast('Miembro eliminado.');
+            app.rerender();
+          }
+        : null,
+      deleteTitle: '¿Quitar del equipo?',
+    });
+  }
+
+  /* =====================================================================
+     SANCIONES
+     ===================================================================== */
+  const SANCTION_TYPES = { ban: 'Ban', mute: 'Mute', kick: 'Kick', warn: 'Warn', other: 'Otro' };
+  const SANCTION_BADGE = { ban: 'badge-danger', mute: 'badge-warn', kick: 'badge-warn', warn: 'badge-accent', other: '' };
+  async function renderSanctions(view, alive) {
+    const data = await api('/api/staff/sanctions');
+    if (!alive()) return;
+    const list = data.sanctions || [];
+    app.setCount('sanciones', list.length);
+    const manage = can('sanctions.manage');
+    view.innerHTML = `
+      ${head('Sanciones', 'Registro interno de sanciones con pruebas. Las pruebas solo son visibles para el staff.', `<button class="btn btn-accent btn-sm" data-act="new">${icon('plus')}Registrar sanción</button>`)}
+      <div class="toolbar">${searchBox('s-q', 'Buscar por jugador o motivo…')}
+        <div class="seg" id="s-type" role="group" aria-label="Tipo"><button type="button" data-t="" aria-pressed="true">Todas</button>${Object.entries(SANCTION_TYPES)
+          .map(([k, v]) => `<button type="button" data-t="${k}" aria-pressed="false">${v}</button>`)
+          .join('')}</div>
+      </div>
+      <div id="s-list"></div>`;
+    const listEl = view.querySelector('#s-list');
+    const q = view.querySelector('#s-q');
+    let type = '';
+    function evidenceHtml(ev) {
+      const url = `/api/staff/evidence/${Number(ev.id)}`;
+      const t = ev.content_type || '';
+      if (t.startsWith('image/')) return `<a href="${url}" target="_blank" rel="noopener" title="${esc(ev.filename || '')}"><img src="${url}" alt="" loading="lazy"></a>`;
+      if (t.startsWith('video/')) return `<video src="${url}" controls preload="metadata"></video>`;
+      return `<a class="file" href="${url}" target="_blank" rel="noopener">${esc(ev.filename || 'archivo')}</a>`;
+    }
+    function draw() {
+      const needle = norm(q.value.trim());
+      const items = list.filter((s) => (!type || s.type === type) && (!needle || norm(s.target_nick + ' ' + s.reason).includes(needle)));
+      listEl.innerHTML = items.length
+        ? items
+            .map(
+              (s) => `<article class="sanction">
+          <div class="sanction-head"><b>${esc(s.target_nick)}</b><span class="badge ${SANCTION_BADGE[s.type] || ''}">${esc(SANCTION_TYPES[s.type] || s.type)}</span>
+            <span class="muted">por ${esc(s.staff_name || s.staff_id || 'desconocido')} · <span title="${esc(DX.formatDate(s.created_at))}">${esc(DX.relTime(s.created_at))}</span></span>
+            ${manage ? `<button class="icon-btn danger" data-del="${s.id}" title="Eliminar">${icon('trash')}</button>` : ''}</div>
+          ${s.reason ? `<p>${esc(s.reason)}</p>` : ''}
+          ${(s.evidence || []).length ? `<div class="evidence">${s.evidence.map(evidenceHtml).join('')}</div>` : ''}
+        </article>`
+            )
+            .join('')
+        : `<div class="empty-state">${list.length ? 'Ninguna sanción coincide.' : 'Todavía no hay sanciones registradas.'}</div>`;
+    }
+    q.addEventListener('input', draw);
+    view.querySelector('#s-type').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-t]');
+      if (!b) return;
+      type = b.dataset.t;
+      view.querySelectorAll('#s-type button').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+      draw();
+    });
+    listEl.addEventListener('click', async (e) => {
+      const del = e.target.closest('[data-del]');
+      if (!del) return;
+      if (!(await DX.confirm('Se borrará la sanción y todas sus pruebas.', { title: '¿Eliminar sanción?' }))) return;
+      try {
+        await api(`/api/staff/sanctions/${del.dataset.del}`, { method: 'DELETE' });
+        DX.toast('Sanción eliminada.');
+        renderSanctions(view, alive);
+      } catch (err) {
+        DX.toast(err.message, 'error');
+      }
+    });
+    view.querySelector('[data-act="new"]').addEventListener('click', openSanction);
+    draw();
+  }
+
+  function openSanction() {
+    drawer({
+      title: 'Registrar sanción',
+      saveLabel: 'Registrar',
+      body: `
+        <div class="field-row-2">
+          <div class="field"><label for="s-nick">Nick del jugador</label><input id="s-nick" name="target_nick" type="text" maxlength="32" autocomplete="off"></div>
+          <div class="field"><label for="s-type2">Tipo</label><select id="s-type2" name="type">${Object.entries(SANCTION_TYPES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+        </div>
+        <div class="field"><label for="s-reason">Motivo</label><textarea id="s-reason" name="reason" maxlength="2000" style="font-family:var(--f-body)"></textarea><span class="field-hint" data-count></span></div>
+        <div class="field"><label for="s-files">Pruebas (opcional)</label><input id="s-files" name="files" type="file" class="file-input" multiple accept="image/*,video/mp4,video/webm"><span class="field-hint">Hasta 6 archivos: imágenes o vídeo.</span></div>`,
+      onOpen(dr) {
+        charCounter(dr.form.elements.reason, 2000);
+      },
+      async onSave(dr) {
+        const f = dr.form;
+        const nick = f.elements.target_nick.value.trim();
+        const reason = f.elements.reason.value.trim();
+        const files = Array.from(f.elements.files.files || []);
+        if (!nick) throw new Error('Falta el nick del jugador.');
+        if (!reason) throw new Error('Explica el motivo.');
+        if (files.length > 6) throw new Error('Máximo 6 archivos.');
+        const fd = new FormData();
+        fd.append('target_nick', nick);
+        fd.append('type', f.elements.type.value);
+        fd.append('reason', reason);
+        files.forEach((file) => fd.append('files', file));
+        const res = await api('/api/staff/sanctions', { method: 'POST', form: fd });
+        if (res && res.fileErrors && res.fileErrors.length) DX.toast('Sanción registrada, pero algunos archivos fallaron: ' + res.fileErrors.map((x) => `${x.filename} (${x.error})`).join(', '), 'error');
+        else DX.toast('Sanción registrada.');
+        app.rerender();
       },
     });
-    // Quill embeds pasted/dropped images as base64 data: URIs by default,
-    // which can blow the 50k-char body limit from a single screenshot.
-    // Intercept those and route them through the R2 upload instead, same
-    // as the toolbar button.
-    quillEditor.root.addEventListener('paste', handleEditorImageDrop, true);
-    quillEditor.root.addEventListener('drop', handleEditorImageDrop, true);
-    return quillEditor;
   }
 
-  async function insertUploadedImage(file) {
-    try {
-      const editor = getQuillEditor();
-      const range = editor.getSelection(true) || { index: editor.getLength() };
-      const url = await uploadMediaFile(file);
-      editor.insertEmbed(range.index, 'image', url);
-      editor.setSelection(range.index + 1);
-    } catch (err) {
-      alert(err.message);
+  /* =====================================================================
+     ESTADÍSTICAS
+     ===================================================================== */
+  let statsRange = '7d';
+  let statsMetric = 'views';
+  async function renderStats(view, alive) {
+    const data = await api(`/api/admin/stats?range=${encodeURIComponent(statsRange)}`);
+    if (!alive()) return;
+    const t = data.totals || {};
+    const p = data.previous || {};
+    const delta = (c, prev) => {
+      c = Number(c) || 0;
+      prev = Number(prev) || 0;
+      if (!prev) return c ? '<span class="kpi-delta up">Nuevo</span>' : '<span class="kpi-delta">Sin datos previos</span>';
+      const d = ((c - prev) / prev) * 100;
+      return `<span class="kpi-delta ${d > 0.5 ? 'up' : d < -0.5 ? 'down' : ''}">${d > 0 ? '+' : ''}${d.toFixed(1)}% vs. periodo anterior</span>`;
+    };
+    const ranges = [['today', 'Hoy', 'D'], ['7d', '7 días', 'W'], ['30d', '30 días', 'M'], ['90d', '90 días', 'T']];
+    view.innerHTML = `
+      ${head('Estadísticas', 'Analítica propia sin cookies: visitantes contados con una huella anónima que rota cada día.', `<div class="seg" id="st-range">${ranges.map(([k, l, key]) => `<button type="button" data-r="${k}" aria-pressed="${k === statsRange}" title="Atajo: ${key}">${l}</button>`).join('')}</div>`)}
+      <div class="kpis">
+        <button type="button" class="kpi" data-m="views" aria-pressed="${statsMetric === 'views'}"><span class="kpi-label">Visitas</span><span class="kpi-value">${num(t.pageviews)}</span>${delta(t.pageviews, p.pageviews)}</button>
+        <button type="button" class="kpi" data-m="uniques" aria-pressed="${statsMetric === 'uniques'}"><span class="kpi-label">Visitantes únicos</span><span class="kpi-value">${num(t.uniques)}</span>${delta(t.uniques, p.uniques)}</button>
+        <div class="kpi"><span class="kpi-label">Clics registrados</span><span class="kpi-value">${num(t.clicks)}</span>${delta(t.clicks, p.clicks)}</div>
+      </div>
+      <section class="panel"><h2>${statsMetric === 'views' ? 'Visitas' : 'Visitantes únicos'} por día</h2><div id="st-chart"></div></section>
+      <div class="grid-3">
+        <section class="panel"><h2>Páginas más vistas</h2><div class="barlist" id="st-pages"></div></section>
+        <section class="panel"><h2>Clics más frecuentes</h2><div class="barlist" id="st-clicks"></div></section>
+        <section class="panel"><h2>Origen del tráfico</h2><div class="barlist" id="st-refs"></div></section>
+        <section class="panel"><h2>Dispositivos</h2><div class="barlist" id="st-dev"></div></section>
+        <section class="panel"><h2>Países</h2><div class="barlist" id="st-country"></div></section>
+      </div>`;
+    const dayLabel = (r) => {
+      const d = DX.parseDate(r.day + ' 00:00:00');
+      return d ? d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : r.day;
+    };
+    // The API only returns days that had traffic: fill the gaps with zeros
+    // so a quiet week still reads as a week instead of two joined points.
+    const span = { today: 1, '7d': 8, '30d': 31, '90d': 91 }[statsRange] || 8;
+    const byDay = new Map((data.daily || []).map((r) => [r.day, r]));
+    const daily = [];
+    for (let i = span - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+      daily.push(byDay.get(d) || { day: d, views: 0, uniques: 0 });
     }
-  }
-
-  function handleEditorImageDrop(e) {
-    const files = e.clipboardData ? e.clipboardData.files : e.dataTransfer ? e.dataTransfer.files : null;
-    const file = files && Array.from(files).find((f) => f.type.startsWith('image/'));
-    if (!file) return;
-    e.preventDefault();
-    e.stopPropagation();
-    insertUploadedImage(file);
-  }
-
-  function handleQuillImageUpload() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/png,image/jpeg,image/webp,image/gif';
-    input.addEventListener('change', () => {
-      const file = input.files && input.files[0];
-      if (file) insertUploadedImage(file);
+    lineChart(view.querySelector('#st-chart'), daily, {
+      key: statsMetric,
+      key2: statsMetric === 'views' ? 'uniques' : null,
+      label: dayLabel,
+      aria: 'Visitas por día',
+      tip: (r) => `<b>${esc(dayLabel(r))}</b>${num(r.views)} visitas · ${num(r.uniques)} únicos`,
+      legend: statsMetric === 'views' ? '<span><i></i>Visitas</span><span><i class="l2"></i>Únicos</span>' : '',
     });
-    input.click();
-  }
-
-  async function uploadHeroImage(file) {
-    const statusEl = document.getElementById('ann-form-hero-status');
-    const preview = document.getElementById('ann-form-hero-preview');
-    statusEl.textContent = 'Subiendo…';
-    try {
-      heroImageUrl = await uploadMediaFile(file);
-      preview.src = heroImageUrl;
-      preview.hidden = false;
-      statusEl.textContent = 'Imagen subida.';
-    } catch (err) {
-      statusEl.textContent = '';
-      annMsg(err.message, 'error');
-    }
-  }
-
-  function annMsg(text, type) {
-    const el = document.getElementById('ann-msg');
-    el.innerHTML = text ? `<div class="panel-msg ${type}">${escapeHtml(text)}</div>` : '';
-  }
-
-  async function loadAnnouncements() {
-    const grid = document.getElementById('ann-grid');
-    grid.innerHTML = '<span class="panel-section-sub">Cargando…</span>';
-    try {
-      const { announcements } = await api('/api/admin/announcements');
-      renderAnnouncements(announcements || []);
-    } catch (err) {
-      grid.innerHTML = '';
-      annMsg(err.message, 'error');
-    }
-  }
-
-  function renderAnnouncements(list) {
-    const grid = document.getElementById('ann-grid');
-    const canManage = hasPerm('announcements.manage');
-    document.getElementById('ann-form-open').style.display = canManage ? '' : 'none';
-
-    if (!list.length) {
-      grid.innerHTML = '<span class="panel-section-sub">Todavía no hay anuncios.</span>';
-      return;
-    }
-
-    const sorted = list.slice().sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
-
-    grid.innerHTML = sorted
-      .map(
-        (a) => `
-        <div class="role-card">
-          <div class="role-card-head">
-            ${a.hero_image_url ? `<img class="ann-thumb" src="${escapeHtml(a.hero_image_url)}" alt="">` : ''}
-            <span class="role-card-name">${escapeHtml(a.title)}</span>
-            ${a.category ? `<span class="category-pill">${escapeHtml(a.category)}</span>` : ''}
-            ${a.pinned ? `<span class="pin-badge">${PIN_ICON}Fijado</span>` : ''}
-          </div>
-          <div class="panel-section-sub" style="margin:0;">${escapeHtml(a.created_at ? new Date(a.created_at).toLocaleString('es') : '')}</div>
-          ${
-            canManage
-              ? `<div class="role-card-actions">
-                   <button class="btn btn-ghost btn-sm" data-edit="${a.id}">Editar</button>
-                   <button class="btn btn-ghost btn-sm" data-delete="${a.id}">Eliminar</button>
-                 </div>`
-              : ''
-          }
-        </div>`
-      )
-      .join('');
-
-    grid.querySelectorAll('[data-edit]').forEach((btn) =>
-      btn.addEventListener('click', () => openAnnouncementForm(list.find((a) => a.id === Number(btn.dataset.edit))))
-    );
-    grid.querySelectorAll('[data-delete]').forEach((btn) =>
-      btn.addEventListener('click', () => deleteAnnouncement(Number(btn.dataset.delete)))
-    );
-  }
-
-  function wireAnnouncementForm() {
-    document.getElementById('ann-form-open').addEventListener('click', () => openAnnouncementForm(null));
-    document.getElementById('ann-form-cancel').addEventListener('click', closeAnnouncementForm);
-    document.getElementById('ann-form-save').addEventListener('click', saveAnnouncement);
-    document.getElementById('ann-form-hero-input').addEventListener('change', (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (file) uploadHeroImage(file);
-    });
-  }
-
-  function openAnnouncementForm(a) {
-    editingAnnId = a ? a.id : null;
-    document.getElementById('ann-form-heading').textContent = a ? `Editar ${a.title}` : 'Crear anuncio';
-    document.getElementById('ann-form-title').value = a ? a.title : '';
-    document.getElementById('ann-form-slug').value = a ? a.slug || '' : '';
-    document.getElementById('ann-form-category').value = a ? a.category || '' : '';
-    document.getElementById('ann-form-excerpt').value = a ? a.excerpt || '' : '';
-    document.getElementById('ann-form-pinned').checked = a ? !!a.pinned : false;
-    document.getElementById('ann-form-hero-input').value = '';
-    document.getElementById('ann-form-hero-status').textContent = '';
-
-    heroImageUrl = a && a.hero_image_url ? a.hero_image_url : null;
-    const preview = document.getElementById('ann-form-hero-preview');
-    if (heroImageUrl) {
-      preview.src = heroImageUrl;
-      preview.hidden = false;
-    } else {
-      preview.hidden = true;
-      preview.src = '';
-    }
-
-    const editor = getQuillEditor();
-    if (a) {
-      editor.root.innerHTML = a.body || '';
-    } else {
-      editor.setText('');
-    }
-
-    document.getElementById('ann-form-card').hidden = false;
-  }
-
-  function closeAnnouncementForm() {
-    document.getElementById('ann-form-card').hidden = true;
-    editingAnnId = null;
-    heroImageUrl = null;
-  }
-
-  async function saveAnnouncement() {
-    const title = document.getElementById('ann-form-title').value.trim();
-    const slug = document.getElementById('ann-form-slug').value.trim();
-    const category = document.getElementById('ann-form-category').value.trim();
-    const excerpt = document.getElementById('ann-form-excerpt').value.trim();
-    const pinned = document.getElementById('ann-form-pinned').checked;
-    const rawHtml = getQuillEditor().root.innerHTML;
-    const body = window.DOMPurify ? DOMPurify.sanitize(rawHtml) : rawHtml;
-
-    if (body.length > 50000) {
-      annMsg(
-        `El contenido es demasiado largo (${body.length.toLocaleString('es')} caracteres, máx. 50.000). ` +
-          'Si pegaste una imagen directamente en el texto puede haberse incrustado como base64: bórrala y ' +
-          'vuelve a añadirla con el botón de imagen de la barra de herramientas.',
-        'error'
-      );
-      return;
-    }
-
-    const payload = { title, body, pinned, slug, excerpt, hero_image_url: heroImageUrl, category };
-
-    try {
-      if (editingAnnId) {
-        await api(`/api/admin/announcements/${editingAnnId}`, {
-          method: 'PATCH',
-          body: JSON.stringify(payload),
-        });
-        annMsg('Anuncio actualizado.', 'ok');
-      } else {
-        await api('/api/admin/announcements', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
-        annMsg('Anuncio creado.', 'ok');
+    const flag = (c) => (c && c.length === 2 ? String.fromCodePoint(...[...c.toUpperCase()].map((x) => 127397 + x.charCodeAt(0))) + ' ' : '');
+    const bars = (id, rows, vk, lk, fmt) => {
+      const el = view.querySelector(id);
+      if (!rows || !rows.length) {
+        el.innerHTML = '<p class="panel-sub">Sin datos en este periodo.</p>';
+        return;
       }
-      closeAnnouncementForm();
-      loadAnnouncements();
-    } catch (err) {
-      annMsg(err.message, 'error');
-    }
-  }
-
-  async function deleteAnnouncement(id) {
-    const ok = window.zdConfirm
-      ? await window.zdConfirm('¿Eliminar este anuncio? Esta acción no se puede deshacer.')
-      : confirm('¿Eliminar este anuncio?');
-    if (!ok) return;
-    try {
-      await api(`/api/admin/announcements/${id}`, { method: 'DELETE' });
-      annMsg('Anuncio eliminado.', 'ok');
-      loadAnnouncements();
-    } catch (err) {
-      annMsg(err.message, 'error');
-    }
-  }
-
-  /* ---------- Team ---------- */
-
-  let editingTeamId = null;
-  const TEAM_LABELS = { staff: 'Staff', dev: 'Desarrollo' };
-
-  function teamMsg(text, type) {
-    const el = document.getElementById('team-msg');
-    el.innerHTML = text ? `<div class="panel-msg ${type}">${escapeHtml(text)}</div>` : '';
-  }
-
-  async function loadTeam() {
-    const grid = document.getElementById('team-grid');
-    grid.innerHTML = '<span class="panel-section-sub">Cargando…</span>';
-    try {
-      const { members } = await api('/api/admin/team');
-      renderTeam(members || []);
-    } catch (err) {
-      grid.innerHTML = '';
-      teamMsg(err.message, 'error');
-    }
-  }
-
-  function renderTeam(members) {
-    const grid = document.getElementById('team-grid');
-    const canManage = hasPerm('team.manage');
-    document.getElementById('team-form-open').style.display = canManage ? '' : 'none';
-
-    if (!members.length) {
-      grid.innerHTML = '<span class="panel-section-sub">Todavía no hay miembros.</span>';
-      return;
-    }
-
-    grid.innerHTML = members
-      .slice()
-      .sort((a, b) => (a.position || 0) - (b.position || 0))
-      .map((m) => {
-        const nick = m.mc_nick || '';
-        const color = m.rank_color || '#6fb3ff';
-        const skinSubject = m.mc_uuid ? encodeURIComponent(m.mc_uuid) : encodeURIComponent(nick);
-        return `
-        <div class="role-card">
-          <div class="role-card-head">
-            <img class="team-skin-thumb" src="https://vzge.me/face/32/${skinSubject}" alt="">
-            <span class="role-card-name">${escapeHtml(nick)}</span>
-            <span class="role-locked-badge">${escapeHtml(TEAM_LABELS[m.team] || m.team || '')}</span>
-          </div>
-          <div class="role-perms">
-            <span class="perm-chip" style="border-color:${escapeHtml(color)}55;color:${escapeHtml(color)}">${escapeHtml(m.rank_label || '')}</span>
-          </div>
-          <div class="panel-section-sub" style="margin:0;">${escapeHtml(m.function_text || '')}</div>
-          ${
-            canManage
-              ? `<div class="role-card-actions">
-                   <button class="btn btn-ghost btn-sm" data-edit="${m.id}">Editar</button>
-                   <button class="btn btn-ghost btn-sm" data-delete="${m.id}">Eliminar</button>
-                 </div>`
-              : ''
-          }
-        </div>`;
+      const max = Math.max(1, ...rows.map((r) => Number(r[vk]) || 0));
+      el.innerHTML = rows
+        .map((r) => `<div class="bar-row" style="--w:${(((Number(r[vk]) || 0) / max) * 100).toFixed(1)}%" title="${esc(r[lk] || '')}"><span>${fmt ? fmt(r[lk]) : esc(r[lk] || 'Desconocido')}</span><b>${num(r[vk])}</b></div>`)
+        .join('');
+    };
+    bars('#st-pages', data.topPages, 'views', 'path');
+    bars('#st-clicks', data.topClicks, 'clicks', 'target');
+    bars('#st-refs', data.referrers, 'views', 'referrer', (v) => esc(v === 'direct' ? 'Directo / interno' : v));
+    bars('#st-dev', data.devices, 'views', 'device', (v) => (v === 'mobile' ? 'Móvil' : 'Escritorio'));
+    bars('#st-country', data.countries, 'views', 'country', (v) => esc(flag(v) + (v || 'Desconocido')));
+    view.querySelector('#st-range').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-r]');
+      if (!b || b.dataset.r === statsRange) return;
+      statsRange = b.dataset.r;
+      renderStats(view, alive);
+    });
+    view.querySelectorAll('[data-m]').forEach((b) =>
+      b.addEventListener('click', () => {
+        statsMetric = b.dataset.m;
+        renderStats(view, alive);
       })
-      .join('');
-
-    grid.querySelectorAll('[data-edit]').forEach((btn) =>
-      btn.addEventListener('click', () => openTeamForm(members.find((m) => m.id === Number(btn.dataset.edit))))
-    );
-    grid.querySelectorAll('[data-delete]').forEach((btn) =>
-      btn.addEventListener('click', () => deleteTeamMember(Number(btn.dataset.delete)))
     );
   }
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || !location.hash.startsWith('#estadisticas')) return;
+    if (/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '') || document.querySelector('.drawer, .cmdk-overlay')) return;
+    const map = { d: 'today', w: '7d', m: '30d', t: '90d' };
+    const r = map[e.key.toLowerCase()];
+    if (!r || r === statsRange) return;
+    statsRange = r;
+    app.rerender();
+  });
 
-  function wireTeamForm() {
-    document.getElementById('team-form-open').addEventListener('click', () => openTeamForm(null));
-    document.getElementById('team-form-cancel').addEventListener('click', closeTeamForm);
-    document.getElementById('team-form-save').addEventListener('click', saveTeamMember);
-    document.getElementById('team-form-color').addEventListener('input', (e) => {
-      document.getElementById('team-form-color-hex').textContent = e.target.value;
+  /* =====================================================================
+     USO DE RECURSOS
+     ===================================================================== */
+  const RESOURCE_LABELS = {
+    d1_reads: ['D1 · filas leídas', 'hoy'],
+    d1_writes: ['D1 · filas escritas', 'hoy'],
+    kv_reads: ['KV · lecturas', 'hoy'],
+    kv_writes: ['KV · escrituras', 'hoy'],
+    kv_deletes: ['KV · borrados', 'hoy'],
+    r2_class_a: ['R2 · operaciones clase A', 'este mes'],
+    r2_class_b: ['R2 · operaciones clase B', 'este mes'],
+  };
+  async function renderUsage(view, alive) {
+    const data = await api('/api/admin/usage');
+    if (!alive()) return;
+    const usage = data.usage || {};
+    const entries = Object.entries(usage);
+    const hot = entries.filter(([, u]) => u.limit && u.current / u.limit >= 0.8);
+    view.innerHTML = `
+      ${head('Uso de recursos', 'Contadores propios frente a los límites gratuitos de Cloudflare. Al llegar al límite, las peticiones que lo necesiten se bloquean en vez de empezar a cobrarse.', `<button class="btn btn-ghost btn-sm" data-act="refresh">Actualizar</button>`)}
+      ${hot.length ? `<div class="banner banner-warn">${icon('gauge')}<div><b>Atención:</b> ${hot.map(([k]) => esc((RESOURCE_LABELS[k] || [k])[0])).join(', ')} por encima del 80%.</div></div>` : ''}
+      ${data.note ? `<div class="banner banner-info">${icon('gauge')}<div>${esc(data.note)}</div></div>` : ''}
+      <div class="grid-2">${entries
+        .map(([k, u]) => {
+          const pct = u.limit ? Math.min(100, (u.current / u.limit) * 100) : 0;
+          const cls = pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : '';
+          const [label, period] = RESOURCE_LABELS[k] || [k, ''];
+          return `<section class="panel meter"><div class="meter-head"><span>${esc(label)} <small class="muted">(${esc(period)})</small></span><b>${num(u.current)} / ${num(u.limit)}</b></div>
+            <div class="meter-bar"><i class="${cls}" style="--w:${pct.toFixed(2)}%"></i></div>
+            <span class="panel-sub">${pct.toFixed(1)}% usado${u.current >= u.limit - 1 ? ' · <b style="color:var(--danger)">BLOQUEADO</b>' : ''}</span></section>`;
+        })
+        .join('')}</div>`;
+    view.querySelector('[data-act="refresh"]').addEventListener('click', () => app.rerender());
+  }
+
+  /* =====================================================================
+     RANGOS Y PERMISOS
+     ===================================================================== */
+  let rolesCache = [];
+  let permsCache = [];
+  const PERM_GROUPS = { panel: 'Panel', wiki: 'Wiki', announcements: 'Anuncios', team: 'Equipo', sanctions: 'Sanciones', devzone: 'Dev Zone' };
+  async function renderRoles(view, alive) {
+    const [r, p] = await Promise.all([api('/api/admin/roles'), permsCache.length ? { permissions: permsCache } : api('/api/admin/permissions')]);
+    if (!alive()) return;
+    rolesCache = r.roles || [];
+    permsCache = p.permissions || [];
+    const manage = can('panel.manage_roles');
+    view.innerHTML = `
+      ${head('Rangos y permisos', 'Owner y Co-Owner tienen todos los permisos y no se pueden editar. Solo puedes gestionar rangos por debajo del tuyo.', manage ? `<button class="btn btn-accent btn-sm" data-act="new">${icon('plus')}Crear rango</button>` : '')}
+      <div class="table-wrap" style="margin-bottom:22px"><table class="table"><thead><tr><th>Rango</th><th class="num">Posición</th><th>Permisos</th><th class="actions"></th></tr></thead><tbody>
+      ${rolesCache
+        .map(
+          (x) => `<tr class="${manage && !x.is_locked ? 'clickable' : ''}" data-id="${x.id}">
+          <td><div class="cell-title"><span class="swatch" style="background:${DX.safeColor(x.color)};width:12px;height:12px"></span><b>${esc(x.name)}</b>${x.is_locked ? '<span class="badge">Fijo</span>' : ''}</div></td>
+          <td class="num">${Number(x.position) || 0}</td>
+          <td class="muted">${x.is_locked ? 'Todos' : x.permissions.length ? x.permissions.map(esc).join(', ') : 'Ninguno'}</td>
+          <td class="actions">${manage && !x.is_locked ? `<button class="icon-btn danger" data-del="${x.id}" title="Eliminar">${icon('trash')}</button>` : ''}</td></tr>`
+        )
+        .join('')}</tbody></table></div>
+      <section class="panel">
+        <h2>Asignar rangos a usuarios</h2>
+        <div class="toolbar">${searchBox('u-q', 'Nombre de usuario o ID de Discord…')}<button class="btn btn-ghost btn-sm" data-act="search">Buscar</button></div>
+        <div id="u-results"><p class="panel-sub">Busca a alguien para ver y cambiar sus rangos. Puedes pegar el ID de Discord de alguien que aún no ha iniciado sesión.</p></div>
+      </section>`;
+    view.querySelector('tbody').addEventListener('click', async (e) => {
+      const del = e.target.closest('[data-del]');
+      if (del) {
+        const role = rolesCache.find((x) => x.id === Number(del.dataset.del));
+        if (!(await DX.confirm(`Quien tenga "${role.name}" perderá sus permisos.`, { title: '¿Eliminar rango?' }))) return;
+        try {
+          await api(`/api/admin/roles/${role.id}`, { method: 'DELETE' });
+          DX.toast('Rango eliminado.');
+          renderRoles(view, alive);
+        } catch (err) {
+          DX.toast(err.message, 'error');
+        }
+        return;
+      }
+      const tr = e.target.closest('tr[data-id]');
+      if (!tr || !manage) return;
+      const role = rolesCache.find((x) => x.id === Number(tr.dataset.id));
+      if (role && !role.is_locked) openRole(role);
     });
-    document.getElementById('team-form-nick').addEventListener('input', (e) => {
-      const img = document.getElementById('team-form-skin');
-      const nick = e.target.value.trim();
-      if (nick) {
-        img.src = `https://vzge.me/face/64/${encodeURIComponent(nick)}`;
-        img.hidden = false;
-      } else {
-        img.hidden = true;
-      }
+    const nb = view.querySelector('[data-act="new"]');
+    if (nb) nb.addEventListener('click', () => openRole(null));
+    const input = view.querySelector('#u-q');
+    const go = () => searchUsers(view, input.value.trim());
+    view.querySelector('[data-act="search"]').addEventListener('click', go);
+    input.addEventListener('keydown', (e) => e.key === 'Enter' && go());
+  }
+
+  async function searchUsers(view, q) {
+    const out = view.querySelector('#u-results');
+    out.innerHTML = '<div class="skeleton" style="height:48px"></div>';
+    try {
+      let { users } = await api(`/api/admin/users?q=${encodeURIComponent(q)}`);
+      if (!users.length && /^\d{15,25}$/.test(q)) users = [{ id: q, username: null, avatar: null, roles: [] }];
+      const manage = can('panel.manage_roles');
+      out.innerHTML = users.length
+        ? `<div class="table-wrap"><table class="table"><tbody>${users
+            .map(
+              (u) => `<tr data-user="${esc(u.id)}">
+            <td><div class="cell-title"><img class="avatar" src="${esc(u.avatar || DX.defaultAvatar)}" alt=""><div><b>${esc(u.username || '(aún no ha iniciado sesión)')}</b><small>${esc(u.id)}</small></div></div></td>
+            <td>${(u.roles || []).map((r) => `<span class="role-pill" style="color:${DX.safeColor(r.color)}"><span class="swatch" style="background:${DX.safeColor(r.color)}"></span>${esc(r.name)}${manage ? `<button type="button" data-rm="${r.id}" aria-label="Quitar ${esc(r.name)}">×</button>` : ''}</span>`).join('') || '<span class="muted">Sin rangos</span>'}</td>
+            <td class="actions">${
+              manage
+                ? `<select class="input" data-assign style="width:auto;display:inline-block;padding:6px 10px"><option value="">Añadir rango…</option>${rolesCache
+                    .filter((r) => !(u.roles || []).some((x) => x.id === r.id))
+                    .map((r) => `<option value="${r.id}">${esc(r.name)}</option>`)
+                    .join('')}</select>`
+                : ''
+            }</td></tr>`
+            )
+            .join('')}</tbody></table></div>`
+        : '<p class="panel-sub">Sin resultados. Prueba con el ID de Discord completo.</p>';
+      out.onclick = async (e) => {
+        const rm = e.target.closest('[data-rm]');
+        if (!rm) return;
+        const uid = rm.closest('[data-user]').dataset.user;
+        try {
+          await api(`/api/admin/users/${encodeURIComponent(uid)}/roles/${rm.dataset.rm}`, { method: 'DELETE' });
+          DX.toast('Rango retirado.');
+          searchUsers(view, q);
+        } catch (err) {
+          DX.toast(err.message, 'error');
+        }
+      };
+      out.onchange = async (e) => {
+        const sel = e.target.closest('[data-assign]');
+        if (!sel || !sel.value) return;
+        const uid = sel.closest('[data-user]').dataset.user;
+        try {
+          await api(`/api/admin/users/${encodeURIComponent(uid)}/roles`, { method: 'POST', body: { roleId: Number(sel.value) } });
+          DX.toast('Rango asignado.');
+          searchUsers(view, q);
+        } catch (err) {
+          DX.toast(err.message, 'error');
+          sel.value = '';
+        }
+      };
+    } catch (err) {
+      out.innerHTML = `<div class="banner banner-danger">${esc(err.message)}</div>`;
+    }
+  }
+
+  function openRole(role) {
+    const isEdit = !!role;
+    const active = new Set(role ? role.permissions : []);
+    const groups = {};
+    permsCache.forEach((p) => {
+      const g = PERM_GROUPS[p.key.split('.')[0]] || 'Otros';
+      (groups[g] = groups[g] || []).push(p);
+    });
+    const color = role ? DX.safeColor(role.color) : '#37d6b4';
+    drawer({
+      title: isEdit ? `Editar ${role.name}` : 'Crear rango',
+      body: `
+        <div class="field-row-2">
+          <div class="field"><label for="r-name">Nombre</label><input id="r-name" name="name" type="text" maxlength="40" value="${esc(role ? role.name : '')}" placeholder="Moderador"></div>
+          <div class="field"><label for="r-color">Color</label><input id="r-color" name="color" type="color" value="${esc(color)}"></div>
+        </div>
+        <div class="field"><label for="r-pos">Posición (mayor = más arriba)</label><input id="r-pos" name="position" type="number" value="${role ? Number(role.position) || 0 : 10}"><span class="field-hint">Debe ser menor que la de tu rango más alto.</span></div>
+        <div class="field"><span class="field-label">Permisos</span><div class="perm-groups">${Object.entries(groups)
+          .map(
+            ([g, list]) => `<div class="perm-group"><h3>${esc(g)}</h3>${list
+              .map((p) => `<label class="perm-check"><input type="checkbox" name="perm" value="${esc(p.key)}" ${active.has(p.key) ? 'checked' : ''}><span><b>${esc(p.label)}</b><small>${esc(p.description || '')}</small><br><code>${esc(p.key)}</code></span></label>`)
+              .join('')}</div>`
+          )
+          .join('')}</div></div>`,
+      async onSave(dr) {
+        const f = dr.form;
+        const payload = {
+          name: f.elements.name.value.trim(),
+          color: f.elements.color.value,
+          position: Number(f.elements.position.value) || 0,
+          permissionKeys: Array.from(f.querySelectorAll('input[name="perm"]:checked')).map((x) => x.value),
+        };
+        if (!payload.name) throw new Error('Falta el nombre.');
+        if (isEdit) await api(`/api/admin/roles/${role.id}`, { method: 'PATCH', body: payload });
+        else await api('/api/admin/roles', { method: 'POST', body: payload });
+        DX.toast(isEdit ? 'Rango actualizado.' : 'Rango creado.');
+        app.rerender();
+      },
+      onDelete: isEdit
+        ? async () => {
+            await api(`/api/admin/roles/${role.id}`, { method: 'DELETE' });
+            DX.toast('Rango eliminado.');
+            app.rerender();
+          }
+        : null,
+      deleteTitle: '¿Eliminar rango?',
     });
   }
 
-  function openTeamForm(member) {
-    editingTeamId = member ? member.id : null;
-    document.getElementById('team-form-heading').textContent = member ? `Editar ${member.mc_nick}` : 'Añadir miembro';
-    document.getElementById('team-form-nick').value = member ? member.mc_nick : '';
-    document.getElementById('team-form-rank').value = member ? member.rank_label || '' : '';
-    document.getElementById('team-form-color').value = member ? member.rank_color || '#6fb3ff' : '#6fb3ff';
-    document.getElementById('team-form-color-hex').textContent = member ? member.rank_color || '#6fb3ff' : '#6fb3ff';
-    document.getElementById('team-form-function').value = member ? member.function_text || '' : '';
-    document.getElementById('team-form-team').value = member ? member.team || 'staff' : 'staff';
-    document.getElementById('team-form-position').value = member ? member.position : 0;
-
-    const img = document.getElementById('team-form-skin');
-    if (member && member.mc_nick) {
-      const skinSubject = member.mc_uuid ? encodeURIComponent(member.mc_uuid) : encodeURIComponent(member.mc_nick);
-      img.src = `https://vzge.me/face/64/${skinSubject}`;
-      img.hidden = false;
-    } else {
-      img.hidden = true;
-    }
-
-    document.getElementById('team-form-card').hidden = false;
-  }
-
-  function closeTeamForm() {
-    document.getElementById('team-form-card').hidden = true;
-    editingTeamId = null;
-  }
-
-  async function saveTeamMember() {
-    const mc_nick = document.getElementById('team-form-nick').value.trim();
-    const rank_label = document.getElementById('team-form-rank').value.trim();
-    const rank_color = document.getElementById('team-form-color').value;
-    const function_text = document.getElementById('team-form-function').value.trim();
-    const team = document.getElementById('team-form-team').value;
-    const position = Number(document.getElementById('team-form-position').value) || 0;
-
-    try {
-      if (editingTeamId) {
-        await api(`/api/admin/team/${editingTeamId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ mc_nick, rank_label, rank_color, function_text, team, position }),
-        });
-        teamMsg('Miembro actualizado.', 'ok');
-      } else {
-        await api('/api/admin/team', {
-          method: 'POST',
-          body: JSON.stringify({ mc_nick, rank_label, rank_color, function_text, team, position }),
-        });
-        teamMsg('Miembro añadido.', 'ok');
-      }
-      closeTeamForm();
-      loadTeam();
-    } catch (err) {
-      teamMsg(err.message, 'error');
-    }
-  }
-
-  async function deleteTeamMember(id) {
-    const ok = window.zdConfirm
-      ? await window.zdConfirm('¿Eliminar este miembro del equipo? Esta acción no se puede deshacer.')
-      : confirm('¿Eliminar este miembro?');
-    if (!ok) return;
-    try {
-      await api(`/api/admin/team/${id}`, { method: 'DELETE' });
-      teamMsg('Miembro eliminado.', 'ok');
-      loadTeam();
-    } catch (err) {
-      teamMsg(err.message, 'error');
-    }
-  }
-
-  /* ---------- Sanctions ---------- */
-
-  const SANCTION_TYPE_LABELS = { ban: 'Ban', mute: 'Mute', kick: 'Kick', warn: 'Warn', other: 'Otro' };
-
-  function sanctionsMsg(text, type) {
-    const el = document.getElementById('sanctions-msg');
-    el.innerHTML = text ? `<div class="panel-msg ${type}">${escapeHtml(text)}</div>` : '';
-  }
-
-  function sanctionFormMsg(text, type) {
-    const el = document.getElementById('sanction-form-msg');
-    el.innerHTML = text ? `<div class="panel-msg ${type}">${escapeHtml(text)}</div>` : '';
-  }
-
-  async function loadSanctions() {
-    const list = document.getElementById('sanctions-list');
-    list.innerHTML = '<span class="panel-section-sub">Cargando…</span>';
-    try {
-      const data = await api('/api/staff/sanctions');
-      renderSanctions(data.sanctions || []);
-    } catch (err) {
-      list.innerHTML = '';
-      sanctionsMsg(err.message, 'error');
-    }
-  }
-
-  function evidenceMarkup(ev) {
-    const url = `/api/staff/evidence/${ev.id}`;
-    const type = ev.content_type || '';
-    const label = ev.filename ? escapeHtml(ev.filename) : 'evidencia';
-    if (type.startsWith('image/')) {
-      return `<a href="${url}" target="_blank" class="evidence-thumb"><img src="${url}" alt="${label}" loading="lazy"></a>`;
-    }
-    if (type.startsWith('video/')) {
-      return `<video class="evidence-thumb" controls src="${url}"></video>`;
-    }
-    return `<a href="${url}" target="_blank" class="evidence-file-link">Ver archivo${ev.filename ? ': ' + label : ''}</a>`;
-  }
-
-  function renderSanctions(sanctions) {
-    const list = document.getElementById('sanctions-list');
-    const canManage = hasPerm('sanctions.manage');
-
-    if (!sanctions.length) {
-      list.innerHTML = '<span class="panel-section-sub">Todavía no hay sanciones registradas.</span>';
-      return;
-    }
-
-    list.innerHTML = sanctions
-      .map((s) => {
-        const evidence = Array.isArray(s.evidence) ? s.evidence : [];
-        return `
-        <div class="sanction-card">
-          <div class="sanction-card-head">
-            <span class="sanction-nick">${escapeHtml(s.target_nick)}</span>
-            <span class="sanction-type">${escapeHtml(SANCTION_TYPE_LABELS[s.type] || s.type)}</span>
-            ${canManage ? `<button class="btn btn-ghost btn-sm sanction-delete" data-delete="${s.id}">Eliminar</button>` : ''}
-          </div>
-          <p class="sanction-reason">${escapeHtml(s.reason || '')}</p>
-          <div class="panel-section-sub" style="margin:0 0 10px;">
-            Aplicada por ${escapeHtml(s.staff_name || s.staff_id || 'desconocido')}${s.created_at ? ' · ' + escapeHtml(new Date(s.created_at).toLocaleString('es')) : ''}
-          </div>
-          ${evidence.length ? `<div class="evidence-grid">${evidence.map(evidenceMarkup).join('')}</div>` : ''}
-        </div>`;
-      })
-      .join('');
-
-    list.querySelectorAll('[data-delete]').forEach((btn) =>
-      btn.addEventListener('click', () => deleteSanction(Number(btn.dataset.delete)))
-    );
-  }
-
-  async function deleteSanction(id) {
-    const ok = window.zdConfirm
-      ? await window.zdConfirm('¿Eliminar esta sanción? Esta acción no se puede deshacer.')
-      : confirm('¿Eliminar esta sanción?');
-    if (!ok) return;
-    try {
-      await api(`/api/staff/sanctions/${id}`, { method: 'DELETE' });
-      sanctionsMsg('Sanción eliminada.', 'ok');
-      loadSanctions();
-    } catch (err) {
-      sanctionsMsg(err.message, 'error');
-    }
-  }
-
-  function wireSanctionForm() {
-    document.getElementById('sanction-form-save').addEventListener('click', saveSanction);
-  }
-
-  async function saveSanction() {
-    const target_nick = document.getElementById('sanction-form-nick').value.trim();
-    const type = document.getElementById('sanction-form-type').value;
-    const reason = document.getElementById('sanction-form-reason').value.trim();
-    const filesInput = document.getElementById('sanction-form-files');
-    const files = filesInput.files ? Array.from(filesInput.files) : [];
-
-    if (!target_nick || !reason) {
-      sanctionFormMsg('Rellena el nick y el motivo.', 'error');
-      return;
-    }
-    if (files.length > 6) {
-      sanctionFormMsg('Puedes adjuntar como máximo 6 archivos.', 'error');
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('target_nick', target_nick);
-    formData.append('type', type);
-    formData.append('reason', reason);
-    files.forEach((f) => formData.append('files', f));
-
-    const saveBtn = document.getElementById('sanction-form-save');
-    saveBtn.disabled = true;
-    sanctionFormMsg('Guardando…', 'ok');
-    try {
-      // Multipart upload: build the request by hand instead of using api(),
-      // which always forces a JSON Content-Type. Leave Content-Type unset so
-      // the browser attaches the multipart boundary itself.
-      const res = await fetch('/api/staff/sanctions', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'X-CSRF-Token': csrfToken },
-        body: formData,
-      });
-      const isJson = res.headers.get('content-type')?.includes('application/json');
-      const body = isJson ? await res.json().catch(() => null) : null;
-      if (!res.ok) {
-        throw new Error((body && body.error) || `Error ${res.status}`);
-      }
-      if (body && Array.isArray(body.fileErrors) && body.fileErrors.length) {
-        const details = body.fileErrors.map((e) => `${e.filename}: ${e.error}`).join(', ');
-        sanctionFormMsg(`Sanción registrada, pero hubo avisos con algunos archivos: ${details}`, 'error');
-      } else {
-        sanctionFormMsg('Sanción registrada.', 'ok');
-      }
-      document.getElementById('sanction-form-nick').value = '';
-      document.getElementById('sanction-form-reason').value = '';
-      filesInput.value = '';
-      loadSanctions();
-    } catch (err) {
-      sanctionFormMsg(err.message, 'error');
-    } finally {
-      saveBtn.disabled = false;
-    }
-  }
-
-  /* ---------- Boot ---------- */
-
-  fetch('/api/auth/me', { credentials: 'include' })
-    .then((r) => r.json())
-    .then((data) => {
-      csrfToken = data.csrfToken || '';
-      if (!data.user) return denied('Tienes que iniciar sesión con Discord para ver el panel.', true);
-      me = data.user;
-      if (!hasPerm('panel.access')) return denied('Tu cuenta no tiene acceso al panel de administración.', false);
-      initShell();
-    })
-    .catch(() => denied('No se pudo cargar el panel. Inténtalo de nuevo en un momento.', false));
+  /* =====================================================================
+     BOOT
+     ===================================================================== */
+  DX.me.then((session) => {
+    if (!session || !session.user) return denied(root, 'Panel de Desafio Xtremo', 'Inicia sesión con Discord para entrar.', true, '/admin.html');
+    me = session.user;
+    if (!can('panel.access')) return denied(root, 'Sin acceso', 'Tu cuenta no tiene acceso al panel de administración.', false);
+    app = shell({
+      root,
+      user: me,
+      name: 'Panel',
+      brand: `<a class="app-brand" href="/"><img src="/assets/wordmark.png" alt="Desafio Xtremo"><span class="app-brand-tag pixel">Panel</span></a>`,
+      groups: [
+        { items: [{ id: 'resumen', label: 'Resumen', icon: 'home', render: renderOverview }] },
+        {
+          title: 'Contenido',
+          items: [
+            { id: 'anuncios', label: 'Anuncios', icon: 'news', render: renderAnnouncements, onSub: (s) => s === 'new' && can('announcements.manage') && openAnnouncement(null) },
+            { id: 'wiki', label: 'Wiki', icon: 'book', render: renderWiki, onSub: (s) => s === 'new' && can('wiki.manage') && openWikiPage(null) },
+            { id: 'equipo', label: 'Equipo', icon: 'users', render: renderTeam, onSub: (s) => s === 'new' && can('team.manage') && openMember(null) },
+          ],
+        },
+        { title: 'Moderación', items: [{ id: 'sanciones', label: 'Sanciones', icon: 'gavel', visible: can('sanctions.access'), render: renderSanctions, onSub: (s) => s === 'new' && openSanction() }] },
+        {
+          title: 'Sistema',
+          items: [
+            { id: 'estadisticas', label: 'Estadísticas', icon: 'chart', visible: can('panel.view_stats'), render: renderStats },
+            { id: 'uso', label: 'Uso de recursos', icon: 'gauge', visible: can('panel.view_usage'), render: renderUsage },
+            { id: 'rangos', label: 'Rangos y permisos', icon: 'shield', render: renderRoles },
+          ],
+        },
+      ],
+      footLinks: [{ href: '/', label: 'Ver la web', icon: 'ext' }].concat(can('devzone.access') ? [{ href: '/devzone.html', label: 'Dev Zone', icon: 'code' }] : []),
+      commands: [
+        can('announcements.manage') && { group: 'Acciones', label: 'Nuevo anuncio', icon: 'plus', run: () => (location.hash = 'anuncios/new') },
+        can('wiki.manage') && { group: 'Acciones', label: 'Nueva página de wiki', icon: 'plus', run: () => (location.hash = 'wiki/new') },
+        can('team.manage') && { group: 'Acciones', label: 'Añadir miembro del equipo', icon: 'plus', run: () => (location.hash = 'equipo/new') },
+        can('sanctions.access') && { group: 'Acciones', label: 'Registrar sanción', icon: 'gavel', run: () => (location.hash = 'sanciones/new') },
+        { group: 'Enlaces', label: 'Abrir la web pública', icon: 'ext', run: () => window.open('/', '_blank') },
+        can('devzone.access') && { group: 'Enlaces', label: 'Ir a Dev Zone', icon: 'code', run: () => (location.href = '/devzone.html') },
+      ].filter(Boolean),
+    });
+  });
 })();

@@ -4,42 +4,42 @@ import {
   withQuotaHandling,
 } from '../../../../backend/lib/adminGuard.js';
 import { d1First, d1Run } from '../../../../backend/lib/db.js';
+import { validateTaskFields } from '../../../../backend/lib/devzone.js';
 
-const STATUSES = new Set(['no_iniciado', 'en_proceso', 'en_espera', 'terminado']);
-const EDITABLE_FIELDS = ['title', 'description', 'system', 'status', 'assignee_id', 'repo', 'blocked_note'];
+function taskId(params) {
+  const id = Number(params.id);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
 
 export const onRequestPatch = withQuotaHandling(async (context) => {
   const { request, env, params } = context;
   const guard = await requirePermissionAndCsrf(request, env, 'devzone.manage');
   if (!guard.ok) return jsonResponse(guard.body, guard.status);
 
-  const existing = await d1First(env, `SELECT id FROM devzone_tasks WHERE id = ?`, [params.id]);
+  const id = taskId(params);
+  if (!id) return jsonResponse({ error: 'Tarea inválida.' }, 400);
+  const existing = await d1First(env, `SELECT id FROM devzone_tasks WHERE id = ?`, [id]);
   if (!existing) return jsonResponse({ error: 'Tarea no encontrada.' }, 404);
 
   const body = await request.json().catch(() => null);
-  if (!body || typeof body !== 'object') return jsonResponse({ error: 'Cuerpo inválido.' }, 400);
+  const parsed = validateTaskFields(body, { partial: true });
+  if (parsed.error) return jsonResponse({ error: parsed.error }, 400);
 
-  if (body.status !== undefined && !STATUSES.has(body.status)) {
-    return jsonResponse({ error: 'Estado inválido.' }, 400);
-  }
-  if (body.title !== undefined && (!body.title.trim() || body.title.length > 160)) {
-    return jsonResponse({ error: 'Título inválido.' }, 400);
-  }
-
-  const sets = [];
-  const values = [];
-  for (const field of EDITABLE_FIELDS) {
-    if (body[field] === undefined) continue;
-    sets.push(`${field} = ?`);
-    values.push(field === 'assignee_id' && !body[field] ? null : body[field]);
-  }
-  if (!sets.length) return jsonResponse({ error: 'Nada para actualizar.' }, 400);
-
+  // Column names come from the validator's fixed allowlist, never from the
+  // request, so building the SET clause from them is safe.
+  const fields = Object.keys(parsed.value);
+  if (!fields.length) return jsonResponse({ error: 'Nada para actualizar.' }, 400);
+  const sets = fields.map((f) => `${f} = ?`);
+  const values = fields.map((f) => parsed.value[f]);
   sets.push(`updated_at = datetime('now')`);
-  values.push(params.id);
+  values.push(id);
 
   await d1Run(env, `UPDATE devzone_tasks SET ${sets.join(', ')} WHERE id = ?`, values);
-  const task = await d1First(env, `SELECT * FROM devzone_tasks WHERE id = ?`, [params.id]);
+  const task = await d1First(
+    env,
+    `SELECT t.*, u.username AS created_by_name FROM devzone_tasks t LEFT JOIN users u ON u.id = t.created_by WHERE t.id = ?`,
+    [id]
+  );
   return jsonResponse({ task });
 });
 
@@ -48,6 +48,11 @@ export const onRequestDelete = withQuotaHandling(async (context) => {
   const guard = await requirePermissionAndCsrf(request, env, 'devzone.manage');
   if (!guard.ok) return jsonResponse(guard.body, guard.status);
 
-  await d1Run(env, `DELETE FROM devzone_tasks WHERE id = ?`, [params.id]);
+  const id = taskId(params);
+  if (!id) return jsonResponse({ error: 'Tarea inválida.' }, 400);
+  const existing = await d1First(env, `SELECT id FROM devzone_tasks WHERE id = ?`, [id]);
+  if (!existing) return jsonResponse({ error: 'Tarea no encontrada.' }, 404);
+
+  await d1Run(env, `DELETE FROM devzone_tasks WHERE id = ?`, [id]);
   return jsonResponse({ ok: true });
 });
