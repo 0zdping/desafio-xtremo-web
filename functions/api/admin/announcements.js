@@ -35,7 +35,8 @@ async function validateAnnouncement(body) {
   // no-ops if the CDN script fails to load, and a direct API call skips
   // the browser entirely). See backend/lib/sanitizeHtml.js.
   const text = await sanitizeHtml(rawText);
-  if (!text || !text.replace(/<[^>]*>/g, '').trim()) {
+  // An image-only post (a poster, a screenshot) is valid content.
+  if (!text || (!text.replace(/<[^>]*>/g, '').trim() && !/<img\b/i.test(text))) {
     return { error: 'El contenido no puede estar vacío.' };
   }
   if (text.length > 50000) {
@@ -43,8 +44,8 @@ async function validateAnnouncement(body) {
   }
   if (category.length > 40) return { error: 'Categoría inválida.' };
   if (excerpt.length > 220) return { error: 'Extracto demasiado largo.' };
-  if (heroImageUrl && !heroImageUrl.startsWith('http')) {
-    return { error: 'La imagen de portada debe ser una URL válida.' };
+  if (heroImageUrl && !/^https:\/\//i.test(heroImageUrl)) {
+    return { error: 'La imagen de portada debe ser una URL https válida (súbela con el botón de portada).' };
   }
 
   let slug = (body?.slug || '').trim();

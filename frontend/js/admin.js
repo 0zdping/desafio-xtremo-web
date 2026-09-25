@@ -23,6 +23,37 @@
       .slice(0, 60);
   const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   const num = (n) => (Number(n) || 0).toLocaleString('es-ES');
+  // Mirrors backend/lib/permissions.js so the UI only offers what the
+  // server will accept (the server still enforces it on every request).
+  const myRank = () => {
+    const roles = (me && me.roles) || [];
+    if (!roles.length) return -Infinity;
+    if (roles.some((r) => r.is_locked)) return Infinity;
+    return Math.max(...roles.map((r) => Number(r.position) || 0));
+  };
+  const canTouchRole = (r) => myRank() === Infinity || (!r.is_locked && (Number(r.position) || 0) < myRank());
+  // Locked roles (Owner/Co-Owner) can be assigned by their holders but never edited or deleted.
+  const canEditRole = (r) => !r.is_locked && canTouchRole(r);
+  // Whether I may change someone's roles at all (never peers or superiors).
+  const canTouchUser = (u) => {
+    if (myRank() === Infinity || String(u.id) === String(me.id)) return true;
+    const ranks = (u.roles || []).map((ur) => rolesCache.find((r) => r.id === ur.id)).filter(Boolean);
+    const theirs = ranks.some((r) => r.is_locked) ? Infinity : ranks.length ? Math.max(...ranks.map((r) => Number(r.position) || 0)) : -Infinity;
+    return theirs < myRank();
+  };
+  // Skin renders by nick can fail (renamed account, renderer hiccup): fall
+  // back to a neutral block instead of a broken-image icon.
+  document.addEventListener('error', (e) => {
+    const img = e.target;
+    if (img && img.classList && img.classList.contains('face') && !img.dataset.fallback) {
+      img.dataset.fallback = '1';
+      img.src = DX.defaultAvatar;
+    }
+  }, true);
+  const hex6 = (c, fb) => {
+    const v = DX.safeColor(c, fb || '#37d6b4');
+    return /^#[0-9a-f]{3}$/i.test(v) ? '#' + v.slice(1).split('').map((x) => x + x).join('') : v.slice(0, 7);
+  };
   const face = (m, size) => `https://vzge.me/face/${size || 64}/${encodeURIComponent(m.mc_uuid || m.mc_nick || 'steve')}`;
 
   function head(title, sub, actions) {
@@ -128,6 +159,7 @@
             <td class="hide-sm muted" title="${esc(DX.formatDate(a.created_at))}">${esc(DX.relTime(a.created_at))}</td>
             <td class="num">${num(a.views)}</td>
             <td class="actions">
+              ${manage ? `<button class="icon-btn" data-edit="${a.id}" title="Editar" aria-label="Editar ${esc(a.title)}">${icon('edit')}</button>` : ''}
               ${manage ? `<button class="icon-btn" data-pin="${a.id}" aria-pressed="${a.pinned ? 'true' : 'false'}" title="${a.pinned ? 'Quitar de fijados' : 'Fijar'}">${icon('pin')}</button>` : ''}
               ${a.slug ? `<a class="icon-btn" href="/anuncios/${encodeURIComponent(a.slug)}" target="_blank" rel="noopener" title="Ver en la web">${icon('ext')}</a>` : ''}
               ${manage ? `<button class="icon-btn danger" data-del="${a.id}" title="Eliminar">${icon('trash')}</button>` : ''}
@@ -167,8 +199,8 @@
         }
         return;
       }
-      const tr = e.target.closest('tr[data-id]');
-      if (tr && manage) openAnnouncement(annCache.find((x) => x.id === Number(tr.dataset.id)));
+      const tr = e.target.closest('[data-edit]') || e.target.closest('tr[data-id]');
+      if (tr && manage) openAnnouncement(annCache.find((x) => x.id === Number(tr.dataset.edit || tr.dataset.id)));
     });
     const act = view.querySelector('.view-actions');
     act.addEventListener('click', (e) => {
@@ -217,14 +249,14 @@
     let quill = null;
     const d = drawer({
       title: isEdit ? 'Editar anuncio' : 'Nuevo anuncio',
-      subtitle: isEdit ? `/anuncios/${a.slug}` : 'Se publica en cuanto guardes.',
+      subtitle: isEdit ? (a.slug ? `/anuncios/${a.slug}` : 'Sin URL todavía') : 'Se publica en cuanto guardes.',
       wide: true,
       saveLabel: isEdit ? 'Guardar cambios' : 'Publicar',
       body: `
         <div class="field"><label for="f-title">Título</label><input id="f-title" name="title" type="text" maxlength="140" required value="${esc(a ? a.title : '')}"></div>
         <div class="field-row-2">
           <div class="field"><label for="f-slug">Slug (URL)</label><input id="f-slug" name="slug" type="text" maxlength="120" value="${esc(a ? a.slug || '' : '')}" placeholder="se genera desde el título"><span class="field-hint">Cambiarlo rompe los enlaces ya compartidos.</span></div>
-          <div class="field"><label for="f-cat">Categoría</label><input id="f-cat" name="category" type="text" maxlength="40" list="cat-list" value="${esc(a ? a.category || '' : '')}" placeholder="Novedades"><datalist id="cat-list">${cats.map((c) => `<option value="${esc(c)}">`).join('')}</datalist></div>
+          <div class="field"><label for="f-cat">Categoría</label><input id="f-cat" name="category" type="text" maxlength="40" list="cat-list" value="${esc(a ? a.category || '' : '')}" placeholder="Anuncio"><datalist id="cat-list">${cats.map((c) => `<option value="${esc(c)}">`).join('')}</datalist></div>
         </div>
         <div class="field"><label for="f-ex">Extracto</label><textarea id="f-ex" name="excerpt" maxlength="220" style="min-height:70px;font-family:var(--f-body)">${esc(a ? a.excerpt || '' : '')}</textarea><span class="field-hint" data-count></span></div>
         <div class="field"><span class="field-label">Portada</span>
@@ -319,7 +351,10 @@
       async onSave(dr) {
         const f = dr.form;
         if (!quill) throw new Error('El editor no está disponible.');
-        const html = quill.root.innerHTML;
+        // getSemanticHTML() turns Quill 2's internal <ol><li data-list="bullet">
+        // into real <ul>/<ol>; the server strips data-* attributes, so the raw
+        // editor HTML would publish every bullet list as a numbered one.
+        const html = typeof quill.getSemanticHTML === 'function' ? quill.getSemanticHTML() : quill.root.innerHTML;
         const payload = {
           title: f.elements.title.value.trim(),
           slug: f.elements.slug.value.trim(),
@@ -377,7 +412,7 @@
           <td class="num hide-sm">${Number(p.position) || 0}</td>
           <td class="muted hide-sm" title="${esc(DX.formatDate(p.updated_at))}">${esc(DX.relTime(p.updated_at))}</td>
           <td class="actions"><a class="icon-btn" href="/wiki.html?p=${encodeURIComponent(p.slug)}" target="_blank" rel="noopener" title="Ver en la web">${icon('ext')}</a>
-          ${manage ? `<button class="icon-btn danger" data-del="${p.id}" title="Eliminar">${icon('trash')}</button>` : ''}</td></tr>`
+          ${manage ? `<button class="icon-btn" data-edit="${p.id}" title="Editar" aria-label="Editar ${esc(p.title)}">${icon('edit')}</button><button class="icon-btn danger" data-del="${p.id}" title="Eliminar">${icon('trash')}</button>` : ''}</td></tr>`
             )
             .join('')
         : emptyRow(5, wikiCache.length ? 'Ninguna página coincide.' : 'Todavía no hay páginas.');
@@ -399,8 +434,8 @@
         }
         return;
       }
-      const tr = e.target.closest('tr[data-id]');
-      if (tr && manage) openWikiPage(wikiCache.find((x) => x.id === Number(tr.dataset.id)));
+      const tr = e.target.closest('[data-edit]') || e.target.closest('tr[data-id]');
+      if (tr && manage) openWikiPage(wikiCache.find((x) => x.id === Number(tr.dataset.edit || tr.dataset.id)));
     });
     const newBtn = view.querySelector('[data-act="new"]');
     if (newBtn) newBtn.addEventListener('click', () => openWikiPage(null));
@@ -469,11 +504,14 @@
   async function renderTeam(view, alive) {
     const data = await api('/api/admin/team');
     if (!alive()) return;
-    teamCache = (data.members || []).slice().sort((a, b) => (a.team > b.team ? 1 : a.team < b.team ? -1 : (b.position || 0) - (a.position || 0)));
+    const TEAM_ORDER = { staff: 0, dev: 1 };
+    teamCache = (data.members || [])
+      .slice()
+      .sort((a, b) => (TEAM_ORDER[a.team] ?? 9) - (TEAM_ORDER[b.team] ?? 9) || (Number(b.position) || 0) - (Number(a.position) || 0));
     app.setCount('equipo', teamCache.length);
     const manage = can('team.manage');
     view.innerHTML = `
-      ${head('Equipo', 'Tarjetas de la sección "El equipo" de la home. El orden va de mayor a menor posición.', manage ? `<button class="btn btn-accent btn-sm" data-act="new">${icon('plus')}Añadir miembro</button>` : '')}
+      ${head('Equipo', 'Tarjetas de la sección "El equipo" de la home. Dentro de cada equipo, el orden va de mayor a menor posición.', manage ? `<button class="btn btn-accent btn-sm" data-act="new">${icon('plus')}Añadir miembro</button>` : '')}
       <div class="table-wrap"><table class="table"><thead><tr><th>Miembro</th><th>Rango</th><th class="hide-sm">Función</th><th>Equipo</th><th class="num hide-sm">Posición</th><th class="actions"></th></tr></thead><tbody>
       ${
         teamCache.length
@@ -486,7 +524,7 @@
             <td class="muted hide-sm">${esc(m.function_text || '')}</td>
             <td><span class="badge">${esc(TEAM_LABEL[m.team] || m.team)}</span></td>
             <td class="num hide-sm">${Number(m.position) || 0}</td>
-            <td class="actions">${manage ? `<button class="icon-btn danger" data-del="${m.id}" title="Eliminar">${icon('trash')}</button>` : ''}</td></tr>`;
+            <td class="actions">${manage ? `<button class="icon-btn" data-edit="${m.id}" title="Editar" aria-label="Editar ${esc(m.mc_nick)}">${icon('edit')}</button><button class="icon-btn danger" data-del="${m.id}" title="Eliminar">${icon('trash')}</button>` : ''}</td></tr>`;
               })
               .join('')
           : emptyRow(6, 'Todavía no hay miembros.')
@@ -505,8 +543,8 @@
         }
         return;
       }
-      const tr = e.target.closest('tr[data-id]');
-      if (tr && manage) openMember(teamCache.find((x) => x.id === Number(tr.dataset.id)));
+      const tr = e.target.closest('[data-edit]') || e.target.closest('tr[data-id]');
+      if (tr && manage) openMember(teamCache.find((x) => x.id === Number(tr.dataset.edit || tr.dataset.id)));
     });
     const nb = view.querySelector('[data-act="new"]');
     if (nb) nb.addEventListener('click', () => openMember(null));
@@ -514,7 +552,7 @@
 
   function openMember(m) {
     const isEdit = !!m;
-    const color = m ? DX.safeColor(m.rank_color, '#37d6b4') : '#37d6b4';
+    const color = m ? hex6(m.rank_color) : '#37d6b4';
     drawer({
       title: isEdit ? `Editar ${m.mc_nick}` : 'Añadir miembro',
       body: `
@@ -654,7 +692,7 @@
           <div class="field"><label for="s-type2">Tipo</label><select id="s-type2" name="type">${Object.entries(SANCTION_TYPES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
         </div>
         <div class="field"><label for="s-reason">Motivo</label><textarea id="s-reason" name="reason" maxlength="2000" style="font-family:var(--f-body)"></textarea><span class="field-hint" data-count></span></div>
-        <div class="field"><label for="s-files">Pruebas (opcional)</label><input id="s-files" name="files" type="file" class="file-input" multiple accept="image/*,video/mp4,video/webm"><span class="field-hint">Hasta 6 archivos: imágenes o vídeo.</span></div>`,
+        <div class="field"><label for="s-files">Pruebas (opcional)</label><input id="s-files" name="files" type="file" class="file-input" multiple accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm"><span class="field-hint">Hasta 6 archivos PNG, JPG, WEBP, GIF, MP4 o WEBM, de 8 MB como máximo cada uno.</span></div>`,
       onOpen(dr) {
         charCounter(dr.form.elements.reason, 2000);
       },
@@ -666,6 +704,11 @@
         if (!nick) throw new Error('Falta el nick del jugador.');
         if (!reason) throw new Error('Explica el motivo.');
         if (files.length > 6) throw new Error('Máximo 6 archivos.');
+        // Checked before sending: the sanction row is created first and a
+        // rejected file afterwards would leave it without its evidence.
+        const OK_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'video/mp4', 'video/webm'];
+        const bad = files.find((x) => !OK_TYPES.includes(x.type) || x.size > 8 * 1024 * 1024);
+        if (bad) throw new Error(`"${bad.name}" no vale: solo PNG, JPG, WEBP, GIF, MP4 o WEBM de hasta 8 MB.`);
         const fd = new FormData();
         fd.append('target_nick', nick);
         fd.append('type', f.elements.type.value);
@@ -684,9 +727,14 @@
      ===================================================================== */
   let statsRange = '7d';
   let statsMetric = 'views';
+  let statsSeq = 0;
+  let statsData = null; // { range, data } of the last response
   async function renderStats(view, alive) {
-    const data = await api(`/api/admin/stats?range=${encodeURIComponent(statsRange)}`);
-    if (!alive()) return;
+    const my = ++statsSeq;
+    const data = statsData && statsData.range === statsRange ? statsData.data : await api(`/api/admin/stats?range=${encodeURIComponent(statsRange)}`);
+    // a slower, older request must never overwrite a newer range
+    if (!alive() || my !== statsSeq) return;
+    statsData = { range: statsRange, data };
     const t = data.totals || {};
     const p = data.previous || {};
     const delta = (c, prev) => {
@@ -754,6 +802,7 @@
       const b = e.target.closest('[data-r]');
       if (!b || b.dataset.r === statsRange) return;
       statsRange = b.dataset.r;
+      statsData = null;
       renderStats(view, alive);
     });
     view.querySelectorAll('[data-m]').forEach((b) =>
@@ -770,6 +819,7 @@
     const r = map[e.key.toLowerCase()];
     if (!r || r === statsRange) return;
     statsRange = r;
+    statsData = null;
     app.rerender();
   });
 
@@ -784,6 +834,7 @@
     kv_deletes: ['KV · borrados', 'hoy'],
     r2_class_a: ['R2 · operaciones clase A', 'este mes'],
     r2_class_b: ['R2 · operaciones clase B', 'este mes'],
+    analytics_writes: ['Escrituras de analítica y visitas', 'hoy'],
   };
   async function renderUsage(view, alive) {
     const data = await api('/api/admin/usage');
@@ -821,15 +872,15 @@
     permsCache = p.permissions || [];
     const manage = can('panel.manage_roles');
     view.innerHTML = `
-      ${head('Rangos y permisos', 'Owner y Co-Owner tienen todos los permisos y no se pueden editar. Solo puedes gestionar rangos por debajo del tuyo.', manage ? `<button class="btn btn-accent btn-sm" data-act="new">${icon('plus')}Crear rango</button>` : '')}
+      ${head('Rangos y permisos', 'Owner y Co-Owner tienen todos los permisos y no se pueden editar. Solo puedes gestionar rangos por debajo del tuyo y conceder permisos que tú tengas.', manage ? `<button class="btn btn-accent btn-sm" data-act="new">${icon('plus')}Crear rango</button>` : '')}
       <div class="table-wrap" style="margin-bottom:22px"><table class="table"><thead><tr><th>Rango</th><th class="num">Posición</th><th>Permisos</th><th class="actions"></th></tr></thead><tbody>
       ${rolesCache
         .map(
-          (x) => `<tr class="${manage && !x.is_locked ? 'clickable' : ''}" data-id="${x.id}">
+          (x) => `<tr class="${manage && canEditRole(x) ? 'clickable' : ''}" data-id="${x.id}">
           <td><div class="cell-title"><span class="swatch" style="background:${DX.safeColor(x.color)};width:12px;height:12px"></span><b>${esc(x.name)}</b>${x.is_locked ? '<span class="badge">Fijo</span>' : ''}</div></td>
           <td class="num">${Number(x.position) || 0}</td>
           <td class="muted">${x.is_locked ? 'Todos' : x.permissions.length ? x.permissions.map(esc).join(', ') : 'Ninguno'}</td>
-          <td class="actions">${manage && !x.is_locked ? `<button class="icon-btn danger" data-del="${x.id}" title="Eliminar">${icon('trash')}</button>` : ''}</td></tr>`
+          <td class="actions">${manage && canEditRole(x) ? `<button class="icon-btn" data-edit="${x.id}" title="Editar" aria-label="Editar ${esc(x.name)}">${icon('edit')}</button><button class="icon-btn danger" data-del="${x.id}" title="Eliminar">${icon('trash')}</button>` : ''}</td></tr>`
         )
         .join('')}</tbody></table></div>
       <section class="panel">
@@ -851,10 +902,10 @@
         }
         return;
       }
-      const tr = e.target.closest('tr[data-id]');
+      const tr = e.target.closest('[data-edit]') || e.target.closest('tr[data-id]');
       if (!tr || !manage) return;
-      const role = rolesCache.find((x) => x.id === Number(tr.dataset.id));
-      if (role && !role.is_locked) openRole(role);
+      const role = rolesCache.find((x) => x.id === Number(tr.dataset.edit || tr.dataset.id));
+      if (role && canEditRole(role)) openRole(role);
     });
     const nb = view.querySelector('[data-act="new"]');
     if (nb) nb.addEventListener('click', () => openRole(null));
@@ -876,11 +927,11 @@
             .map(
               (u) => `<tr data-user="${esc(u.id)}">
             <td><div class="cell-title"><img class="avatar" src="${esc(u.avatar || DX.defaultAvatar)}" alt=""><div><b>${esc(u.username || '(aún no ha iniciado sesión)')}</b><small>${esc(u.id)}</small></div></div></td>
-            <td>${(u.roles || []).map((r) => `<span class="role-pill" style="color:${DX.safeColor(r.color)}"><span class="swatch" style="background:${DX.safeColor(r.color)}"></span>${esc(r.name)}${manage ? `<button type="button" data-rm="${r.id}" aria-label="Quitar ${esc(r.name)}">×</button>` : ''}</span>`).join('') || '<span class="muted">Sin rangos</span>'}</td>
+            <td>${(u.roles || []).map((r) => `<span class="role-pill" style="color:${DX.safeColor(r.color)}"><span class="swatch" style="background:${DX.safeColor(r.color)}"></span>${esc(r.name)}${manage && canTouchUser(u) && canTouchRole(r) ? `<button type="button" data-rm="${r.id}" aria-label="Quitar ${esc(r.name)}">×</button>` : ''}</span>`).join('') || '<span class="muted">Sin rangos</span>'}</td>
             <td class="actions">${
-              manage
+              manage && canTouchUser(u)
                 ? `<select class="input" data-assign style="width:auto;display:inline-block;padding:6px 10px"><option value="">Añadir rango…</option>${rolesCache
-                    .filter((r) => !(u.roles || []).some((x) => x.id === r.id))
+                    .filter((r) => canTouchRole(r) && !(u.roles || []).some((x) => x.id === r.id))
                     .map((r) => `<option value="${r.id}">${esc(r.name)}</option>`)
                     .join('')}</select>`
                 : ''
@@ -926,7 +977,9 @@
       const g = PERM_GROUPS[p.key.split('.')[0]] || 'Otros';
       (groups[g] = groups[g] || []).push(p);
     });
-    const color = role ? DX.safeColor(role.color) : '#37d6b4';
+    const color = role ? hex6(role.color) : '#37d6b4';
+    const ownPerms = new Set(me.permissions || []);
+    const defaultPos = myRank() === Infinity ? 10 : Math.max(0, Math.min(10, myRank() - 1));
     drawer({
       title: isEdit ? `Editar ${role.name}` : 'Crear rango',
       body: `
@@ -934,11 +987,11 @@
           <div class="field"><label for="r-name">Nombre</label><input id="r-name" name="name" type="text" maxlength="40" value="${esc(role ? role.name : '')}" placeholder="Moderador"></div>
           <div class="field"><label for="r-color">Color</label><input id="r-color" name="color" type="color" value="${esc(color)}"></div>
         </div>
-        <div class="field"><label for="r-pos">Posición (mayor = más arriba)</label><input id="r-pos" name="position" type="number" value="${role ? Number(role.position) || 0 : 10}"><span class="field-hint">Debe ser menor que la de tu rango más alto.</span></div>
+        <div class="field"><label for="r-pos">Posición (mayor = más arriba)</label><input id="r-pos" name="position" type="number" value="${role ? Number(role.position) || 0 : defaultPos}"><span class="field-hint">Debe ser menor que la de tu rango más alto.</span></div>
         <div class="field"><span class="field-label">Permisos</span><div class="perm-groups">${Object.entries(groups)
           .map(
             ([g, list]) => `<div class="perm-group"><h3>${esc(g)}</h3>${list
-              .map((p) => `<label class="perm-check"><input type="checkbox" name="perm" value="${esc(p.key)}" ${active.has(p.key) ? 'checked' : ''}><span><b>${esc(p.label)}</b><small>${esc(p.description || '')}</small><br><code>${esc(p.key)}</code></span></label>`)
+              .map((p) => `<label class="perm-check"${ownPerms.has(p.key) || myRank() === Infinity ? '' : ' title="No tienes este permiso, así que no puedes concederlo ni quitarlo"'}><input type="checkbox" name="perm" value="${esc(p.key)}" ${active.has(p.key) ? 'checked' : ''} ${ownPerms.has(p.key) || myRank() === Infinity ? '' : 'disabled'}><span><b>${esc(p.label)}</b><small>${esc(p.description || '')}</small><br><code>${esc(p.key)}</code></span></label>`)
               .join('')}</div>`
           )
           .join('')}</div></div>`,
@@ -948,7 +1001,7 @@
           name: f.elements.name.value.trim(),
           color: f.elements.color.value,
           position: Number(f.elements.position.value) || 0,
-          permissionKeys: Array.from(f.querySelectorAll('input[name="perm"]:checked')).map((x) => x.value),
+          permissionKeys: Array.from(f.querySelectorAll('input[name="perm"]:checked:not(:disabled)')).map((x) => x.value),
         };
         if (!payload.name) throw new Error('Falta el nombre.');
         if (isEdit) await api(`/api/admin/roles/${role.id}`, { method: 'PATCH', body: payload });
@@ -993,7 +1046,7 @@
         {
           title: 'Sistema',
           items: [
-            { id: 'estadisticas', label: 'Estadísticas', icon: 'chart', visible: can('panel.view_stats'), render: renderStats },
+            { id: 'estadisticas', label: 'Estadísticas', icon: 'chart', visible: can('panel.view_stats'), render: (v, alive) => ((statsData = null), renderStats(v, alive)) },
             { id: 'uso', label: 'Uso de recursos', icon: 'gauge', visible: can('panel.view_usage'), render: renderUsage },
             { id: 'rangos', label: 'Rangos y permisos', icon: 'shield', render: renderRoles },
           ],

@@ -26,6 +26,11 @@ export const QUOTA_LIMITS = {
   // (reads) per month. We stay under those with the same margin-of-one rule.
   r2_class_a: 900000,
   r2_class_b: 9000000,
+  // Soft sub-budget for writes anonymous visitors can trigger (analytics
+  // beacon, post view counters). It is spent out of the same D1 write
+  // quota but stops at 40% of it, so hostile or just heavy public traffic
+  // can never block logins, likes or staff edits for the rest of the day.
+  analytics_writes: 40000,
 };
 
 /** Resources not listed here reset daily by default. */
@@ -60,11 +65,21 @@ const cache = new Map(); // key -> { count, at }
 let pendingUnits = 0;
 let lastFlush = Date.now();
 let flushing = null;
+// When the counters table can't be read (migration 0009 not applied yet),
+// stop trying for a minute instead of paying a failing query per request.
+let disabledUntil = 0;
 
 async function readCount(env, key) {
+  if (Date.now() < disabledUntil) throw new Error('usage counters unavailable');
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < READ_CACHE_MS) return hit.count;
-  const row = await env.DB.prepare('SELECT count FROM usage_counters WHERE key = ?').bind(key).first();
+  let row;
+  try {
+    row = await env.DB.prepare('SELECT count FROM usage_counters WHERE key = ?').bind(key).first();
+  } catch (err) {
+    disabledUntil = Date.now() + 60_000;
+    throw err;
+  }
   const count = row ? Number(row.count) || 0 : 0;
   cache.set(key, { count, at: Date.now() });
   return count;
@@ -73,6 +88,11 @@ async function readCount(env, key) {
 export async function flushUsage(env) {
   if (flushing) return flushing;
   if (!pending.size || !env || !env.DB) return;
+  if (Date.now() < disabledUntil) {
+    pending.clear();
+    pendingUnits = 0;
+    return;
+  }
   const batch = Array.from(pending.entries());
   pending.clear();
   pendingUnits = 0;
@@ -140,6 +160,7 @@ export async function getUsageSnapshot(env) {
     let current = 0;
     try {
       cache.delete(key);
+      disabledUntil = 0;
       current = await readCount(env, key);
     } catch (err) {
       tableMissing = true;

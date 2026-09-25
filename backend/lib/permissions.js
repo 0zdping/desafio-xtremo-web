@@ -59,3 +59,28 @@ export function grantablePermissions(actorRoles, actorPermissions, requestedKeys
   const extra = (requestedKeys || []).filter((k) => !own.has(k));
   return extra.length ? { ok: false, extra } : { ok: true };
 }
+
+/** Full check for assigning a role to / removing it from a user. On top of
+ *  canManageRole, a non-owner can't:
+ *   - hand out (to anyone, themselves included) a role carrying permissions
+ *     they don't hold, which would otherwise let them "borrow" permissions
+ *     through any lower role an owner configured, and
+ *   - change the roles of someone ranked at or above them.
+ *  Returns null when allowed, or an error message. */
+export async function roleChangeError(env, guard, role, targetUserId) {
+  if (!canManageRole(guard.roles, role)) return 'Solo puedes gestionar rangos por debajo del tuyo.';
+  const rank = actorRank(guard.roles);
+  if (rank === Infinity) return null;
+  const rows = await d1Select(
+    env,
+    `SELECT p.key FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id WHERE rp.role_id = ?`,
+    [role.id]
+  );
+  const grant = grantablePermissions(guard.roles, guard.permissions, rows.map((r) => r.key));
+  if (!grant.ok) return `Ese rango incluye permisos que tú no tienes: ${grant.extra.join(', ')}.`;
+  if (String(targetUserId) !== String(guard.user.id)) {
+    const target = await getUserRolesAndPermissions(env, targetUserId);
+    if (actorRank(target.roles) >= rank) return 'No puedes cambiar los rangos de alguien de tu nivel o superior.';
+  }
+  return null;
+}

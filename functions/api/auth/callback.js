@@ -3,6 +3,7 @@ import { parseCookie, serializeCookie } from '../../../backend/lib/cookies.js';
 import { rateLimit, clientIp } from '../../../backend/lib/rateLimit.js';
 import { withQuotaHandling } from '../../../backend/lib/http.js';
 import { d1Run } from '../../../backend/lib/db.js';
+import { safeReturnPath } from '../../../backend/lib/redirect.js';
 import {
   createSession,
   SESSION_COOKIE,
@@ -51,7 +52,8 @@ export const onRequestGet = withQuotaHandling(async (context) => {
     );
 
     const sessionId = await createSession(env, user);
-    const returnTo = parseCookie(cookieHeader, OAUTH_RETURN_COOKIE) || '/';
+    // Re-validated here too: the cookie is client-controlled.
+    const returnTo = safeReturnPath(parseCookie(cookieHeader, OAUTH_RETURN_COOKIE));
 
     const headers = new Headers();
     headers.append('Set-Cookie', serializeCookie(SESSION_COOKIE, sessionId, { maxAgeSeconds: sessionMaxAgeSeconds() }));

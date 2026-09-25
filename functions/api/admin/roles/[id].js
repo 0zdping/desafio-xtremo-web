@@ -36,8 +36,21 @@ export const onRequestPatch = withQuotaHandling(async (context) => {
   if (position >= actorRank(guard.roles)) {
     return jsonResponse({ error: 'La posición debe ser menor que la de tu rango más alto.' }, 403);
   }
-  const grant = grantablePermissions(guard.roles, guard.permissions, permissionKeys);
-  if (!grant.ok) return jsonResponse({ error: `No puedes conceder permisos que no tienes: ${grant.extra.join(', ')}.` }, 403);
+  // A non-owner can't add permissions they lack, but a role an owner set up
+  // may already carry some: those are kept as they are (the editor can't
+  // see-and-remove what they couldn't grant back), instead of failing.
+  if (actorRank(guard.roles) !== Infinity) {
+    const current = await d1Select(
+      env,
+      `SELECT p.key FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id WHERE rp.role_id = ?`,
+      [roleId]
+    );
+    const own = new Set(guard.permissions || []);
+    const kept = current.map((r) => r.key).filter((k) => !own.has(k));
+    const grant = grantablePermissions(guard.roles, guard.permissions, permissionKeys.filter((k) => !kept.includes(k)));
+    if (!grant.ok) return jsonResponse({ error: `No puedes conceder permisos que no tienes: ${grant.extra.join(', ')}.` }, 403);
+    for (const k of kept) if (!permissionKeys.includes(k)) permissionKeys.push(k);
+  }
 
   const dupe = await d1First(env, `SELECT id FROM roles WHERE name = ? AND id != ?`, [name, roleId]);
   if (dupe) return jsonResponse({ error: 'Ya existe un rango con ese nombre.' }, 409);

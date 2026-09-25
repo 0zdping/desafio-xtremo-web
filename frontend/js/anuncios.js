@@ -39,7 +39,10 @@
       const c = a.category || 'Anuncio';
       counts.set(c, (counts.get(c) || 0) + 1);
     });
-    if (cat && !counts.has(cat)) cat = '';
+    if (cat && !counts.has(cat)) {
+      const match = Array.from(counts.keys()).find((c) => c.toLowerCase() === cat.toLowerCase());
+      cat = match || '';
+    }
     const chip = (value, label, n) =>
       `<button type="button" class="filter-chip" data-cat="${DX.escapeHtml(value)}" aria-pressed="${cat === value}">${DX.escapeHtml(label)}<small>${n}</small></button>`;
     chipsEl.innerHTML = chip('', 'Todos', all.length) + Array.from(counts.entries()).map(([c, n]) => chip(c, c, n)).join('');
@@ -51,6 +54,8 @@
     const featured = !cat && !query;
     grid.innerHTML = page.map((a, i) => DXPosts.card(a, { featured: featured && i === 0, liked: liked.has(Number(a.id)), showStats: true })).join('');
     moreWrap.hidden = list.length <= shown;
+    const status = document.getElementById('feed-status');
+    if (status) status.textContent = list.length === 1 ? '1 anuncio' : `${list.length} anuncios`;
     const none = !list.length;
     empty.hidden = !none;
     if (none) {

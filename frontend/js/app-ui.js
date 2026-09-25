@@ -82,20 +82,49 @@
     return data;
   }
 
+  /** Keeps Tab / Shift+Tab inside `container` while it is open. */
+  function trapFocus(container) {
+    function onKey(e) {
+      if (e.key !== 'Tab') return;
+      const items = Array.from(container.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]')).filter((el) => el.offsetParent !== null);
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    container.addEventListener('keydown', onKey);
+    return () => container.removeEventListener('keydown', onKey);
+  }
+
   /* ---------- drawer ---------- */
   let openDrawer = null;
+  let drawerSeq = 0;
   function drawer(opts) {
-    if (openDrawer) openDrawer.forceClose();
+    // Never throw away unsaved work: if another editor is open and dirty,
+    // ask first (and only open the new one if the user agrees).
+    if (openDrawer) {
+      if (openDrawer.isDirty()) {
+        openDrawer.close().then((ok) => ok && drawer(opts));
+        return null;
+      }
+      openDrawer.forceClose();
+    }
     const overlay = document.createElement('div');
     overlay.className = 'drawer-overlay';
     const el = document.createElement('section');
     el.className = 'drawer' + (opts.wide ? ' wide' : '');
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-modal', 'true');
-    el.setAttribute('aria-labelledby', 'drawer-title');
+    el.setAttribute('aria-labelledby', 'drawer-title-' + (++drawerSeq));
     el.innerHTML = `
       <header class="drawer-head">
-        <div><h2 id="drawer-title">${esc(opts.title)} <span class="dirty-dot" title="Cambios sin guardar"></span></h2>${opts.subtitle ? `<p>${esc(opts.subtitle)}</p>` : ''}</div>
+        <div><h2 id="drawer-title-${drawerSeq}">${esc(opts.title)} <span class="dirty-dot" title="Cambios sin guardar"></span></h2>${opts.subtitle ? `<p>${esc(opts.subtitle)}</p>` : ''}</div>
         <button type="button" class="icon-btn" data-close aria-label="Cerrar">${icon('close')}</button>
       </header>
       <form class="drawer-body" novalidate>${opts.body || ''}</form>
@@ -122,10 +151,13 @@
       if (saveBtn) saveBtn.click();
     });
 
+    const releaseTrap = trapFocus(el);
+    let busy = false;
     const api_ = {
       el,
       form,
       markDirty,
+      isDirty: () => dirty,
       setError(msg) {
         errEl.textContent = msg || '';
       },
@@ -136,6 +168,7 @@
       },
       forceClose() {
         document.removeEventListener('keydown', onKey, true);
+        releaseTrap();
         el.classList.add('closing');
         overlay.remove();
         setTimeout(() => el.remove(), 240);
@@ -151,7 +184,9 @@
       },
     };
     function onKey(e) {
-      if (e.key === 'Escape' && !document.querySelector('.dialog-overlay')) {
+      // A dialog or the command palette on top owns the keyboard.
+      if (document.querySelector('.dialog-overlay, .cmdk-overlay')) return;
+      if (e.key === 'Escape' && !(e.target.closest && e.target.closest('.ql-tooltip'))) {
         e.stopPropagation();
         api_.close();
       }
@@ -164,6 +199,8 @@
     overlay.addEventListener('click', () => api_.close());
     if (saveBtn) {
       saveBtn.addEventListener('click', async () => {
+        if (busy) return;
+        busy = true;
         errEl.textContent = '';
         saveBtn.disabled = true;
         const label = saveBtn.textContent;
@@ -177,6 +214,7 @@
         } catch (err) {
           errEl.textContent = err.message || 'No se pudo guardar.';
         } finally {
+          busy = false;
           saveBtn.disabled = false;
           saveBtn.textContent = label;
         }
@@ -185,8 +223,11 @@
     const delBtn = el.querySelector('[data-delete]');
     if (delBtn) {
       delBtn.addEventListener('click', async () => {
+        if (busy) return;
         if (!(await DX.confirm(opts.deleteConfirm || 'Esta acción no se puede deshacer.', { title: opts.deleteTitle || '¿Eliminar?' }))) return;
+        busy = true;
         delBtn.disabled = true;
+        if (saveBtn) saveBtn.disabled = true;
         try {
           await opts.onDelete(api_);
           dirty = false;
@@ -194,7 +235,9 @@
         } catch (err) {
           errEl.textContent = err.message || 'No se pudo eliminar.';
         } finally {
+          busy = false;
           delBtn.disabled = false;
+          if (saveBtn) saveBtn.disabled = false;
         }
       });
     }
@@ -215,16 +258,23 @@
     function register(list) {
       items = list;
     }
+    let prevFocus = null;
+    let release = null;
     function close() {
       if (overlay) overlay.remove();
       overlay = null;
+      if (release) release();
+      release = null;
+      if (prevFocus && prevFocus.focus) prevFocus.focus();
     }
     function open() {
       if (overlay) return;
+      prevFocus = document.activeElement;
       overlay = document.createElement('div');
       overlay.className = 'cmdk-overlay';
       overlay.innerHTML = `<div class="cmdk" role="dialog" aria-modal="true" aria-label="Buscar"><input type="text" placeholder="Busca una sección o una acción…" aria-label="Buscar" role="combobox" aria-expanded="true" aria-controls="cmdk-list"><ul id="cmdk-list" role="listbox"></ul></div>`;
       document.body.appendChild(overlay);
+      release = trapFocus(overlay);
       const input = overlay.querySelector('input');
       const list = overlay.querySelector('ul');
       let sel = 0;
@@ -240,11 +290,13 @@
             .map((it, i) => {
               const g = it.group && it.group !== lastGroup ? `<li class="cmdk-group" role="presentation">${esc(it.group)}</li>` : '';
               lastGroup = it.group;
-              return `${g}<li role="option" data-i="${i}" aria-selected="${i === sel}">${icon(it.icon || 'ext')}${esc(it.label)}${it.hint ? `<small>${esc(it.hint)}</small>` : ''}</li>`;
+              return `${g}<li role="option" id="cmdk-opt-${i}" data-i="${i}" aria-selected="${i === sel}">${icon(it.icon || 'ext')}${esc(it.label)}${it.hint ? `<small>${esc(it.hint)}</small>` : ''}</li>`;
             })
             .join('') || '<li class="cmdk-empty">Sin resultados</li>';
         const cur = list.querySelector('[aria-selected="true"]');
         if (cur) cur.scrollIntoView({ block: 'nearest' });
+        if (cur) input.setAttribute('aria-activedescendant', cur.id);
+        else input.removeAttribute('aria-activedescendant');
       }
       function run(i) {
         const it = visible[i];
@@ -286,7 +338,7 @@
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         if (overlay) close();
-        else if (items.length) open();
+        else if (items.length && !document.querySelector('.dialog-overlay')) open();
       }
     });
     return { register, open, close };
@@ -323,7 +375,7 @@
         <div class="app-scrim" data-side-close></div>
         <div class="app-main">
           <header class="app-top">
-            <button type="button" class="icon-btn app-menu-btn" data-side-open aria-label="Abrir menú">${icon('menu')}</button>
+            <button type="button" class="icon-btn app-menu-btn" data-side-open aria-label="Abrir menú" aria-expanded="false" aria-controls="app-side">${icon('menu')}</button>
             <div class="app-crumbs"><span>${esc(opts.name)}</span><span>/</span><b id="app-crumb"></b></div>
             <div class="app-top-actions" id="app-top-actions"></div>
           </header>
@@ -335,8 +387,24 @@
     const crumb = root.querySelector('#app-crumb');
     const flat = groups.flatMap((g) => g.items);
     root.querySelector('[data-cmdk]').addEventListener('click', () => cmdk.open());
-    root.querySelector('[data-side-open]').addEventListener('click', () => document.body.classList.add('side-open'));
-    root.querySelector('[data-side-close]').addEventListener('click', () => document.body.classList.remove('side-open'));
+    const sideBtn = root.querySelector('[data-side-open]');
+    const side = root.querySelector('#app-side');
+    const setSide = (open) => {
+      document.body.classList.toggle('side-open', open);
+      sideBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        const first = side.querySelector('a, button');
+        if (first) first.focus();
+      }
+    };
+    sideBtn.addEventListener('click', () => setSide(true));
+    root.querySelector('[data-side-close]').addEventListener('click', () => setSide(false));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('side-open')) {
+        setSide(false);
+        sideBtn.focus();
+      }
+    });
     root.querySelector('[data-logout]').addEventListener('click', async () => {
       try {
         await api('/api/auth/logout', { method: 'POST' });
@@ -357,7 +425,7 @@
         return;
       }
       current = item.id;
-      document.body.classList.remove('side-open');
+      if (document.body.classList.contains('side-open')) setSide(false);
       root.querySelectorAll('[data-route]').forEach((a) => {
         if (a.dataset.route === item.id) a.setAttribute('aria-current', 'page');
         else a.removeAttribute('aria-current');
@@ -513,5 +581,5 @@
       </div></div>`;
   }
 
-  window.DXApp = { api, drawer, cmdk, shell, mdEditor, MD_TOOLBAR, lineChart, icon, denied, esc };
+  window.DXApp = { api, drawer, cmdk, shell, mdEditor, MD_TOOLBAR, lineChart, icon, denied, esc, trapFocus };
 })();

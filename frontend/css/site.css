@@ -39,7 +39,7 @@ main{flex:1;}
   border-bottom:1px solid transparent;
 }
 .site-nav.is-scrolled{background:rgba(3,11,10,.72);border-bottom-color:var(--border-hair);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);}
-.site-nav.is-hidden{transform:translateY(-100%);}
+.site-nav.is-hidden:not(:focus-within){transform:translateY(-100%);}
 .site-nav .container{height:100%;display:flex;align-items:center;gap:28px;max-width:1400px;}
 .nav-logo{display:flex;align-items:center;flex-shrink:0;}
 .nav-logo img{height:20px;width:auto;transition:filter .25s ease, transform .3s var(--ease);}
@@ -189,3 +189,6 @@ body.menu-open{overflow:hidden;}
 .section-head h2{font-size:clamp(32px, 5vw, 60px);letter-spacing:-.04em;line-height:1;margin-top:16px;}
 .section-sub{color:var(--text-soft);font-size:clamp(15px,1.5vw,17px);line-height:1.65;margin-top:18px;max-width:600px;}
 .section-head.center .section-sub{margin-left:auto;margin-right:auto;}
+
+/* touch devices: skip the full-screen blend layer (costly on low-end phones) */
+@media (hover:none){ .grain{display:none;} }

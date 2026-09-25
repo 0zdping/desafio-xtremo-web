@@ -174,13 +174,18 @@
     const y = window.scrollY;
     const dir = y > lastY ? 1 : y < lastY ? -1 : 0;
     const maxScroll = Math.max(1, document.documentElement.scrollHeight - vh);
-    root.style.setProperty('--scroll', (y / maxScroll).toFixed(4));
-    scrollHandlers.forEach((fn) => fn({ y, dir, vh, progress: y / maxScroll }));
     lastY = y;
 
-    for (const s of scenes) {
-      const r = s.el.getBoundingClientRect();
-      if (r.bottom < -vh || r.top > vh * 2) continue; // far off-screen: skip work
+    // Read every rect first, then write: interleaving getBoundingClientRect
+    // with style writes would force a synchronous layout per element.
+    const sceneRects = scenes.map((s) => s.el.getBoundingClientRect());
+    const fillRects = fills.map((f) => f.el.getBoundingClientRect());
+
+    scrollHandlers.forEach((fn) => fn({ y, dir, vh, progress: y / maxScroll }));
+
+    scenes.forEach((s, i) => {
+      const r = sceneRects[i];
+      if (r.bottom < -vh || r.top > vh * 2) return; // far off-screen: skip work
       let p;
       if (s.mode === 'pin') {
         const total = r.height - vh;
@@ -188,25 +193,25 @@
       } else {
         p = clamp((vh - r.top) / (vh + r.height));
       }
-      if (Math.abs(p - s.last) < 0.0005) continue;
+      if (Math.abs(p - s.last) < 0.0005) return;
       s.last = p;
       s.el.style.setProperty('--p', p.toFixed(4));
       const hs = handlers.get(s.el);
       if (hs) hs.forEach((fn) => fn(p, r));
-    }
+    });
 
-    for (const f of fills) {
-      const r = f.el.getBoundingClientRect();
-      if (r.bottom < 0 || r.top > vh) continue;
+    fills.forEach((f, i) => {
+      const r = fillRects[i];
+      if (r.bottom < 0 || r.top > vh) return;
       // lights from "top of text at 85% of the screen" to "bottom at 45%"
       const start = vh * 0.85;
       const end = vh * 0.45;
       const k = clamp((start - r.top) / (start - end + r.height * 0.6));
       const lit = Math.round(k * f.words.length);
-      if (lit === f.lit) continue;
+      if (lit === f.lit) return;
       f.lit = lit;
-      f.words.forEach((w, i) => w.classList.toggle('lit', i < lit));
-    }
+      f.words.forEach((w, j) => w.classList.toggle('lit', j < lit));
+    });
   }
   function requestFrame() {
     if (!ticking) {

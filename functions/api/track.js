@@ -2,6 +2,7 @@ import { withQuotaHandling } from '../../backend/lib/http.js';
 import { d1Run } from '../../backend/lib/db.js';
 import { visitorHash, parseDevice, normalizeReferrer, sanitizePath, sanitizeTarget } from '../../backend/lib/analytics.js';
 import { rateLimit, clientIp } from '../../backend/lib/rateLimit.js';
+import { checkQuota, addUsage } from '../../backend/lib/quota.js';
 
 const MAX_EVENTS_PER_BATCH = 15;
 const TYPES = new Set(['pageview', 'click']);
@@ -25,7 +26,7 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   const { request, env } = context;
 
   const ip = clientIp(request);
-  const { allowed } = await rateLimit(env, `track:${ip}`, 40, 60);
+  const { allowed } = await rateLimit(env, `track:${ip}`, 20, 60);
   if (!allowed) return new Response(null, { status: 204 });
 
   const origin = request.headers.get('origin');
@@ -44,6 +45,12 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   const valid = events.filter((e) => e && TYPES.has(e.type));
   if (!valid.length) return new Response(null, { status: 204 });
 
+  // Own soft budget (see QUOTA_LIMITS.analytics_writes): when it runs out,
+  // analytics quietly stops for the day instead of eating the D1 write
+  // quota that logins and staff edits depend on.
+  const budget = await checkQuota(env, 'analytics_writes');
+  if (!budget.allowed) return new Response(null, { status: 204 });
+
   const hash = await visitorHash(env, request);
   const referrer = normalizeReferrer(body?.ref, request.url);
   const device = parseDevice(request.headers.get('user-agent'));
@@ -60,6 +67,7 @@ export const onRequestPost = withQuotaHandling(async (context) => {
     `INSERT INTO analytics_events (type, path, target, visitor_hash, referrer, device, country) VALUES ${rows}`,
     params
   );
+  await addUsage(env, 'analytics_writes', valid.length);
 
   return new Response(null, { status: 204 });
 });

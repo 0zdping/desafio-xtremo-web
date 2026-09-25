@@ -16,6 +16,7 @@
   if (!shell || !article) return;
 
   const esc = DX.escapeHtml;
+  const toggle = side.querySelector('.wiki-mobile-toggle');
   let pages = [];
   const cache = new Map();
   let current = null;
@@ -93,9 +94,9 @@
     if (/INPUT|TEXTAREA|SELECT/.test(tag) || document.activeElement.isContentEditable) return;
     e.preventDefault();
     side.classList.add('open');
+    toggle.setAttribute('aria-expanded', 'true');
     filterEl.focus();
   });
-  const toggle = side.querySelector('.wiki-mobile-toggle');
   toggle.addEventListener('click', () => {
     const open = !side.classList.contains('open');
     side.classList.toggle('open', open);
@@ -178,29 +179,46 @@
     const cat = page.category || meta.category || 'General';
     article.innerHTML = `
       <nav class="breadcrumb" aria-label="Ruta"><a href="/wiki.html">Wiki</a><span>/</span><span>${esc(cat)}</span></nav>
-      <h1 class="wiki-title">${esc(page.title)}</h1>
+      <h2 class="wiki-title" tabindex="-1">${esc(page.title)}</h2>
       ${page.updated_at ? `<p class="wiki-updated"><span class="status-dot ok"></span>Actualizado <time datetime="${esc(page.updated_at)}" title="${esc(DX.formatDate(page.updated_at))}">${esc(DX.relTime(page.updated_at))}</time></p>` : ''}
       <div class="md-content">${renderMarkdown(page.content)}</div>
       ${pager(page.slug)}`;
     enhance(article.querySelector('.md-content'));
     buildToc();
     document.title = `${page.title} · Wiki · Desafio Xtremo`;
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.href = `${location.origin}/wiki.html?p=${encodeURIComponent(page.slug)}`;
     if (location.hash) {
       const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
       if (target) target.scrollIntoView();
     }
   }
 
+  function markCurrent() {
+    linksEl.querySelectorAll('.wiki-link').forEach((a) => {
+      if (a.dataset.slug === current) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+  }
+
   function load(slug, push) {
+    const moved = current !== null && current !== slug;
     current = slug;
-    renderSidebar();
+    markCurrent();
     if (push) {
       history.pushState({ slug }, '', '?p=' + encodeURIComponent(slug));
       const top = shell.getBoundingClientRect().top + window.scrollY - 90;
       if (window.scrollY > top) window.scrollTo({ top, behavior: 'smooth' });
     }
     const done = (page) => {
-      if (current === slug) show(page);
+      if (current !== slug) return;
+      show(page);
+      // Move focus to the new title so keyboard and screen reader users land
+      // on the page they just opened.
+      if (moved) {
+        const h = article.querySelector('.wiki-title');
+        if (h) h.focus({ preventScroll: true });
+      }
     };
     if (cache.has(slug)) return done(cache.get(slug));
     article.setAttribute('aria-busy', 'true');
@@ -222,7 +240,11 @@
   window.addEventListener('popstate', () => {
     if (!pages.length) return;
     const wanted = new URLSearchParams(location.search).get('p');
-    load(pages.some((p) => p.slug === wanted) ? wanted : pages[0].slug, false);
+    const slug = pages.some((p) => p.slug === wanted) ? wanted : ordered().flat[0].slug;
+    // TOC and heading anchors (#seccion) also fire popstate: same page, so
+    // nothing to reload.
+    if (slug === current) return;
+    load(slug, false);
   });
 
   fetch('/api/wiki')
@@ -230,6 +252,7 @@
     .then((data) => {
       pages = Array.isArray(data && data.pages) ? data.pages : [];
       if (!pages.length) throw new Error('empty');
+      renderSidebar();
       const wanted = new URLSearchParams(location.search).get('p');
       load(pages.some((p) => p.slug === wanted) ? wanted : ordered().flat[0].slug, false);
     })

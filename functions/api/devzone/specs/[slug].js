@@ -33,9 +33,10 @@ export const onRequestPut = withQuotaHandling(async (context) => {
   }
 
   const body = await request.json().catch(() => null);
-  const title = (body?.title || '').trim();
-  const system = (body?.system || 'general').trim() || 'general';
-  const sourceNote = (body?.source_note || '').trim();
+  const str = (v) => (typeof v === 'string' ? v.trim() : '');
+  const title = str(body?.title);
+  const system = str(body?.system) || 'general';
+  const sourceNote = str(body?.source_note);
   const rawContent = typeof body?.content === 'string' ? body.content : '';
 
   if (!title || title.length > 120) return jsonResponse({ error: 'Título inválido.' }, 400);

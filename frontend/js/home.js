@@ -49,6 +49,9 @@
     const measure = () => tracks.forEach((t) => (t.width = t.track.scrollWidth / 3));
     measure();
     window.addEventListener('resize', measure);
+    // The display font is much wider than its fallback: re-measure once the
+    // web fonts land, or the loop point is wrong and the text jumps.
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
     if (M.reduced) return;
     let boost = 0;
     let lastY = window.scrollY;
@@ -57,26 +60,35 @@
       lastY = y;
     });
     let last = performance.now();
-    let visible = true;
-    if ('IntersectionObserver' in window) {
-      new IntersectionObserver((e) => (visible = e[0].isIntersecting)).observe(document.querySelector('.ticker'));
-    }
+    let raf = null;
     function loop(t) {
       const dt = Math.min(50, t - last);
       last = t;
       boost *= 0.92;
-      if (visible) {
-        tracks.forEach((tr) => {
-          if (!tr.width) return;
-          tr.x -= tr.dir * (0.045 + boost * 0.02) * dt;
-          if (tr.x <= -tr.width) tr.x += tr.width;
-          if (tr.x > 0) tr.x -= tr.width;
-          tr.track.style.transform = `translate3d(${tr.x.toFixed(2)}px,0,0)`;
-        });
-      }
-      requestAnimationFrame(loop);
+      tracks.forEach((tr) => {
+        if (!tr.width) return;
+        tr.x -= tr.dir * (0.045 + boost * 0.02) * dt;
+        if (tr.x <= -tr.width) tr.x += tr.width;
+        if (tr.x > 0) tr.x -= tr.width;
+        tr.track.style.transform = `translate3d(${tr.x.toFixed(2)}px,0,0)`;
+      });
+      raf = requestAnimationFrame(loop);
     }
-    requestAnimationFrame(loop);
+    const start = () => {
+      if (raf == null) {
+        last = performance.now();
+        raf = requestAnimationFrame(loop);
+      }
+    };
+    const stop = () => {
+      if (raf != null) cancelAnimationFrame(raf);
+      raf = null;
+    };
+    // Only animate while the ticker is on screen and the tab is visible.
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver((e) => (e[0].isIntersecting && !document.hidden ? start() : stop())).observe(document.querySelector('.ticker'));
+    } else start();
+    document.addEventListener('visibilitychange', () => document.hidden && stop());
   })();
 
   /* ---------------- 01 resource nodes (click to harvest) ---------------- */
@@ -212,7 +224,7 @@
     const rows = sec.querySelectorAll('.ladder li');
     let last = -1;
     M.onScene(sec, (p) => {
-      const k = clamp((p - 0.22) * 3.2);
+      const k = clamp((p - 0.3) * 4);
       const idx = Math.max(0, Math.min(4, Math.ceil(k * 5) - 1));
       if (idx === last) return;
       last = idx;
@@ -273,16 +285,9 @@
     const svg = document.getElementById('event-wheel');
     const list = document.getElementById('event-list');
     if (!sec || !svg || !list) return;
-    const EVENTS = [
-      { name: 'Naranja', c: '#ff8a3d', text: 'Recursos raros o abundantes aparecen en una zona anunciada.' },
-      { name: 'Rojo', c: '#ff4d4d', text: 'Uno de los recursos básicos solo rinde la mitad.' },
-      { name: 'Verde', c: '#3fd98a', text: 'Efectos positivos: fortuna, más ganancia de recursos…' },
-      { name: 'Rosa', c: '#ff7ad1', text: 'El mercado central abre por tiempo limitado.' },
-      { name: 'Amarillo', c: '#f5d742', text: 'Clima extremo y más criaturas de lo normal.' },
-      { name: 'Morado', c: '#a974ff', text: 'Todo el botín de una zona vuelve a aparecer.' },
-      { name: 'Turquesa', c: '#37d6b4', text: 'Aparece un jefe en el mapa.' },
-      { name: 'Azul', c: '#4aa8ff', text: 'Cambia el clima: niebla, ola de calor, frío…' },
-    ];
+    // The list itself is static HTML (readable without JS); the wheel is
+    // drawn from the same items so the two can never drift apart.
+    const EVENTS = Array.from(list.querySelectorAll('.event-item')).map((li) => ({ c: li.dataset.color }));
     const N = EVENTS.length;
     const R = 100;
     const seg = (i) => {
@@ -298,15 +303,14 @@
         return `<rect x="${(68 * Math.cos(a) - 5).toFixed(1)}" y="${(68 * Math.sin(a) - 5).toFixed(1)}" width="10" height="10" fill="rgba(0,0,0,.25)"/>`;
       }).join('') +
       `<circle r="100" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2"/>`;
-    list.innerHTML = EVENTS.map(
-      (e) => `<li class="event-item" style="--c:${e.c}"><span class="event-swatch"></span><div><b>${e.name}</b><span>${e.text}</span></div></li>`
-    ).join('');
     const segs = svg.querySelectorAll('.seg');
     const items = list.querySelectorAll('.event-item');
     let last = -1;
     M.onScene(sec, (p) => {
+      // With reduced motion the wheel stays still and only the highlighted
+      // colour changes as you scroll.
       const rot = p * 900;
-      svg.style.setProperty('--rot', rot.toFixed(1) + 'deg');
+      if (!M.reduced) svg.style.setProperty('--rot', rot.toFixed(1) + 'deg');
       // segment under the pointer (top): undo the rotation
       const idx = ((Math.round(((360 - (rot % 360)) % 360) / (360 / N)) % N) + N) % N;
       if (idx === last) return;
@@ -327,7 +331,9 @@
     const heroEl = document.getElementById('inicio');
     let activeIdx = -1;
     let labelTimer = null;
-    M.onScroll(({ vh: h }) => {
+    const xp = bar.querySelector('.xp-bar span');
+    M.onScroll(({ vh: h, progress }) => {
+      if (xp) xp.style.transform = `scaleX(${Math.min(1, Math.max(0, progress)).toFixed(4)})`;
       const heroBottom = heroEl ? heroEl.getBoundingClientRect().bottom : 0;
       const footTop = footer ? footer.getBoundingClientRect().top : Infinity;
       bar.classList.toggle('is-visible', heroBottom < h * 0.6 && footTop > h - 40);
@@ -337,8 +343,15 @@
         const r = c.getBoundingClientRect();
         if (r.top <= mid && r.bottom > mid) idx = Number(c.dataset.chapter);
       });
-      if (idx === activeIdx || idx < 0) return;
+      if (idx === activeIdx) return;
       activeIdx = idx;
+      if (idx < 0) {
+        links.forEach((a) => {
+          a.classList.remove('is-active');
+          a.removeAttribute('aria-current');
+        });
+        return;
+      }
       links.forEach((a) => {
         const on = Number(a.dataset.target) === idx;
         a.classList.toggle('is-active', on);
@@ -450,6 +463,9 @@
         );
         section.hidden = false;
         M.refresh();
+        // Arriving via /#equipo from another page: the browser tried to
+        // scroll while the section was still hidden, so do it now.
+        if (location.hash === '#equipo') section.scrollIntoView();
       })
       .catch(() => {});
 

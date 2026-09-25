@@ -135,6 +135,20 @@
       });
       document.addEventListener('keydown', onKey, true);
       document.body.appendChild(overlay);
+      // keep Tab inside the dialog
+      overlay.addEventListener('keydown', (e) => {
+        if (e.key !== 'Tab') return;
+        const btns = overlay.querySelectorAll('button');
+        const first = btns[0];
+        const last = btns[btns.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      });
       overlay.querySelector('[data-act="cancel"]').focus();
     });
   };
@@ -225,7 +239,13 @@
       toggle.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
     }
     if (menu) menu.toggleAttribute('inert', !open);
+    // Everything behind the full-screen menu is taken out of the tab order.
+    document.querySelectorAll('main, .site-footer, .hotbar').forEach((el) => el.toggleAttribute('inert', open));
     if (open && nav) nav.classList.remove('is-hidden');
+    if (open && menu) {
+      const first = menu.querySelector('a');
+      if (first) setTimeout(() => first.focus(), 50);
+    }
   }
   if (toggle && menu) {
     setMenu(false);
@@ -266,6 +286,9 @@
   const canvas = document.getElementById('dust');
   if (!canvas || !canvas.getContext) return;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  // Phones: skip it. A canvas repainting every frame under blurred layers is
+  // the most expensive thing on the page for a purely decorative effect.
+  if (!window.matchMedia('(hover:hover)').matches) return;
   const ctx = canvas.getContext('2d');
   const COLORS = ['164,245,201', '55,214,180', '233,247,240'];
   let w = 0, h = 0, dpr = 1, motes = [], running = true, raf = null;
@@ -311,8 +334,12 @@
     running = !document.hidden;
     if (running && !raf) raf = requestAnimationFrame(tick);
   });
-  window.addEventListener('resize', resize);
+  let lastW = 0;
+  window.addEventListener('resize', () => {
+    if (window.innerWidth !== lastW) resize();
+  });
   resize();
+  lastW = window.innerWidth;
   raf = requestAnimationFrame(tick);
 })();
 
@@ -373,12 +400,12 @@
       const wrap = document.createElement('div');
       wrap.className = 'account-wrap';
       wrap.innerHTML = `
-        <button type="button" class="account-chip" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="account-chip" aria-expanded="false" aria-label="Tu cuenta">
           <img class="account-avatar" src="${avatar}" alt="">
           <span class="account-name">${name}</span>
           <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
         </button>
-        <div class="account-dropdown" role="menu">
+        <div class="account-dropdown">
           <div class="account-dropdown-head">
             <img src="${avatar}" alt="">
             <div>
@@ -387,10 +414,10 @@
             </div>
           </div>
           <div class="account-dropdown-links">
-            ${canPanel ? `<a href="/admin.html" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>Panel de administración</a>` : ''}
-            ${canDev ? `<a href="/devzone.html" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16"/></svg>Dev Zone</a>` : ''}
+            ${canPanel ? `<a href="/admin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>Panel de administración</a>` : ''}
+            ${canDev ? `<a href="/devzone.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16"/></svg>Dev Zone</a>` : ''}
             ${canPanel || canDev ? '<div class="divider"></div>' : ''}
-            <button type="button" data-logout role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>Cerrar sesión</button>
+            <button type="button" data-logout><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>Cerrar sesión</button>
           </div>
         </div>`;
       slot.appendChild(wrap);
@@ -411,6 +438,9 @@
           setOpen(false);
           chip.focus();
         }
+      });
+      wrap.addEventListener('focusout', (e) => {
+        if (!wrap.contains(e.relatedTarget)) setOpen(false);
       });
     }
 

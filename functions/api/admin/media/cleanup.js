@@ -39,7 +39,10 @@ export const onRequestPost = withQuotaHandling(async (context) => {
     const listing = await env.MEDIA.list({ prefix: 'posts/', cursor });
     for (const obj of listing.objects) {
       const url = `${base}/${obj.key}`;
-      if (referenced.has(url)) kept.push(obj.key);
+      // Images uploaded in the last 24 h may belong to a post someone is
+      // still writing (uploaded into the editor but not saved yet).
+      const recent = obj.uploaded && Date.now() - new Date(obj.uploaded).getTime() < 86400000;
+      if (referenced.has(url) || recent) kept.push(obj.key);
       else toDelete.push(obj.key);
     }
     cursor = listing.truncated ? listing.cursor : undefined;

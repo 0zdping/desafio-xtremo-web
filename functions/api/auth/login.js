@@ -3,17 +3,8 @@ import { serializeCookie } from '../../../backend/lib/cookies.js';
 import { rateLimit, clientIp } from '../../../backend/lib/rateLimit.js';
 import { OAUTH_STATE_COOKIE, OAUTH_RETURN_COOKIE } from '../../../backend/lib/session.js';
 import { withQuotaHandling } from '../../../backend/lib/http.js';
+import { safeReturnPath } from '../../../backend/lib/redirect.js';
 
-/** Solo se permite volver a una ruta relativa dentro del propio sitio,
- *  nunca a una URL absoluta ni a algo tipo "//evil.com", para evitar un
- *  open redirect a través de este parámetro. */
-function sanitizeReturnTo(raw) {
-  const fallback = '/';
-  if (!raw) return fallback;
-  if (!raw.startsWith('/') || raw.startsWith('//')) return fallback;
-  if (raw.includes('://')) return fallback;
-  return raw;
-}
 
 export const onRequestGet = withQuotaHandling(async (context) => {
   const { request, env } = context;
@@ -28,7 +19,7 @@ export const onRequestGet = withQuotaHandling(async (context) => {
 
   const url = new URL(request.url);
   const state = crypto.randomUUID();
-  const returnTo = sanitizeReturnTo(url.searchParams.get('return_to'));
+  const returnTo = safeReturnPath(url.searchParams.get('return_to'));
   const authorizeUrl = buildDiscordAuthorizeUrl(env, state);
 
   const headers = new Headers();

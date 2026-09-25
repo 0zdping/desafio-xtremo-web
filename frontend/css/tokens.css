@@ -20,7 +20,7 @@
 
   --text: #e9f7f0;
   --text-soft: #a3bdb2;
-  --text-dim: #66807a;
+  --text-dim: #819b94; /* >= 5.5:1 on bg and cards: used for small text */
   --text-faint: #34463f;
 
   /* brand */
@@ -181,7 +181,6 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;letter-spacing:-0.02em;
 /* ---------- card surface (shared) ---------- */
 .card{
   position:relative;background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-md);
-  backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
 }
 /* cursor spotlight: JS writes --mx/--my on hover (site.js). Purely decorative. */
 .spot{--mx:50%;--my:50%;}

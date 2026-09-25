@@ -37,6 +37,9 @@ const STRIP_WITH_CONTENT = new Set([
   'script', 'style', 'iframe', 'object', 'embed', 'noscript', 'svg', 'math',
   'template', 'link', 'meta', 'base', 'form', 'input', 'button', 'textarea',
   'select', 'video', 'audio', 'source', 'title', 'head',
+  // Raw-text elements: their content is not parsed as markup, so unwrapping
+  // them would let "<xmp><img onerror=...></xmp>" come out as live HTML.
+  'xmp', 'noembed', 'noframes', 'plaintext', 'frame', 'frameset', 'applet', 'param', 'portal',
 ]);
 
 // Everything else not listed here gets every attribute stripped.
@@ -49,7 +52,7 @@ function isSafeHref(value) {
   const v = (value || '').trim();
   if (!v) return false;
   if (/^(https?:|mailto:)/i.test(v)) return true;
-  if (v.startsWith('/') && !v.startsWith('//')) return true; // site-relative only
+  if (v.startsWith('/') && !v.startsWith('//') && !v.includes('\\')) return true; // site-relative only
   return false;
 }
 

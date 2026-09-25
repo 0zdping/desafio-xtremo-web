@@ -13,7 +13,10 @@
     clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   };
 
-  function readingTime(html) {
+  function readingTime(html, chars) {
+    // The public list sends body_chars instead of the whole body: roughly
+    // 7 characters of stored HTML per word.
+    if (html == null && chars) return Math.max(1, Math.round(chars / 7 / 200));
     const words = String(html || '').replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length;
     return Math.max(1, Math.round(words / 200));
   }
@@ -32,12 +35,10 @@
     opts = opts || {};
     const esc = DX.escapeHtml;
     const href = a.slug ? `/anuncios/${encodeURIComponent(a.slug)}` : '';
-    const tag = href ? 'a' : 'article';
-    const hrefAttr = href ? ` href="${esc(href)}"` : '';
     const cover = a.hero_image_url
       ? `<img src="${esc(a.hero_image_url)}" alt="" loading="lazy" decoding="async">`
       : placeholder(a.title || a.id);
-    const mins = readingTime(a.body);
+    const mins = readingTime(a.body, a.body_chars);
     const stats = opts.showStats
       ? `<div class="post-card-stats">
            <span>${ICON.eye}${esc(String(a.views || 0))}</span>
@@ -47,7 +48,7 @@
          </div>`
       : '';
     return `
-      <${tag} class="post-card spot${opts.featured ? ' is-featured' : ''}${a.pinned ? ' is-pinned' : ''}"${hrefAttr} data-reveal="up" data-category="${esc(a.category || 'Anuncio')}">
+      <article class="post-card spot${href ? ' has-link' : ''}${opts.featured ? ' is-featured' : ''}${a.pinned ? ' is-pinned' : ''}" data-reveal="up" data-category="${esc(a.category || 'Anuncio')}">
         <div class="post-card-cover">
           ${cover}
           ${a.pinned ? `<span class="pin-badge">${ICON.pin}Fijado</span>` : ''}
@@ -58,11 +59,11 @@
             <time datetime="${esc(a.created_at || '')}">${esc(DX.formatDate(a.created_at))}</time>
             <span class="post-card-read">${ICON.clock}${mins} min</span>
           </div>
-          <h3 class="post-card-title">${esc(a.title)}</h3>
+          <h3 class="post-card-title">${href ? `<a class="post-card-link" href="${esc(href)}">${esc(a.title)}</a>` : esc(a.title)}</h3>
           ${a.excerpt ? `<p class="post-card-excerpt">${esc(a.excerpt)}</p>` : ''}
           ${stats}
         </div>
-      </${tag}>`;
+      </article>`;
   }
 
   /** Wires every [data-like-id] button inside `root`. Optimistic: the heart

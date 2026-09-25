@@ -34,6 +34,13 @@
     DX.mdCallouts(div);
     return div.innerHTML;
   }
+  function slugFromHash() {
+    try {
+      return decodeURIComponent(location.hash.split('/')[1] || '');
+    } catch (err) {
+      return '';
+    }
+  }
   function hue(str) {
     let h = 0;
     for (const c of String(str)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
@@ -84,6 +91,7 @@
     }
     function drawPeople() {
       const list = assignees();
+      if (filterWho && !list.some(([who]) => who === filterWho)) filterWho = '';
       people.innerHTML =
         `<button type="button" class="person" data-who="" aria-pressed="${!filterWho}"><span class="initials" style="background:var(--surface-3)">·</span>Todos</button>` +
         list.map(([who, n]) => `<button type="button" class="person" data-who="${esc(who)}" aria-pressed="${filterWho === who}">${initials(who)}${esc(who)}<small>${n}</small></button>`).join('');
@@ -143,9 +151,12 @@
       redraw();
     });
 
+    const moveSeq = new Map();
     async function move(id, status) {
       const x = tasks.find((t2) => t2.id === id);
       if (!x || x.status === status) return;
+      const seq = (moveSeq.get(id) || 0) + 1;
+      moveSeq.set(id, seq);
       const prev = x.status;
       x.status = status;
       x.updated_at = new Date().toISOString();
@@ -157,8 +168,9 @@
       }
       try {
         const res = await api(`/api/devzone/tasks/${id}`, { method: 'PATCH', body: { status } });
-        if (res && res.task) Object.assign(x, res.task);
+        if (res && res.task && moveSeq.get(id) === seq) Object.assign(x, res.task);
       } catch (err) {
+        if (moveSeq.get(id) !== seq) return; // a newer move already superseded this one
         x.status = prev;
         redraw();
         DX.toast('No se pudo mover la tarea: ' + err.message, 'error');
@@ -201,7 +213,7 @@
         redraw();
         const again = board.querySelector(`.quick-add[data-status="${form.dataset.status}"] input`);
         if (again) again.focus();
-        DX.toast('Tarea creada. Ábrela para completar los detalles.');
+        DX.toast(visible(res.task) ? 'Tarea creada. Ábrela para completar los detalles.' : 'Tarea creada, pero los filtros activos la ocultan.');
       } catch (err) {
         DX.toast(err.message, 'error');
         input.disabled = false;
@@ -299,10 +311,11 @@
             }
           : null,
       deleteTitle: '¿Eliminar tarea?',
-      deleteConfirm: 'Si ya está hecha, mejor muévela a Terminado: así queda constancia.',
+      deleteConfirm: x && x.status !== 'terminado' ? 'Si ya está hecha, mejor muévela a Terminado: así queda constancia.' : 'Se borrará del tablero para siempre.',
     });
   }
 
+  let decisionsCache = [];
   /* =====================================================================
      DECISIONES
      ===================================================================== */
@@ -310,6 +323,7 @@
     const data = await api('/api/devzone/decisions');
     if (!alive()) return;
     const list = data.decisions || [];
+    decisionsCache = list;
     app.setCount('decisiones', list.length);
     const systems = [...new Set(list.map((d) => d.system || 'general'))];
     view.innerHTML = `
@@ -401,16 +415,23 @@
       : '<p class="panel-sub">Sin specs todavía.</p>';
     const nb = view.querySelector('[data-act="new"]');
     if (nb) nb.addEventListener('click', () => openSpec(null));
-    const wanted = decodeURIComponent((location.hash.split('/')[1] || ''));
-    const slug = specs.some((s) => s.slug === wanted) ? wanted : specs[0] && specs[0].slug;
+    let seq = 0;
+    let shown = null;
+    const wanted = slugFromHash();
+    const slug = specs.some((x) => x.slug === wanted) ? wanted : specs[0] && specs[0].slug;
     if (slug) loadSpec(slug);
     else doc.innerHTML = '<div class="empty-state"><strong>Sin specs todavía</strong>Crea la primera para empezar.</div>';
 
     async function loadSpec(s) {
+      if (!specs.some((x) => x.slug === s)) s = specs[0] && specs[0].slug;
+      if (!s || s === shown) return;
+      shown = s;
+      const my = ++seq;
       listEl.querySelectorAll('a').forEach((a) => (a.dataset.slug === s ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
       doc.innerHTML = '<div class="skeleton" style="height:30px;width:50%;margin-bottom:16px"></div><div class="skeleton" style="height:200px"></div>';
       try {
         const { spec } = await api('/api/devzone/specs/' + encodeURIComponent(s));
+        if (my !== seq) return; // a newer click already replaced this one
         doc.innerHTML = `
           <div class="spec-doc-head"><h1>${esc(spec.title)}</h1>${canManage() ? `<button class="btn btn-ghost btn-sm" data-edit>${icon('edit')}Editar</button>` : ''}</div>
           <p class="spec-meta">${esc(spec.system || 'general')}${spec.source_note ? ' · ' + esc(spec.source_note) : ''} · actualizada <span title="${esc(DX.formatDate(spec.updated_at))}">${esc(DX.relTime(spec.updated_at))}</span></p>
@@ -418,6 +439,8 @@
         const eb = doc.querySelector('[data-edit]');
         if (eb) eb.addEventListener('click', () => openSpec(spec));
       } catch (err) {
+        if (my !== seq) return;
+        shown = null;
         doc.innerHTML = `<div class="empty-state">${esc(err.message)}</div>`;
       }
     }
@@ -465,14 +488,14 @@
         if (!payload.title) throw new Error('Falta el título.');
         await api('/api/devzone/specs/' + encodeURIComponent(slug), { method: 'PUT', body: payload });
         DX.toast(isEdit ? 'Spec actualizada.' : 'Spec creada.');
-        location.hash = 'specs/' + slug;
+        history.replaceState(null, '', '#specs/' + slug);
         app.rerender();
       },
       onDelete: isEdit
         ? async () => {
             await api('/api/devzone/specs/' + encodeURIComponent(spec.slug), { method: 'DELETE' });
             DX.toast('Spec eliminada.');
-            location.hash = 'specs';
+            history.replaceState(null, '', '#specs');
             app.rerender();
           }
         : null,
@@ -502,15 +525,15 @@
         {
           items: [
             { id: 'tablero', label: 'Tablero', icon: 'board', render: renderBoard, onSub: (s) => s === 'new' && canManage() && openTask(null) },
-            { id: 'decisiones', label: 'Decisiones', icon: 'scroll', render: renderDecisions },
-            { id: 'specs', label: 'Specs', icon: 'file', render: renderSpecs, onSub: (s) => s !== 'new' && app && app.loadSpec && app.loadSpec(decodeURIComponent(s)) },
+            { id: 'decisiones', label: 'Decisiones', icon: 'scroll', render: renderDecisions, onSub: (s) => s === 'new' && canManage() && openDecision(decisionsCache) },
+            { id: 'specs', label: 'Specs', icon: 'file', render: renderSpecs, onSub: (s) => s !== 'new' && app && app.loadSpec && app.loadSpec(slugFromHash()) },
           ],
         },
       ],
       footLinks: [{ href: '/', label: 'Ver la web', icon: 'ext' }].concat(DX.hasPerm(me, 'panel.access') ? [{ href: '/admin.html', label: 'Panel de staff', icon: 'shield' }] : []),
       commands: [
         canManage() && { group: 'Acciones', label: 'Nueva tarea', icon: 'plus', hint: 'N', run: () => (location.hash = 'tablero/new') },
-        canManage() && { group: 'Acciones', label: 'Registrar decisión', icon: 'scroll', run: () => (location.hash = 'decisiones') },
+        canManage() && { group: 'Acciones', label: 'Registrar decisión', icon: 'scroll', run: () => (location.hash = 'decisiones/new') },
         { group: 'Enlaces', label: 'Abrir la web pública', icon: 'ext', run: () => window.open('/', '_blank') },
       ].filter(Boolean),
     });

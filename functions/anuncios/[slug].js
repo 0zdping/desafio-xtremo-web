@@ -1,6 +1,8 @@
 import { withQuotaHandling } from '../../backend/lib/http.js';
 import { cachedPublicJson } from '../../backend/lib/edgeCache.js';
 import { d1First, d1Run } from '../../backend/lib/db.js';
+import { rateLimit, clientIp } from '../../backend/lib/rateLimit.js';
+import { checkQuota, addUsage } from '../../backend/lib/quota.js';
 
 /* Server-rendered announcement page (/anuncios/<slug>). Rendered here rather
  * than client-side so link previews (Discord, X) get the real title, excerpt
@@ -77,7 +79,8 @@ const NAV = `<header class="site-nav">
     <a href="/#recursos"><small>02</small>El juego</a>
     <a href="/wiki.html"><small>03</small>Wiki</a>
     <a href="/anuncios.html"><small>04</small>Anuncios</a>
-    <a href="/invite" target="_blank" rel="noopener"><small>05</small>Discord</a>
+    <a href="/#equipo"><small>05</small>Equipo</a>
+    <a href="/invite" target="_blank" rel="noopener"><small>06</small>Discord</a>
   </nav>
   <div class="mobile-menu-account" id="mobile-account"></div>
 </div>`;
@@ -162,10 +165,16 @@ export const onRequestGet = withQuotaHandling(async (context) => {
 
   if (!post) return notFound();
 
-  if (isCountableView(request)) {
+  // One counted view per visitor IP and post per hour, inside the analytics
+  // write budget: a reload loop can't inflate the counter or spend the D1
+  // write quota the rest of the site needs.
+  const firstViewThisHour = (await rateLimit(env, `view:${clientIp(request)}:${post.id}`, 1, 3600)).allowed;
+  if (isCountableView(request) && firstViewThisHour && (await checkQuota(env, 'analytics_writes')).allowed) {
     // Best-effort and off the critical path: a failed counter update must
     // never break or slow down the page itself.
-    const bump = d1Run(env, 'UPDATE announcements SET views = views + 1 WHERE id = ?', [post.id]).catch(() => {});
+    const bump = d1Run(env, 'UPDATE announcements SET views = views + 1 WHERE id = ?', [post.id])
+      .then(() => addUsage(env, 'analytics_writes', 1))
+      .catch(() => {});
     if (context.waitUntil) context.waitUntil(bump);
     else await bump;
   }
@@ -173,9 +182,12 @@ export const onRequestGet = withQuotaHandling(async (context) => {
   const origin = new URL(request.url).origin;
   const url = `${origin}/anuncios/${encodeURIComponent(post.slug)}`;
   const title = escapeHtml(post.title);
-  const excerpt = escapeHtml(post.excerpt || '');
+  // Posts without an excerpt still get a real description for search
+  // engines and link previews: the first sentences of the body.
+  const plain = String(post.body || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const excerpt = escapeHtml(post.excerpt || (plain.length > 160 ? plain.slice(0, 157) + '...' : plain));
   const heroUrl = post.hero_image_url ? escapeHtml(post.hero_image_url) : '';
-  const ogImage = heroUrl || `${origin}/assets/banner.png`;
+  const ogImage = heroUrl || `${origin}/assets/og-image.png`;
   const category = escapeHtml(post.category || 'Anuncio');
   const published = toDate(post.created_at);
   const mins = readingTime(post.body);
