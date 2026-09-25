@@ -58,6 +58,37 @@
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="12" fill="#123029"/><circle cx="12" cy="9.5" r="3.5" fill="#4d7a6d"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" fill="#4d7a6d"/></svg>'
     );
 
+  /** Discord's own default avatar for a user id (what Discord shows when
+   *  someone has no custom picture). */
+  DX.discordDefaultAvatar = function (id) {
+    let n = 0;
+    try {
+      n = Number((BigInt(String(id)) >> 22n) % 6n);
+    } catch (err) {}
+    return `https://cdn.discordapp.com/embed/avatars/${n}.png`;
+  };
+
+  /* Avatar URLs are stored when someone logs in and live as long as the
+   * session (30 days). If they change their Discord picture meanwhile, the
+   * old URL starts returning 404: swap any failed <img data-avatar-id> for
+   * their Discord default avatar, and if that fails too, for a neutral one. */
+  document.addEventListener(
+    'error',
+    (e) => {
+      const img = e.target;
+      if (!img || img.tagName !== 'IMG' || !img.hasAttribute('data-avatar-id')) return;
+      const step = img.dataset.avatarStep || '0';
+      if (step === '0') {
+        img.dataset.avatarStep = '1';
+        img.src = DX.discordDefaultAvatar(img.getAttribute('data-avatar-id'));
+      } else if (step === '1') {
+        img.dataset.avatarStep = '2';
+        img.src = DX.defaultAvatar;
+      }
+    },
+    true
+  );
+
   DX.loginUrl = function () {
     return `/api/auth/login?return_to=${encodeURIComponent(location.pathname + location.search)}`;
   };
@@ -401,13 +432,13 @@
       wrap.className = 'account-wrap';
       wrap.innerHTML = `
         <button type="button" class="account-chip" aria-expanded="false" aria-label="Tu cuenta">
-          <img class="account-avatar" src="${avatar}" alt="">
+          <img class="account-avatar" src="${avatar}" alt="" data-avatar-id="${DX.escapeHtml(user.id)}">
           <span class="account-name">${name}</span>
           <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <div class="account-dropdown">
           <div class="account-dropdown-head">
-            <img src="${avatar}" alt="">
+            <img src="${avatar}" alt="" data-avatar-id="${DX.escapeHtml(user.id)}">
             <div>
               <p class="account-dropdown-name">${name}</p>
               <p class="account-dropdown-role" style="color:${roleColor}">${DX.escapeHtml(roleLabel)}</p>
@@ -446,7 +477,7 @@
 
     if (mobileSlot) {
       mobileSlot.innerHTML = `
-        <div class="mobile-account-row"><img src="${avatar}" alt=""><span>${name}</span></div>
+        <div class="mobile-account-row"><img src="${avatar}" alt="" data-avatar-id="${DX.escapeHtml(user.id)}"><span>${name}</span></div>
         ${canPanel ? '<a href="/admin.html">Panel de administración</a>' : ''}
         ${canDev ? '<a href="/devzone.html">Dev Zone</a>' : ''}
         <button type="button" data-logout>Cerrar sesión</button>`;

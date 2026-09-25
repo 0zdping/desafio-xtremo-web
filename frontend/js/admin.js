@@ -926,7 +926,7 @@
         ? `<div class="table-wrap"><table class="table"><tbody>${users
             .map(
               (u) => `<tr data-user="${esc(u.id)}">
-            <td><div class="cell-title"><img class="avatar" src="${esc(u.avatar || DX.defaultAvatar)}" alt=""><div><b>${esc(u.username || '(aún no ha iniciado sesión)')}</b><small>${esc(u.id)}</small></div></div></td>
+            <td><div class="cell-title"><img class="avatar" src="${esc(u.avatar || DX.defaultAvatar)}" alt="" data-avatar-id="${esc(u.id)}"><div><b>${esc(u.username || '(aún no ha iniciado sesión)')}</b><small>${esc(u.id)}</small></div></div></td>
             <td>${(u.roles || []).map((r) => `<span class="role-pill" style="color:${DX.safeColor(r.color)}"><span class="swatch" style="background:${DX.safeColor(r.color)}"></span>${esc(r.name)}${manage && canTouchUser(u) && canTouchRole(r) ? `<button type="button" data-rm="${r.id}" aria-label="Quitar ${esc(r.name)}">×</button>` : ''}</span>`).join('') || '<span class="muted">Sin rangos</span>'}</td>
             <td class="actions">${
               manage && canTouchUser(u)

@@ -367,7 +367,7 @@
               .join('')}
           </nav>
           <div class="app-side-foot">
-            <div class="app-user"><img src="${esc(user.avatar || DX.defaultAvatar)}" alt=""><div><b>${esc(user.username || user.id)}</b><small style="color:${roleColor}">${esc(top ? top.name : 'Miembro')}</small></div></div>
+            <div class="app-user"><img src="${esc(user.avatar || DX.defaultAvatar)}" alt="" data-avatar-id="${esc(user.id)}"><div><b>${esc(user.username || user.id)}</b><small style="color:${roleColor}">${esc(top ? top.name : 'Miembro')}</small></div></div>
             ${(opts.footLinks || []).map((l) => `<a href="${esc(l.href)}">${icon(l.icon)}${esc(l.label)}</a>`).join('')}
             <button type="button" data-logout>${icon('logout')}Cerrar sesión</button>
           </div>
