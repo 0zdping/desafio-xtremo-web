@@ -20,13 +20,12 @@ Todas las páginas comparten los mismos tokens y el mismo shell:
 |---|---|
 | `css/tokens.css` | Paleta (sacada del logo), tipografía, botones, formularios, toasts, diálogos, Markdown renderizado. Lo carga todo. |
 | `css/site.css` | Shell público: nav, menú móvil, footer, fondo ambiental, utilidades de animación. |
-| `css/home.css` | La home: capítulos con animación por scroll, hotbar, toasts de logro. |
+| `css/home.css` | La home: capítulos con animación por scroll, hotbar, toasts de logro. El mapa del evento es `assets/mapa.webp`. |
 | `css/content.css` | Tarjetas de anuncios, feed, página de anuncio, wiki. |
 | `css/app.css` | Shell de aplicación compartido por el panel (`admin.html`) y Dev Zone (`devzone.html`, tema morado vía `body.theme-dev`). |
 | `css/devzone.css` | Tablero kanban, línea temporal de decisiones y lector de specs. |
 | `js/site.js` | `window.DX`: sesión (una sola petición a `/api/auth/me` por página), toasts, diálogo de confirmación, fechas relativas, nav, cuenta. |
 | `js/motion.js` | Motor de animación por scroll propio (`data-reveal`, `data-split`, `data-scene`, `data-fill`, `data-count`, `data-scramble`). |
-| `js/island.js` | Isla en pixel art generada por código (semilla fija). |
 | `js/pixel-icons.js` | Iconos pixel art dibujados a mano como SVG. |
 | `js/app-ui.js` | `window.DXApp`: API con CSRF, router por hash, drawer de edición con aviso de cambios sin guardar, paleta `Ctrl+K`, editor Markdown con vista previa, gráfico. |
 

@@ -1,38 +1,40 @@
 /* ==========================================================================
    home.js · wiring for the home narrative. Depends on site.js (DX),
-   motion.js (DXMotion), island.js (DXIsland), pixel-icons.js (DXPixel),
+   motion.js (DXMotion), pixel-icons.js (DXPixel),
    posts.js (DXPosts).
    ========================================================================== */
 (function () {
   const DX = window.DX;
   const M = window.DXMotion;
   const clamp = M.clamp;
-  const SEED = 20260925;
+  // Hand-picked land points on the real map (assets/mapa.webp), as fractions
+  // of its width/height, so markers never land in the sea.
+  const LAND = {
+    me: { x: 0.3, y: 0.66 },
+    snowWest: { x: 0.3, y: 0.2 },
+    snowEast: { x: 0.72, y: 0.14 },
+    east: { x: 0.78, y: 0.4 },
+    southEast: { x: 0.8, y: 0.62 },
+    south: { x: 0.62, y: 0.78 },
+    meet: { x: 0.53, y: 0.54 },
+  };
   const vw = () => window.innerWidth;
   const vh = () => window.innerHeight;
 
-  /* ---------------- hero island + markers + HUD ---------------- */
+  /* ---------------- hero map + markers + HUD ---------------- */
   const hero = document.getElementById('inicio');
-  const heroCanvas = document.getElementById('island-hero');
-  if (hero && heroCanvas) {
-    const island = DXIsland.create(heroCanvas, { seed: SEED });
-    const rng = DXIsland.rng(7);
+  if (hero && document.getElementById('map-hero')) {
     const markers = document.getElementById('hero-markers');
-    const me = island.randomLand('forest', rng);
-    const mates = [island.randomLand('snow', rng), island.randomLand('desert', rng), island.randomLand('forest', rng)];
     const mk = (pos, cls, label) =>
       `<div class="mk ${cls}" style="left:${(pos.x * 100).toFixed(2)}%;top:${(pos.y * 100).toFixed(2)}%"><span class="mk-label">${label}</span><span class="mk-pin"></span></div>`;
-    markers.innerHTML = mates.map((p) => mk(p, 'mate', '?')).join('') + mk(me, 'me', 'Tú');
-
+    markers.innerHTML = [LAND.snowWest, LAND.east, LAND.south].map((p) => mk(p, 'mate', '?')).join('') + mk(LAND.me, 'me', 'Tú');
     const hx = document.getElementById('hud-x');
     const hz = document.getElementById('hud-z');
-    const hb = document.getElementById('hud-biome');
-    const baseX = Math.round((me.x - 0.5) * 3000);
-    const baseZ = Math.round((me.y - 0.5) * 2000);
+    const baseX = Math.round((LAND.me.x - 0.5) * 3000);
+    const baseZ = Math.round((LAND.me.y - 0.5) * 3000);
     M.onScene(hero, (p) => {
       if (hx) hx.textContent = 'X ' + (baseX + Math.round(p * 214));
       if (hz) hz.textContent = 'Z ' + (baseZ - Math.round(p * 96));
-      if (hb) hb.textContent = p > 0.25 ? 'Bioma · Bosque' : 'Bioma · desconocido';
     });
   }
 
@@ -170,49 +172,29 @@
     });
   })();
 
-  /* ---------------- 03 biomes (pinned map fly-over) ---------------- */
+  /* ---------------- 03 biomes (pinned, one card per biome) ---------------- */
+  // Where each biome sits on the map isn't decided yet, so the map behind
+  // only zooms in a little per step and the colour of the light changes:
+  // it never points at a region.
   (function () {
     const sec = document.getElementById('biomas');
-    const canvas = document.getElementById('island-biomes');
-    if (!sec || !canvas) return;
-    const island = DXIsland.create(canvas, { seed: SEED });
+    if (!sec) return;
+    const map = document.getElementById('map-biomes');
     const cards = sec.querySelectorAll('.biome-card');
     const thermo = sec.querySelector('.thermo');
     const ORDER = ['intro', 'snow', 'forest', 'desert'];
     const TEMP = { intro: 0.5, snow: 0.08, forest: 0.5, desert: 0.93 };
     let active = null;
-
-    function frame(name) {
-      const W = canvas.offsetWidth;
-      const H = canvas.offsetHeight;
-      if (!W || !H) return;
-      const mobile = vw() < 760;
-      const fit = Math.min((vw() * 0.95) / W, (vh() * 0.9) / H);
-      const focus = name === 'intro' ? { x: 0.5, y: 0.5 } : island.biomeCenter(name);
-      const scale = name === 'intro' ? fit : fit * 2.3;
-      const tx = mobile ? vw() * 0.5 : vw() * (name === 'intro' ? 0.62 : 0.7);
-      const ty = mobile ? vh() * 0.62 : vh() * 0.5;
-      const mx = tx - vw() / 2 - scale * (focus.x - 0.5) * W;
-      const my = ty - vh() / 2 - scale * (focus.y - 0.5) * H;
-      canvas.style.setProperty('--mx', mx.toFixed(1) + 'px');
-      canvas.style.setProperty('--my', my.toFixed(1) + 'px');
-      canvas.style.setProperty('--ms', scale.toFixed(3));
-    }
-
     function set(name) {
       if (name === active) return;
       active = name;
       sec.dataset.active = name;
       cards.forEach((c) => c.classList.toggle('is-active', c.dataset.biome === name));
       if (thermo) thermo.style.setProperty('--t', TEMP[name]);
-      frame(name);
+      if (map) map.style.setProperty('--ms', (1 + ORDER.indexOf(name) * 0.04).toFixed(2));
     }
-    M.onScene(sec, (p) => {
-      const idx = p < 0.14 ? 0 : p < 0.42 ? 1 : p < 0.7 ? 2 : 3;
-      set(ORDER[idx]);
-    });
+    M.onScene(sec, (p) => set(ORDER[p < 0.14 ? 0 : p < 0.42 ? 1 : p < 0.7 ? 2 : 3]));
     set('intro');
-    window.addEventListener('resize', () => frame(active));
   })();
 
   /* ---------------- 04 death ladder clock ---------------- */
@@ -236,17 +218,13 @@
   /* ---------------- 05 clans converge ---------------- */
   (function () {
     const sec = document.getElementById('clanes');
-    const canvas = document.getElementById('island-clans');
     const layer = document.getElementById('clan-markers');
-    if (!sec || !canvas || !layer) return;
-    const island = DXIsland.create(canvas, { seed: SEED, sparkle: false });
-    const rng = DXIsland.rng(31);
-    const meet = island.biomeCenter('forest');
+    if (!sec || !layer) return;
     const players = [
-      { name: 'Tú', color: '#a4f5c9', from: island.randomLand('forest', rng) },
-      { name: 'Jugador 2', color: '#f3b45e', from: island.randomLand('desert', rng) },
-      { name: 'Jugador 3', color: '#bfe3ff', from: island.randomLand('snow', rng) },
-      { name: 'Jugador 4', color: '#c78bff', from: island.randomLand(null, rng) },
+      { name: 'Tú', color: '#a4f5c9', from: LAND.me },
+      { name: 'Jugador 2', color: '#f3b45e', from: LAND.south },
+      { name: 'Jugador 3', color: '#bfe3ff', from: LAND.snowWest },
+      { name: 'Jugador 4', color: '#c78bff', from: LAND.east },
     ];
     players.forEach((pl, i) => {
       const el = document.createElement('span');
@@ -259,7 +237,7 @@
       // each arrives at a slightly different moment
       pl.start = 0.18 + i * 0.05;
       pl.end = 0.5 + i * 0.06;
-      pl.to = { x: meet.x + (i % 2 ? 0.03 : -0.03), y: meet.y + (i > 1 ? 0.045 : -0.045) };
+      pl.to = { x: LAND.meet.x + (i % 2 ? 0.025 : -0.025), y: LAND.meet.y + (i > 1 ? 0.03 : -0.03) };
     });
     const slots = sec.querySelectorAll('.clan-slot');
     const count = document.getElementById('clan-count');
@@ -268,10 +246,8 @@
       players.forEach((pl, i) => {
         const k = i === 0 ? 1 : clamp((p - pl.start) / (pl.end - pl.start));
         const e = 1 - Math.pow(1 - k, 3);
-        const x = pl.from.x + (pl.to.x - pl.from.x) * e;
-        const y = pl.from.y + (pl.to.y - pl.from.y) * e;
-        pl.el.style.left = (x * 100).toFixed(2) + '%';
-        pl.el.style.top = (y * 100).toFixed(2) + '%';
+        pl.el.style.left = ((pl.from.x + (pl.to.x - pl.from.x) * e) * 100).toFixed(2) + '%';
+        pl.el.style.top = ((pl.from.y + (pl.to.y - pl.from.y) * e) * 100).toFixed(2) + '%';
         if (i === 0 || k >= 1) arrived++;
       });
       slots.forEach((s, i) => s.classList.toggle('on', i < arrived));
@@ -279,44 +255,25 @@
     });
   })();
 
-  /* ---------------- 06 event wheel ---------------- */
+  /* ---------------- 06 alarms: the light cycles through the colours ---------------- */
   (function () {
-    const sec = document.getElementById('eventos');
-    const svg = document.getElementById('event-wheel');
+    const sec = document.getElementById('alarmas');
     const list = document.getElementById('event-list');
-    if (!sec || !svg || !list) return;
-    // The list itself is static HTML (readable without JS); the wheel is
-    // drawn from the same items so the two can never drift apart.
-    const EVENTS = Array.from(list.querySelectorAll('.event-item')).map((li) => ({ c: li.dataset.color }));
-    const N = EVENTS.length;
-    const R = 100;
-    const seg = (i) => {
-      const a0 = ((i / N) * 360 - 90 - 180 / N) * (Math.PI / 180);
-      const a1 = (((i + 1) / N) * 360 - 90 - 180 / N) * (Math.PI / 180);
-      return `M0 0 L${(R * Math.cos(a0)).toFixed(2)} ${(R * Math.sin(a0)).toFixed(2)} A${R} ${R} 0 0 1 ${(R * Math.cos(a1)).toFixed(2)} ${(R * Math.sin(a1)).toFixed(2)} Z`;
-    };
-    svg.innerHTML =
-      `<circle r="108" fill="#020807"/>` +
-      EVENTS.map((e, i) => `<path class="seg" d="${seg(i)}" fill="${e.c}" stroke="#020807" stroke-width="3"/>`).join('') +
-      EVENTS.map((e, i) => {
-        const a = ((i / N) * 360 - 90) * (Math.PI / 180);
-        return `<rect x="${(68 * Math.cos(a) - 5).toFixed(1)}" y="${(68 * Math.sin(a) - 5).toFixed(1)}" width="10" height="10" fill="rgba(0,0,0,.25)"/>`;
-      }).join('') +
-      `<circle r="100" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2"/>`;
-    const segs = svg.querySelectorAll('.seg');
-    const items = list.querySelectorAll('.event-item');
+    if (!sec || !list) return;
+    const stage = sec.querySelector('.alarm-stage');
+    const nameEl = document.getElementById('alarm-name');
+    const items = Array.from(list.querySelectorAll('.event-item'));
+    const lights = Array.from(sec.querySelectorAll('.alarm-lights i'));
     let last = -1;
     M.onScene(sec, (p) => {
-      // With reduced motion the wheel stays still and only the highlighted
-      // colour changes as you scroll.
-      const rot = p * 900;
-      if (!M.reduced) svg.style.setProperty('--rot', rot.toFixed(1) + 'deg');
-      // segment under the pointer (top): undo the rotation
-      const idx = ((Math.round(((360 - (rot % 360)) % 360) / (360 / N)) % N) + N) % N;
+      const idx = Math.min(items.length - 1, Math.floor(clamp((p - 0.18) / 0.62) * items.length));
       if (idx === last) return;
       last = idx;
-      segs.forEach((s, i) => s.classList.toggle('dim', i !== idx));
+      const item = items[idx];
+      stage.style.setProperty('--c', item.dataset.color);
+      if (nameEl) nameEl.textContent = item.dataset.name.toLowerCase();
       items.forEach((it, i) => it.classList.toggle('is-active', i === idx));
+      lights.forEach((l, i) => l.classList.toggle('on', i === idx));
     });
   })();
 
@@ -398,7 +355,7 @@
   }
   (function () {
     if (!('IntersectionObserver' in window)) return;
-    const icons = { 1: 'pickaxe', 2: 'bench', 3: 'thermo', 4: 'hourglass', 5: 'clan', 6: 'wheel', 7: 'heart' };
+    const icons = { 1: 'pickaxe', 2: 'bench', 3: 'thermo', 4: 'hourglass', 5: 'clan', 6: 'siren', 7: 'heart' };
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {

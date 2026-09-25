@@ -25,6 +25,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="preload" href="assets/banner.png" as="image">
+<link rel="preload" href="assets/mapa.webp" as="image">
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/site.css">
 <link rel="stylesheet" href="css/content.css">
@@ -74,7 +75,7 @@
       <div class="eyelids" aria-hidden="true"><span></span><span></span></div>
       <div class="hero-map" aria-hidden="true">
         <div class="hero-map-tilt">
-          <canvas id="island-hero" width="192" height="120"></canvas>
+          <img id="map-hero" src="/assets/mapa.webp" alt="" width="800" height="800" decoding="async" fetchpriority="high">
           <div class="hero-markers" id="hero-markers"></div>
         </div>
       </div>
@@ -102,7 +103,7 @@
       <div class="hud hud-coords" aria-hidden="true">
         <span class="hud-label">Posición</span>
         <span class="hud-value"><span id="hud-x">X 1204</span> <span id="hud-z">Z -388</span></span>
-        <span class="hud-sub" id="hud-biome">Bioma · desconocido</span>
+        <span class="hud-sub">Bioma · por descubrir</span>
       </div>
       <div class="hud hud-scroll" aria-hidden="true">
         <span class="hud-mouse"><span></span></span>
@@ -114,7 +115,7 @@
   <!-- ============ ticker ============ -->
   <div class="ticker" aria-hidden="true">
     <div class="ticker-row" data-dir="1">
-      <div class="ticker-track"><span>Sin mesa de crafteo</span><i></i><span>Sin minería vanilla</span><i></i><span>Recursos por nodos</span><i></i><span>Clanes de 4</span><i></i><span>Tres biomas</span><i></i><span>Temperatura</span><i></i><span>Sacos de dormir</span><i></i><span>Eventos por colores</span><i></i></div>
+      <div class="ticker-track"><span>Despiertas solo</span><i></i><span>Encuentra a tu clan</span><i></i><span>Fabrica desde el inventario</span><i></i><span>Mesas de trabajo por niveles</span><i></i><span>Sobrevive al frío y al calor</span><i></i><span>Sacos de dormir</span><i></i><span>Alarmas de colores</span><i></i><span>Muere, espera y vuelve</span><i></i></div>
     </div>
     <div class="ticker-row ticker-row-alt" data-dir="-1">
       <div class="ticker-track"><span>Un mundo nuevo</span><i></i><span>De jugadores para jugadores</span><i></i><span>Plugin propio</span><i></i><span>Resourcepack propio</span><i></i><span>Hecho desde cero</span><i></i><span>Un mundo nuevo</span><i></i><span>De jugadores para jugadores</span><i></i></div>
@@ -130,7 +131,7 @@
         <div data-reveal="up"><dt>Biomas</dt><dd data-count="3">3</dd></div>
         <div data-reveal="up" data-delay="0.08"><dt>Jugadores por clan</dt><dd data-count="4">4</dd></div>
         <div data-reveal="up" data-delay="0.16"><dt>Niveles de mesa</dt><dd data-count="3">3</dd></div>
-        <div data-reveal="up" data-delay="0.24"><dt>Tipos de evento</dt><dd data-count="8">8</dd></div>
+        <div data-reveal="up" data-delay="0.24"><dt>Colores de alarma</dt><dd data-count="8">8</dd></div>
       </dl>
     </div>
   </section>
@@ -223,9 +224,9 @@
             <div class="inv-progress"><span></span></div>
           </div>
           <div class="tiers">
-            <div class="tier tier-1"><div class="cube"><i></i><i></i><i></i></div><span class="pixel">Nv 1</span></div>
-            <div class="tier tier-2"><div class="cube"><i></i><i></i><i></i></div><span class="pixel">Nv 2</span></div>
-            <div class="tier tier-3"><div class="cube"><i></i><i></i><i></i></div><span class="pixel">Nv 3</span></div>
+            <div class="tier tier-1"><span class="tier-icon" data-pixel="bench"></span><span class="tier-text"><span class="pixel">Nivel 1</span><small>Mesa básica</small></span></div>
+            <div class="tier tier-2"><span class="tier-icon" data-pixel="bench"></span><span class="tier-text"><span class="pixel">Nivel 2</span><small>Planos básicos</small></span></div>
+            <div class="tier tier-3"><span class="tier-icon" data-pixel="bench"></span><span class="tier-text"><span class="pixel">Nivel 3</span><small>Planos avanzados</small></span></div>
           </div>
         </div>
       </div>
@@ -236,7 +237,7 @@
   <section class="chapter biomes" id="biomas" data-chapter="3" data-scene="pin" data-achievement="Explorador de biomas">
     <div class="biomes-sticky">
       <div class="biomes-map" aria-hidden="true">
-        <canvas id="island-biomes" width="192" height="120"></canvas>
+        <img id="map-biomes" src="/assets/mapa.webp" alt="" width="800" height="800" loading="lazy" decoding="async">
       </div>
       <div class="biomes-tint" aria-hidden="true"></div>
       <div class="container biomes-layout">
@@ -249,13 +250,13 @@
         </header>
         <div class="biome-cards">
           <article class="biome-card" data-biome="intro">
-            <p class="biome-kicker pixel">Tres biomas · Ni uno más</p>
+            <p class="biome-kicker pixel">Nieve · Bosque · Desierto</p>
             <h3>Elige bien</h3>
             <p>Nieve, bosque y desierto. Cada uno tiene sus ventajas y sus problemas, y una mala ubicación puede arruinar todo tu desarrollo.</p>
-            <p class="biome-hint pixel">Sigue bajando para recorrer la isla</p>
+            <p class="biome-hint pixel">Sigue bajando para conocerlos</p>
           </article>
           <article class="biome-card" data-biome="snow">
-            <p class="biome-kicker pixel">Norte · Frío</p>
+            <p class="biome-kicker pixel">Frío</p>
             <h3>Nieve</h3>
             <p>Madera y piedra de sobra, pero casi nada de metal y apenas animales. Comer y avanzar rápido se complica.</p>
             <dl class="biome-stats">
@@ -265,9 +266,9 @@
             </dl>
           </article>
           <article class="biome-card" data-biome="forest">
-            <p class="biome-kicker pixel">Centro · Templado</p>
+            <p class="biome-kicker pixel">Templado</p>
             <h3>Bosque</h3>
-            <p>Ni frío ni calor. Un reparto equilibrado de madera, piedra y metal: el sitio más cómodo para empezar.</p>
+            <p>Ni frío ni calor. Un reparto equilibrado de madera, piedra y metal: el más cómodo para empezar.</p>
             <dl class="biome-stats">
               <div><dt>Madera</dt><dd><span style="--v:.55"></span></dd></div>
               <div><dt>Piedra</dt><dd><span style="--v:.55"></span></dd></div>
@@ -275,7 +276,7 @@
             </dl>
           </article>
           <article class="biome-card" data-biome="desert">
-            <p class="biome-kicker pixel">Sur · Calor</p>
+            <p class="biome-kicker pixel">Calor</p>
             <h3>Desierto</h3>
             <p>Lleno de metal y vacío de piedra y madera. Puedes avanzar muy rápido… si aguantas el calor.</p>
             <dl class="biome-stats">
@@ -353,7 +354,7 @@
       </div>
       <div class="clans-map card" data-reveal="scale" aria-hidden="true">
         <div class="clans-map-zoom">
-          <canvas id="island-clans" width="192" height="120"></canvas>
+          <img id="map-clans" src="/assets/mapa.webp" alt="" width="800" height="800" loading="lazy" decoding="async">
           <div class="clan-markers" id="clan-markers"></div>
         </div>
         <div class="clans-map-hud"><span class="pixel">Clan · <b id="clan-count">1</b>/4</span></div>
@@ -362,31 +363,33 @@
   </section>
 
   <!-- ============ 06 eventos ============ -->
-  <section class="chapter events" id="eventos" data-chapter="6" data-scene="view" data-achievement="Ojo al cielo">
+  <section class="chapter events" id="alarmas" data-chapter="6" data-scene="view" data-achievement="Alarma activada">
     <div class="container events-layout">
-      <div class="wheel-wrap" data-reveal="scale" aria-hidden="true">
-        <svg class="wheel" id="event-wheel" viewBox="-110 -110 220 220"></svg>
-        <span class="wheel-pointer"></span>
-        <span class="wheel-hub" data-pixel="wheel"></span>
+      <div class="alarm-stage" data-reveal="scale" aria-hidden="true">
+        <div class="alarm-beams"></div>
+        <div class="alarm-glow"></div>
+        <span class="alarm-siren" data-pixel="siren"></span>
+        <p class="alarm-label pixel">Alarma <span id="alarm-name">naranja</span></p>
+        <div class="alarm-lights"><i style="--c:#ff8a3d"></i><i style="--c:#ff4d4d"></i><i style="--c:#3fd98a"></i><i style="--c:#ff7ad1"></i><i style="--c:#f5d742"></i><i style="--c:#a974ff"></i><i style="--c:#37d6b4"></i><i style="--c:#4aa8ff"></i></div>
       </div>
       <div class="events-copy">
         <header class="chapter-head">
           <span class="chapter-num" aria-hidden="true" data-scramble>06</span>
           <div>
-            <p class="eyebrow" data-reveal="up">Eventos</p>
-            <h2 data-split>La isla <span class="accent">no se está quieta.</span></h2>
-            <p class="section-sub" data-reveal="up" data-delay="0.1">Las ruletas vuelven con otro papel: cada color tiene su efecto, siempre temporal. Algunas llegan sin avisar, así que juegas a la hora que quieras.</p>
+            <p class="eyebrow" data-reveal="up">Alarmas</p>
+            <h2 data-split>Cuando suena la alarma, <span class="accent">todo cambia.</span></h2>
+            <p class="section-sub" data-reveal="up" data-delay="0.1">Cada alarma tiene su color y su efecto, siempre temporal. Algunas suenan sin avisar, así que puedes jugar a la hora que quieras sin perderte nada.</p>
           </div>
         </header>
         <ul class="event-list" id="event-list">
-          <li class="event-item" style="--c:#ff8a3d" data-color="#ff8a3d"><span class="event-swatch"></span><div><b>Naranja</b><span>Recursos raros o abundantes aparecen en una zona anunciada.</span></div></li>
-          <li class="event-item" style="--c:#ff4d4d" data-color="#ff4d4d"><span class="event-swatch"></span><div><b>Rojo</b><span>Uno de los recursos básicos solo rinde la mitad.</span></div></li>
-          <li class="event-item" style="--c:#3fd98a" data-color="#3fd98a"><span class="event-swatch"></span><div><b>Verde</b><span>Efectos positivos: fortuna, más ganancia de recursos…</span></div></li>
-          <li class="event-item" style="--c:#ff7ad1" data-color="#ff7ad1"><span class="event-swatch"></span><div><b>Rosa</b><span>El mercado central abre por tiempo limitado.</span></div></li>
-          <li class="event-item" style="--c:#f5d742" data-color="#f5d742"><span class="event-swatch"></span><div><b>Amarillo</b><span>Clima extremo y más criaturas de lo normal.</span></div></li>
-          <li class="event-item" style="--c:#a974ff" data-color="#a974ff"><span class="event-swatch"></span><div><b>Morado</b><span>Todo el botín de una zona vuelve a aparecer.</span></div></li>
-          <li class="event-item" style="--c:#37d6b4" data-color="#37d6b4"><span class="event-swatch"></span><div><b>Turquesa</b><span>Aparece un jefe en el mapa.</span></div></li>
-          <li class="event-item" style="--c:#4aa8ff" data-color="#4aa8ff"><span class="event-swatch"></span><div><b>Azul</b><span>Cambia el clima: niebla, ola de calor, frío…</span></div></li>
+          <li class="event-item" style="--c:#ff8a3d" data-color="#ff8a3d" data-name="Naranja"><span class="event-swatch"></span><div><b>Naranja</b><span>Recursos raros o abundantes aparecen en una zona anunciada.</span></div></li>
+          <li class="event-item" style="--c:#ff4d4d" data-color="#ff4d4d" data-name="Rojo"><span class="event-swatch"></span><div><b>Rojo</b><span>Uno de los recursos básicos solo rinde la mitad.</span></div></li>
+          <li class="event-item" style="--c:#3fd98a" data-color="#3fd98a" data-name="Verde"><span class="event-swatch"></span><div><b>Verde</b><span>Efectos positivos: fortuna, más ganancia de recursos…</span></div></li>
+          <li class="event-item" style="--c:#ff7ad1" data-color="#ff7ad1" data-name="Rosa"><span class="event-swatch"></span><div><b>Rosa</b><span>El mercado central abre por tiempo limitado.</span></div></li>
+          <li class="event-item" style="--c:#f5d742" data-color="#f5d742" data-name="Amarillo"><span class="event-swatch"></span><div><b>Amarillo</b><span>Clima extremo y más criaturas de lo normal.</span></div></li>
+          <li class="event-item" style="--c:#a974ff" data-color="#a974ff" data-name="Morado"><span class="event-swatch"></span><div><b>Morado</b><span>Todo el botín de una zona vuelve a aparecer.</span></div></li>
+          <li class="event-item" style="--c:#37d6b4" data-color="#37d6b4" data-name="Turquesa"><span class="event-swatch"></span><div><b>Turquesa</b><span>Aparece un jefe en el mapa.</span></div></li>
+          <li class="event-item" style="--c:#4aa8ff" data-color="#4aa8ff" data-name="Azul"><span class="event-swatch"></span><div><b>Azul</b><span>Cambia el clima: niebla, ola de calor, frío…</span></div></li>
         </ul>
       </div>
     </div>
@@ -479,7 +482,7 @@
     <li><a href="#biomas" data-target="3" title="Biomas"><span data-pixel="thermo"></span><span class="sr-only">Biomas</span></a></li>
     <li><a href="#muerte" data-target="4" title="Muerte"><span data-pixel="hourglass"></span><span class="sr-only">Muerte</span></a></li>
     <li><a href="#clanes" data-target="5" title="Clanes"><span data-pixel="clan"></span><span class="sr-only">Clanes</span></a></li>
-    <li><a href="#eventos" data-target="6" title="Eventos"><span data-pixel="wheel"></span><span class="sr-only">Eventos</span></a></li>
+    <li><a href="#alarmas" data-target="6" title="Alarmas"><span data-pixel="siren"></span><span class="sr-only">Alarmas</span></a></li>
     <li><a href="#comunidad" data-target="7" title="Comunidad"><span data-pixel="heart"></span><span class="sr-only">Comunidad</span></a></li>
   </ol>
   <span class="hotbar-label" id="hotbar-label" aria-hidden="true">El concepto</span>
@@ -516,7 +519,6 @@
 <script src="js/site.js"></script>
 <script src="js/motion.js"></script>
 <script src="js/pixel-icons.js"></script>
-<script src="js/island.js"></script>
 <script src="js/analytics.js"></script>
 <script src="js/posts.js"></script>
 <script src="js/home.js"></script>

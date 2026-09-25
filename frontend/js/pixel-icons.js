@@ -163,6 +163,30 @@
         '............',
       ],
     },
+    // Alarm light: the dome takes the surrounding CSS `color`, so one icon
+    // serves every alarm colour.
+    siren: {
+      pal: { o: '#1b1512', h: 'currentColor', w: 'rgba(255,255,255,.85)', s: 'rgba(0,0,0,.28)', m: '#a7b5c5', M: '#6c7b8e' },
+      rows: [
+        '................',
+        '................',
+        '......oooo......',
+        '....oohhwwoo....',
+        '...ohhhhhwwho...',
+        '..ohhhhhhhwhho..',
+        '..ohhhhhhhhhho..',
+        '..ohshhhhhhhho..',
+        '..ohsshhhhhhho..',
+        '.oooooooooooooo.',
+        '.ommmmmmmmmmmmo.',
+        '.oMMMMMMMMMMMMo.',
+        '.oooooooooooooo.',
+        '................',
+        '................',
+        '................',
+      ],
+      shiftY: 1,
+    },
     bench: {
       pal: { o: '#2b170b', w: '#e0aa66', W: '#9c6630', m: '#a7b5c5' },
       rows: [
