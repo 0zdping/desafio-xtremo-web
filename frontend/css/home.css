@@ -335,36 +335,52 @@
 .clans-map-hud b{color:var(--mint);font-weight:400;}
 @media (max-width:900px){.clans-layout{grid-template-columns:1fr;gap:36px;}}
 
-/* ---------- 06 eventos ---------- */
-.events-layout{display:grid;grid-template-columns:.9fr 1.1fr;gap:64px;align-items:center;}
-.events .chapter-head{grid-template-columns:1fr;margin-bottom:30px;}
-.alarm-stage{--c:#ff8a3d;position:relative;width:100%;max-width:460px;aspect-ratio:1;margin:0 auto;display:grid;place-items:center;}
-.alarm-beams{
-  position:absolute;inset:-6%;border-radius:50%;
-  background:conic-gradient(from 0deg, transparent 0deg, color-mix(in srgb, var(--c) 55%, transparent) 14deg, transparent 38deg, transparent 180deg, color-mix(in srgb, var(--c) 55%, transparent) 194deg, transparent 218deg);
-  -webkit-mask-image:radial-gradient(circle, #000 18%, transparent 70%);
-          mask-image:radial-gradient(circle, #000 18%, transparent 70%);
-  animation:beamSpin 2.6s linear infinite;transition:background .4s ease;
-}
-@keyframes beamSpin{to{transform:rotate(360deg);}}
-.alarm-glow{position:absolute;width:62%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle, color-mix(in srgb, var(--c) 45%, transparent), transparent 70%);animation:alarmPulse 1.3s ease-in-out infinite;transition:background .4s ease;}
-@keyframes alarmPulse{50%{transform:scale(1.12);opacity:.65;}}
-.alarm-siren{position:relative;width:44%;aspect-ratio:1;color:var(--c);transition:color .35s ease;filter:drop-shadow(0 0 28px color-mix(in srgb, var(--c) 70%, transparent)) drop-shadow(0 18px 20px rgba(0,0,0,.5));}
-.alarm-siren .px-icon{width:100%;height:100%;}
-.alarm-label{position:absolute;bottom:14%;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-soft);}
-.alarm-label span{color:var(--c);transition:color .35s ease;}
-.alarm-lights{position:absolute;bottom:4%;display:flex;gap:8px;}
-.alarm-lights i{width:12px;height:12px;background:var(--c);opacity:.25;box-shadow:0 0 0 2px #020807;transition:opacity .3s ease, transform .3s var(--ease-back), box-shadow .3s ease;}
-.alarm-lights i.on{opacity:1;transform:translateY(-4px);box-shadow:0 0 0 2px #020807, 0 0 14px var(--c);}
-.reduced-motion .alarm-beams{animation:none;}
-.reduced-motion .alarm-glow{animation:none;}
-.event-list{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.event-item{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-hair);background:var(--glass);transition:border-color .25s ease, background .25s ease, transform .3s var(--ease);}
+/* ---------- 06 alarmas ---------- */
+.events .chapter-head{margin-bottom:34px;}
+.alarm-screen{--c:#FF8A1F;position:relative;margin:0 0 22px;aspect-ratio:1920/500;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border-strong);background:#0a0f1a;box-shadow:0 30px 80px -30px rgba(0,0,0,.8), inset 0 0 0 1px rgba(255,255,255,.03);isolation:isolate;}
+.alarm-sky{position:absolute;inset:0;z-index:-2;
+  background:
+    radial-gradient(1px 1px at 12% 62%, rgba(255,255,255,.55) 50%, transparent 51%),
+    radial-gradient(1px 1px at 27% 78%, rgba(255,255,255,.35) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 44% 88%, rgba(255,255,255,.45) 50%, transparent 51%),
+    radial-gradient(1px 1px at 63% 70%, rgba(255,255,255,.4) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 81% 84%, rgba(255,255,255,.5) 50%, transparent 51%),
+    radial-gradient(1px 1px at 92% 58%, rgba(255,255,255,.35) 50%, transparent 51%),
+    radial-gradient(1px 1px at 6% 90%, rgba(255,255,255,.3) 50%, transparent 51%),
+    linear-gradient(180deg,#0a0f1a 0%,#0a0f1a 44%,#0c1822 78%,#0e2228 100%);}
+.alarm-halo{position:absolute;left:50%;top:-30%;width:70%;aspect-ratio:2.6;transform:translateX(-50%);z-index:-1;border-radius:50%;
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--c) 30%, transparent), transparent);opacity:.25;transition:background .5s ease, opacity .5s ease;}
+.alarm-screen.is-playing .alarm-halo{opacity:.9;animation:alarmHalo 1s ease-in-out infinite;}
+@keyframes alarmHalo{50%{opacity:.5;}}
+.alarm-video{position:absolute;left:50%;top:0;width:68.75%;height:auto;aspect-ratio:1320/256;transform:translateX(-50%);display:block;background:transparent;}
+.alarm-cross{position:absolute;left:50%;top:56%;width:15px;height:15px;transform:translate(-50%,-50%);opacity:.5;
+  background:linear-gradient(#fff,#fff) center/100% 2px no-repeat, linear-gradient(#fff,#fff) center/2px 100% no-repeat;}
+.alarm-caption{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:14px;padding:12px 16px;background:linear-gradient(0deg, rgba(3,8,10,.9), transparent);}
+.alarm-now{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-soft);display:flex;align-items:center;gap:8px;white-space:nowrap;}
+.alarm-now b{color:var(--c);font-weight:400;transition:color .3s ease;}
+.alarm-dot{width:8px;height:8px;background:var(--c);box-shadow:0 0 0 2px #020807, 0 0 10px var(--c);transition:background .3s ease;}
+.alarm-screen.is-playing .alarm-dot{animation:alarmHalo .5s steps(2) infinite;}
+.alarm-note{font-size:12px;color:var(--text-soft);opacity:.75;flex:1;min-width:0;}
+.alarm-sound{flex-shrink:0;margin-left:auto;}
+.alarm-sound svg{width:16px;height:16px;}
+.alarm-sound .on{display:none;}
+.alarm-sound[aria-pressed="true"] .on{display:inline;}
+.alarm-sound[aria-pressed="true"] .off{display:none;}
+.no-alpha .alarm-sky, .no-alpha .alarm-halo{display:none;}
+.event-list{list-style:none;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.event-item{all:unset;box-sizing:border-box;cursor:pointer;width:100%;height:100%;display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-hair);background:var(--glass);transition:border-color .25s ease, background .25s ease, transform .3s var(--ease);}
+.event-item:hover{border-color:color-mix(in srgb, var(--c) 55%, transparent);transform:translateY(-2px);}
+.event-item:focus-visible{outline:2px solid var(--c);outline-offset:2px;}
 .event-item.is-active{border-color:var(--c);background:color-mix(in srgb, var(--c) 10%, transparent);}
-.event-swatch{width:14px;height:14px;background:var(--c);flex-shrink:0;margin-top:3px;box-shadow:0 0 0 2px #020807;}
-.event-item b{display:block;font-size:14px;font-weight:600;margin-bottom:2px;}
-.event-item span{font-size:13px;color:var(--text-soft);line-height:1.5;}
-@media (max-width:980px){.events-layout{grid-template-columns:1fr;gap:40px;}.alarm-stage{max-width:320px;}}
+.event-siren{width:32px;height:32px;flex-shrink:0;image-rendering:pixelated;background-size:32px 640px;background-repeat:no-repeat;background-position:0 0;filter:drop-shadow(0 0 6px color-mix(in srgb, var(--c) 45%, transparent));}
+.event-item.is-active .event-siren, .event-item:hover .event-siren{animation:sirenSpin 1s steps(20) infinite;}
+@keyframes sirenSpin{to{background-position:0 -640px;}}
+.event-text b{display:block;font-size:14px;font-weight:600;margin-bottom:2px;color:var(--text);}
+.event-text span{font-size:13px;color:var(--text-soft);line-height:1.5;}
+.reduced-motion .event-siren{animation:none !important;}
+.reduced-motion .alarm-halo, .reduced-motion .alarm-dot{animation:none !important;}
+@media (max-width:1100px){.event-list{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:720px){.alarm-screen{aspect-ratio:1920/760;}.alarm-video{width:100%;}.alarm-note{display:none;}.alarm-cross{top:52%;}}
 @media (max-width:560px){.event-list{grid-template-columns:1fr;}}
 
 /* ---------- 07 comunidad ---------- */

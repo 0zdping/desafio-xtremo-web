@@ -255,26 +255,82 @@
     });
   })();
 
-  /* ---------------- 06 alarms: the light cycles through the colours ---------------- */
+  /* ---------------- 06 alarms: real in-game recordings, cycled while in view ---------------- */
   (function () {
-    const sec = document.getElementById('alarmas');
+    const screen = document.getElementById('alarm-screen');
+    const video = document.getElementById('alarm-video');
     const list = document.getElementById('event-list');
-    if (!sec || !list) return;
-    const stage = sec.querySelector('.alarm-stage');
-    const nameEl = document.getElementById('alarm-name');
+    if (!screen || !video || !list) return;
     const items = Array.from(list.querySelectorAll('.event-item'));
-    const lights = Array.from(sec.querySelectorAll('.alarm-lights i'));
-    let last = -1;
-    M.onScene(sec, (p) => {
-      const idx = Math.min(items.length - 1, Math.floor(clamp((p - 0.18) / 0.62) * items.length));
-      if (idx === last) return;
-      last = idx;
-      const item = items[idx];
-      stage.style.setProperty('--c', item.dataset.color);
-      if (nameEl) nameEl.textContent = item.dataset.name.toLowerCase();
-      items.forEach((it, i) => it.classList.toggle('is-active', i === idx));
-      lights.forEach((l, i) => l.classList.toggle('on', i === idx));
+    const nameEl = document.getElementById('alarm-name');
+    const soundBtn = document.getElementById('alarm-sound');
+    const reduced = document.documentElement.classList.contains('reduced-motion');
+    // Safari decodes VP9 but drops its alpha channel: it gets the flat MP4 instead.
+    const noAlpha = /^((?!chrome|chromium|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent) ||
+      !video.canPlayType('video/webm; codecs="vp9"');
+    if (noAlpha) screen.classList.add('no-alpha');
+    const ext = noAlpha ? 'mp4' : 'webm';
+    let idx = 0;
+    let visible = false;
+    let hold = false; // a clicked alarm plays once and the cycle waits for it
+
+    function setSound(on) {
+      video.muted = !on;
+      soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      soundBtn.querySelector('span').textContent = on ? 'Silenciar' : 'Activar sonido';
+    }
+
+    function select(i, play) {
+      idx = (i + items.length) % items.length;
+      const it = items[idx];
+      const key = it.dataset.alarm;
+      screen.style.setProperty('--c', it.style.getPropertyValue('--c'));
+      if (nameEl) nameEl.textContent = it.querySelector('b').textContent.toLowerCase();
+      items.forEach((el, n) => {
+        el.classList.toggle('is-active', n === idx);
+        el.setAttribute('aria-pressed', n === idx ? 'true' : 'false');
+      });
+      video.poster = '/assets/alarmas/' + key + '.webp';
+      video.src = '/assets/alarmas/' + key + '.' + ext;
+      if (play) {
+        video.play().catch(() => {
+          // Autoplay with sound refused: fall back to muted.
+          setSound(false);
+          video.play().catch(() => {});
+        });
+      }
+    }
+
+    video.addEventListener('play', () => screen.classList.add('is-playing'));
+    video.addEventListener('pause', () => screen.classList.remove('is-playing'));
+    video.addEventListener('ended', () => {
+      screen.classList.remove('is-playing');
+      if (hold || reduced || !visible) { hold = false; return; }
+      select(idx + 1, true);
     });
+
+    items.forEach((it, n) => it.addEventListener('click', () => {
+      hold = reduced;
+      select(n, true);
+    }));
+
+    soundBtn.addEventListener('click', () => {
+      const on = soundBtn.getAttribute('aria-pressed') !== 'true';
+      setSound(on);
+      if (on) {
+        video.currentTime = 0;
+        video.play().catch(() => {});
+      }
+    });
+
+    select(0, false);
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver((entries) => {
+        visible = entries[0].isIntersecting;
+        if (visible && !reduced && video.paused) video.play().catch(() => {});
+        if (!visible && !video.paused) video.pause();
+      }, { threshold: 0.4 }).observe(screen);
+    }
   })();
 
   /* ---------------- hotbar: scrollspy + visibility ---------------- */
