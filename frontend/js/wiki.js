@@ -104,7 +104,46 @@
   });
 
   /* ---------- article ---------- */
+  // A paragraph holding only images becomes a figure (one image) or a captioned
+  // gallery (several, caption = alt text): "![A](a) ![B](b)" on one line.
+  function figures(container) {
+    container.querySelectorAll('p').forEach((p) => {
+      const imgs = Array.from(p.querySelectorAll(':scope > img'));
+      if (!imgs.length) return;
+      const onlyImages = Array.from(p.childNodes).every(
+        (n) => (n.nodeType === 1 && (n.tagName === 'IMG' || n.tagName === 'BR')) || (n.nodeType === 3 && !n.textContent.trim())
+      );
+      if (!onlyImages) return;
+      imgs.forEach((img) => {
+        img.decoding = 'async';
+      });
+      if (imgs.length === 1) {
+        const fig = document.createElement('figure');
+        fig.className = 'md-figure';
+        fig.appendChild(imgs[0]);
+        p.replaceWith(fig);
+        return;
+      }
+      const grid = document.createElement('div');
+      grid.className = 'md-gallery';
+      imgs.forEach((img) => {
+        // Gallery cells have a fixed square size, so lazy loading can't shift the layout.
+        img.loading = 'lazy';
+        const fig = document.createElement('figure');
+        fig.appendChild(img);
+        if (img.alt) {
+          const cap = document.createElement('figcaption');
+          cap.textContent = img.alt;
+          fig.appendChild(cap);
+        }
+        grid.appendChild(fig);
+      });
+      p.replaceWith(grid);
+    });
+  }
+
   function enhance(container) {
+    figures(container);
     const used = new Set();
     container.querySelectorAll('h2, h3').forEach((h) => {
       let id = slugify(h.textContent);
