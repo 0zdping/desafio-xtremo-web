@@ -1,4 +1,4 @@
-// POST /api/launcher/vincular/confirmar: SOLO el proxy (petición firmada con DX_SERVIDOR_SECRETO).
+// POST /api/launcher/vincular/confirmar: SOLO el proxy (petición firmada con su clave Ed25519).
 // Lo llama cuando alguien ya autenticado en el juego (Mojang o /login) escribe /vincular <código>.
 import { withQuotaHandling, jsonResponse } from '../../../../backend/lib/http.js';
 import { d1First, d1Run } from '../../../../backend/lib/db.js';

@@ -4,7 +4,8 @@
  *  Secretos (variables de Cloudflare Pages, tipo "secret"):
  *   - DX_BILLETE_CLAVE: clave privada Ed25519 (PKCS8 en base64) que firma los billetes.
  *     El proxy solo tiene la pública: no puede fabricar billetes.
- *   - DX_SERVIDOR_SECRETO: secreto compartido con el proxy para /vincular.
+ *   - DX_SERVIDOR_PUBLICA: clave pública Ed25519 del proxy (SPKI en base64) para /vincular.
+ *     La privada la genera el proxy y no sale del portátil.
  */
 import { d1First, d1Run } from './db.js';
 
@@ -37,13 +38,6 @@ export async function sha256Hex(texto) {
   return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-function iguales(a, b) {
-  if (a.length !== b.length) return false;
-  let d = 0;
-  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return d === 0;
-}
-
 /** Usuario dueño del token "Authorization: Bearer ..." del launcher, o null. */
 export async function usuarioLauncher(request, env) {
   const m = /^Bearer ([A-Za-z0-9_-]{40,100})$/.exec(request.headers.get('authorization') || '');
@@ -64,18 +58,23 @@ export async function esStaff(env, userId) {
   return Boolean(fila);
 }
 
-/** Petición firmada por el proxy: X-DX-Fecha (segundos) y X-DX-Firma = HMAC-SHA256(fecha + "\n" + cuerpo). */
+/** Petición firmada por el proxy: X-DX-Fecha (segundos) y X-DX-Firma = Ed25519(fecha + "\n" + cuerpo) en base64. */
 export async function firmaServidorValida(request, env, cuerpo) {
-  const secreto = env.DX_SERVIDOR_SECRETO;
-  if (!secreto) return false;
+  // Clave pública Ed25519 del proxy (SPKI en base64). La privada solo existe en el portátil:
+  // ningún secreto compartido viaja entre la web y el servidor.
+  const publica = env.DX_SERVIDOR_PUBLICA;
+  if (!publica) return false;
   const fecha = request.headers.get('x-dx-fecha') || '';
-  const firma = (request.headers.get('x-dx-firma') || '').toLowerCase();
   const t = Number(fecha);
   if (!Number.isInteger(t) || Math.abs(Date.now() / 1000 - t) > 60) return false;
-  const k = await crypto.subtle.importKey('raw', enc.encode(secreto), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', k, enc.encode(`${fecha}\n${cuerpo}`)));
-  const hex = [...mac].map((b) => b.toString(16).padStart(2, '0')).join('');
-  return iguales(hex, firma);
+  try {
+    const der = Uint8Array.from(atob(publica), (c) => c.charCodeAt(0));
+    const firma = Uint8Array.from(atob(request.headers.get('x-dx-firma') || ''), (c) => c.charCodeAt(0));
+    const k = await crypto.subtle.importKey('spki', der, { name: 'Ed25519' }, false, ['verify']);
+    return await crypto.subtle.verify({ name: 'Ed25519' }, k, firma, enc.encode(`${fecha}\n${cuerpo}`));
+  } catch {
+    return false;
+  }
 }
 
 function uuidBytes(uuid) {
