@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es" class="no-js">
+<head>
+<title>Jugadores · Desafio Xtremo</title>
+<meta name="description" content="Perfiles y ranking de jugadores de Desafío Xtremo.">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#030b0a">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="stylesheet" href="/css/content.css">
+<link rel="canonical" href="https://desafioxtremo.site/jugador">
+<style>
+.jg-buscar{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;max-width:520px}
+.jg-buscar input{flex:1;min-width:180px;background:var(--card-bg);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:12px 14px;color:var(--text);font:inherit}
+.jg-ficha{display:grid;grid-template-columns:220px minmax(0,1fr);gap:40px;align-items:center;margin-top:36px}
+.jg-skin{border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--card-bg);padding:18px;display:flex;justify-content:center}
+.jg-skin img{width:160px;height:auto;image-rendering:pixelated}
+.jg-nombre{font-family:var(--f-display);font-weight:800;font-size:clamp(2rem,5vw,3.2rem);margin:0}
+.jg-estado{font-family:var(--f-pixel);font-size:.75rem;letter-spacing:.1em;color:var(--teal);text-transform:uppercase;margin:6px 0 0}
+.jg-estado.off{color:var(--text-dim)}
+.jg-datos{list-style:none;padding:0;margin:22px 0 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.jg-datos li{border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;background:var(--card-bg)}
+.jg-datos small{display:block;color:var(--text-dim);font-size:.78rem;margin-bottom:4px}
+.jg-datos b{font-size:1.05rem}
+.jg-vacio{margin-top:30px;color:var(--text-soft)}
+.jg-ranking{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:8px;max-width:640px}
+.jg-ranking li a{display:grid;grid-template-columns:40px 32px 1fr auto;gap:12px;align-items:center;border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 14px;background:var(--card-bg);color:inherit;text-decoration:none}
+.jg-ranking li a:hover{border-color:var(--border-strong)}
+.jg-ranking .p{font-family:var(--f-pixel);color:var(--teal)}
+.jg-ranking img{width:32px;height:32px;image-rendering:pixelated;border-radius:4px}
+.jg-ranking .t{font-family:var(--f-mono);font-size:.88rem;color:var(--text-soft)}
+.jg-sec{padding:0 0 96px}
+@media (max-width:760px){.jg-ficha{grid-template-columns:1fr}.jg-datos{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<div class="backdrop" aria-hidden="true"></div>
+<canvas id="dust" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="site-nav">
+  <div class="container">
+    <a href="/" class="nav-logo" aria-label="Desafio Xtremo, inicio"><img src="/assets/wordmark.png" alt="Desafio Xtremo" width="148" height="20"></a>
+    <ul class="nav-links">
+      <li><a href="/">Inicio</a></li>
+      <li><a href="/#recursos">El juego</a></li>
+      <li><a href="/wiki.html">Wiki</a></li>
+      <li><a href="/anuncios.html">Anuncios</a></li>
+      <li><a href="/launcher">Launcher</a></li>
+      <li><a href="/#equipo">Equipo</a></li>
+    </ul>
+    <div class="nav-right">
+      <div id="account-slot"></div>
+      <a href="/invite" target="_blank" rel="noopener" class="btn btn-discord btn-sm nav-cta">Discord</a>
+      <button class="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<div class="mobile-menu" id="mobile-menu">
+  <nav aria-label="Menú móvil">
+    <a href="/"><small>01</small>Inicio</a>
+    <a href="/#recursos"><small>02</small>El juego</a>
+    <a href="/wiki.html"><small>03</small>Wiki</a>
+    <a href="/anuncios.html"><small>04</small>Anuncios</a>
+    <a href="/#equipo"><small>05</small>Equipo</a>
+    <a href="/launcher"><small>06</small>Launcher</a>
+    <a href="/invite" target="_blank" rel="noopener"><small>07</small>Discord</a>
+  </nav>
+  <div class="mobile-menu-account" id="mobile-account"></div>
+</div>
+
+<main id="main">
+  <section class="page-head">
+    <div class="container">
+      <p class="eyebrow">Jugadores</p>
+      <h1 id="jg-titulo">Busca a un jugador</h1>
+      <p id="jg-intro">Su tiempo de juego en Desafío Xtremo, su clan y cuándo se conectó por última vez.</p>
+      <form class="jg-buscar" id="jg-form" role="search">
+        <label class="sr-only" for="jg-nombre">Nombre de Minecraft</label>
+        <input id="jg-nombre" name="n" placeholder="Nombre de Minecraft" maxlength="16" autocomplete="off" spellcheck="false" pattern="[A-Za-z0-9_]{3,16}" required>
+        <button class="btn btn-primary" type="submit">Buscar</button>
+      </form>
+      <div id="jg-resultado" aria-live="polite"></div>
+    </div>
+  </section>
+  <section class="section jg-sec">
+    <div class="container">
+      <p class="eyebrow">Ranking</p>
+      <h2>Quién más ha jugado</h2>
+      <ol class="jg-ranking" id="jg-ranking"><li class="jg-vacio">Cargando…</li></ol>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <img src="/assets/wordmark.png" alt="Desafio Xtremo" width="163" height="22" loading="lazy">
+        <p>Un evento de Minecraft por equipos, hecho por y para jugadores. Proyecto independiente.</p>
+      </div>
+      <div class="footer-col">
+        <h3>Explorar</h3>
+        <ul><li><a href="/#recursos">El juego</a></li><li><a href="/wiki.html">Wiki</a></li><li><a href="/anuncios.html">Anuncios</a></li><li><a href="/#equipo">Equipo</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h3>Comunidad</h3>
+        <ul><li><a href="/invite" target="_blank" rel="noopener">Discord</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h3>Servidor</h3>
+        <div class="server-ip"><span class="status-dot"></span><div><p class="server-ip-label">IP del servidor</p><p class="server-ip-value">Próximamente</p></div></div>
+      </div>
+    </div>
+    <p class="footer-giant" aria-hidden="true">DESAFIO XTREMO</p>
+    <div class="footer-bottom">
+      <p>© 2026 Desafio Xtremo. No es un producto oficial de Minecraft. No está aprobado por Mojang ni Microsoft, ni asociado con ellos.</p>
+      <p>Hecho a mano por el equipo.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/site.js"></script>
+<script src="/js/motion.js"></script>
+<script src="/js/jugador.js"></script>
+</body>
+</html>
