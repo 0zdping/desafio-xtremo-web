@@ -8,9 +8,15 @@ import { leerJson } from '../../../backend/lib/launcherHttp.js';
 
 export const onRequestGet = withQuotaHandling(async (context) => {
   return cachedPublicJson(context, context.request.url, 60, async () => {
-    const filas = await d1Select(context.env, `SELECT clave, valor, updated_at FROM servidor_estado WHERE clave IN ('desafio')`);
+    const filas = await d1Select(context.env, `SELECT clave, valor, updated_at FROM servidor_estado WHERE clave IN ('desafio', 'acceso', 'previsto')`);
+    const v = (k) => (filas.find((f) => f.clave === k) || {}).valor;
     const d = filas.find((f) => f.clave === 'desafio');
-    return { desafio: d ? d.valor : 'desconocido', actualizado: d ? d.updated_at : null };
+    // acceso: 'staff' (antes del lanzamiento, solo el equipo puede jugar desde el launcher) o 'todos'.
+    // previsto: texto de la fecha prevista ('' = incógnita). Se cambian en la tabla servidor_estado.
+    return {
+      desafio: d ? d.valor : 'desconocido', actualizado: d ? d.updated_at : null,
+      acceso: v('acceso') === 'todos' ? 'todos' : 'staff', previsto: v('previsto') || '',
+    };
   });
 });
 

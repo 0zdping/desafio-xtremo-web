@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="es" class="no-js">
 <head>
-<title>Conectar el launcher · Desafio Xtremo</title>
-<meta name="robots" content="noindex">
+<title>Launcher · Desafio Xtremo</title>
+<meta name="description" content="Descarga el launcher de Desafío Xtremo: pulsa JUGAR y entra.">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#030b0a">
@@ -15,7 +15,25 @@
 <link rel="stylesheet" href="/css/tokens.css">
 <link rel="stylesheet" href="/css/site.css">
 <link rel="stylesheet" href="/css/content.css">
-<style>.lz-acciones{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}.lz-nota{margin-top:28px;font-size:.9rem;opacity:.7}</style>
+<style>
+.lz-acciones{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:28px}
+.lz-nota{margin-top:22px;font-size:.88rem;opacity:.7;max-width:60ch}
+.lz-ver{font-family:var(--f-mono);font-size:.85rem;opacity:.75}
+.lz-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:48px;align-items:center}
+.lz-previsto{border:1px solid var(--border-strong);border-radius:var(--radius-lg);padding:28px;background:var(--card-bg);text-align:center}
+.lz-chip{font-family:var(--f-pixel);font-size:.72rem;letter-spacing:.12em;color:var(--teal);text-transform:uppercase}
+.lz-prev-t{margin:18px 0 4px;color:var(--text-soft)}
+.lz-prev-f{margin:0;font-family:var(--f-display);font-weight:800;font-size:clamp(2.6rem,6vw,4rem);background:var(--accent-gradient);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lz-prev-s{margin:10px 0 0;font-size:.9rem;color:var(--text-dim)}
+.lz-lista{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;counter-reset:p}
+.lz-lista li{counter-increment:p;border:1px solid var(--border);border-radius:var(--radius-md);padding:22px;background:var(--card-bg);display:flex;flex-direction:column;gap:8px}
+.lz-lista li::before{content:counter(p);font-family:var(--f-pixel);color:var(--teal)}
+.lz-lista span{color:var(--text-soft);font-size:.95rem}
+.lz-pasos{padding:0 0 96px}
+.lz-extras{list-style:none;padding:0;margin:28px 0 0;display:flex;flex-wrap:wrap;gap:10px}
+.lz-extras li{border:1px solid var(--border);border-radius:var(--radius-pill);padding:8px 14px;font-size:.88rem;color:var(--text-soft)}
+@media (max-width:860px){.lz-grid,.lz-lista{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 <a class="skip-link" href="#main">Saltar al contenido</a>
@@ -31,6 +49,7 @@
       <li><a href="/#recursos">El juego</a></li>
       <li><a href="/wiki.html">Wiki</a></li>
       <li><a href="/anuncios.html">Anuncios</a></li>
+      <li><a href="/launcher">Launcher</a></li>
       <li><a href="/#equipo">Equipo</a></li>
     </ul>
     <div class="nav-right">
@@ -47,19 +66,57 @@
     <a href="/wiki.html"><small>03</small>Wiki</a>
     <a href="/anuncios.html"><small>04</small>Anuncios</a>
     <a href="/#equipo"><small>05</small>Equipo</a>
-    <a href="/invite" target="_blank" rel="noopener"><small>06</small>Discord</a>
+    <a href="/launcher"><small>06</small>Launcher</a>
+    <a href="/invite" target="_blank" rel="noopener"><small>07</small>Discord</a>
   </nav>
   <div class="mobile-menu-account" id="mobile-account"></div>
 </div>
 
 <main id="main">
-  <section class="page-head">
+  <section class="page-head" id="lz-conectar" hidden>
     <div class="container">
       <p class="eyebrow">Launcher</p>
       <h1 id="lz-titulo">Conectar el launcher</h1>
       <p id="lz-texto">Comprobando tu sesión…</p>
       <p id="lz-acciones" class="lz-acciones" hidden></p>
       <p id="lz-nota" class="lz-nota">Solo conecta el launcher si acabas de pulsar Conectar en él. Nunca pidas ni compartas este enlace.</p>
+    </div>
+  </section>
+
+  <section class="page-head lz-descarga" id="lz-descarga">
+    <div class="container lz-grid">
+      <div>
+        <p class="eyebrow" data-reveal="up">Launcher oficial · Windows</p>
+        <h1 data-split>Pulsa JUGAR. Ya estás dentro.</h1>
+        <p data-reveal="up" data-delay="0.1">El launcher de Desafío Xtremo instala el juego con todo lo necesario, lo mantiene al día y te mete en el servidor. Sin instalar mods, sin contraseñas, sin pasos raros.</p>
+        <p class="lz-acciones" data-reveal="up" data-delay="0.2">
+          <a class="btn btn-primary" id="lz-boton" href="/api/launcher/version?descargar">Descargar para Windows</a>
+          <span class="lz-ver" id="lz-ver"></span>
+        </p>
+        <p class="lz-nota">Windows puede avisar de que es de un "editor desconocido": pulsa <b>Más información</b> y después <b>Ejecutar de todas formas</b>.</p>
+      </div>
+      <aside class="lz-previsto" data-reveal="up" data-delay="0.15">
+        <span class="lz-chip">Desafío Xtremo 2</span>
+        <p class="lz-prev-t">Previsto para</p>
+        <p class="lz-prev-f" id="lz-previsto">¿?</p>
+        <p class="lz-prev-s">El launcher ya está disponible. Las puertas del Desafío, todavía no.</p>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section lz-pasos" id="lz-pasos">
+    <div class="container">
+      <ol class="lz-lista">
+        <li><b>Instala y abre</b><span>Un instalador de un clic. Java, Minecraft 1.21.11, los mods de rendimiento y nuestro paquete de recursos vienen incluidos.</span></li>
+        <li><b>Elige cómo juegas</b><span><b>Tengo Minecraft</b>: tu cuenta de Microsoft, con tu nombre y tu skin. <b>No tengo Minecraft</b>: eliges un nombre y el launcher inicia sesión por ti.</span></li>
+        <li><b>Pulsa JUGAR</b><span>Entras directamente al servidor, y queda guardado en tu lista de servidores.</span></li>
+      </ol>
+      <ul class="lz-extras">
+        <li>Se actualiza solo, con actualizaciones firmadas.</li>
+        <li>Anuncios del Desafío y estado del servidor en directo.</li>
+        <li>Te avisa en el escritorio cuando se abre el Desafío.</li>
+        <li>Skin propia aunque no tengas Minecraft.</li>
+      </ul>
     </div>
   </section>
 </main>

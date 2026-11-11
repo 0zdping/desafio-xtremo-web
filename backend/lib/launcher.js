@@ -59,10 +59,10 @@ export async function esStaff(env, userId) {
 }
 
 /** Petición firmada por el proxy: X-DX-Fecha (segundos) y X-DX-Firma = Ed25519(fecha + "\n" + cuerpo) en base64. */
-export async function firmaServidorValida(request, env, cuerpo) {
-  // Clave pública Ed25519 del proxy (SPKI en base64). La privada solo existe en el portátil:
-  // ningún secreto compartido viaja entre la web y el servidor.
-  const publica = env.DX_SERVIDOR_PUBLICA;
+export async function firmaServidorValida(request, env, cuerpo, clave = env.DX_SERVIDOR_PUBLICA) {
+  // Clave pública Ed25519 del plugin que firma (SPKI en base64): DX Login (DX_SERVIDOR_PUBLICA)
+  // o dx-staff (DX_STAFF_PUBLICA). Las privadas solo existen en el portátil.
+  const publica = clave;
   if (!publica) return false;
   const fecha = request.headers.get('x-dx-fecha') || '';
   const t = Number(fecha);

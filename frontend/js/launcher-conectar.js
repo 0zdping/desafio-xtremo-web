@@ -19,6 +19,21 @@
     acciones.hidden = !botones || !botones.length;
   }
 
+  // Sin código: página de descarga. Con código: conectar el launcher a la cuenta.
+  if (!codigo) {
+    fetch('/api/launcher/version').then((r) => (r.ok ? r.json() : null)).then((v) => {
+      if (!v) return;
+      const mb = v.tamano ? ` · ${(v.tamano / 1048576).toFixed(0)} MB` : '';
+      document.getElementById('lz-ver').textContent = `Versión ${v.version}${mb}`;
+    }).catch(() => {});
+    fetch('/api/launcher/servidor').then((r) => (r.ok ? r.json() : null)).then((d) => {
+      if (d && d.previsto) document.getElementById('lz-previsto').textContent = d.previsto;
+    }).catch(() => {});
+    return;
+  }
+  document.getElementById('lz-descarga').hidden = true;
+  document.getElementById('lz-pasos').hidden = true;
+  document.getElementById('lz-conectar').hidden = false;
   if (!/^[A-Za-z0-9_-]{32}$/.test(codigo)) {
     mostrar('Enlace no válido', 'Abre este enlace desde el botón Conectar del launcher.');
     return;
