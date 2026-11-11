@@ -10,7 +10,7 @@ export const onRequestGet = withQuotaHandling(async ({ request, env }) => {
   let info;
   try {
     const sobre = JSON.parse(await obj.text());
-    info = JSON.parse(atob(sobre.datos));
+    info = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(sobre.datos), (c) => c.charCodeAt(0))));
   } catch {
     return jsonResponse({ error: 'Versión publicada ilegible.' }, 500);
   }
