@@ -1,0 +1,54 @@
+/* /launcher?c=<código>: el jugador confirma que conecta el launcher a su cuenta. */
+(function () {
+  const titulo = document.getElementById('lz-titulo');
+  const texto = document.getElementById('lz-texto');
+  const acciones = document.getElementById('lz-acciones');
+  const codigo = new URLSearchParams(location.search).get('c') || '';
+
+  function boton(etiqueta, clase, alPulsar, href) {
+    const b = document.createElement(href ? 'a' : 'button');
+    b.className = 'btn ' + clase;
+    b.textContent = etiqueta;
+    if (href) b.href = href; else { b.type = 'button'; b.addEventListener('click', alPulsar); }
+    return b;
+  }
+  function mostrar(t, p, botones) {
+    titulo.textContent = t;
+    texto.textContent = p;
+    acciones.replaceChildren(...(botones || []));
+    acciones.hidden = !botones || !botones.length;
+  }
+
+  if (!/^[A-Za-z0-9_-]{32}$/.test(codigo)) {
+    mostrar('Enlace no válido', 'Abre este enlace desde el botón Conectar del launcher.');
+    return;
+  }
+
+  window.DX.me.then(({ user, csrfToken }) => {
+    if (!user) {
+      const vuelta = encodeURIComponent('/launcher?c=' + codigo);
+      mostrar('Conectar el launcher', 'Primero inicia sesión con tu cuenta de Discord.', [
+        boton('Iniciar sesión con Discord', 'btn-discord', null, '/api/auth/login?return_to=' + vuelta),
+      ]);
+      return;
+    }
+    mostrar('Conectar el launcher', `Vas a conectar el launcher de Desafío Xtremo a tu cuenta ${user.username}.`, [
+      boton('Conectar', 'btn-primary', async (e) => {
+        e.currentTarget.disabled = true;
+        try {
+          const r = await fetch('/api/launcher/conectar/confirmar', {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken || '' },
+            body: JSON.stringify({ codigo }),
+          });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok) { mostrar('No se pudo conectar', d.error || 'Inténtalo de nuevo desde el launcher.'); return; }
+          mostrar('¡Listo!', 'El launcher ya está conectado a tu cuenta. Puedes cerrar esta pestaña y volver a él.');
+        } catch {
+          mostrar('No se pudo conectar', 'Revisa tu conexión e inténtalo de nuevo.');
+        }
+      }),
+      boton('Cancelar', 'btn-ghost', null, '/'),
+    ]);
+  });
+})();
