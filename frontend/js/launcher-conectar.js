@@ -36,6 +36,8 @@
       if (enMac) {
         const principal = mac.arm64 || mac.x64;
         boton.href = principal.descarga;
+        const abajo = document.getElementById('lz-boton2');
+        if (abajo) abajo.href = principal.descarga;
         boton.textContent = mac.arm64 ? 'Descargar para Mac (Apple Silicon)' : 'Descargar para Mac (Intel)';
         if (mac.arm64 && mac.x64) enlaces.push(enlace('Mac con Intel', mac.x64.descarga, 'btn btn-ghost'));
         enlaces.push(enlace('Windows', v.descarga, 'btn btn-ghost'));

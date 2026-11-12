@@ -17,22 +17,53 @@
 <link rel="stylesheet" href="/css/content.css">
 <style>
 .lz-acciones{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:28px}
-.lz-nota{margin-top:22px;font-size:.88rem;opacity:.7;max-width:60ch}
-.lz-ver{font-family:var(--f-mono);font-size:.85rem;opacity:.75}
-.lz-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:48px;align-items:center}
-.lz-previsto{border:1px solid var(--border-strong);border-radius:var(--radius-lg);padding:28px;background:var(--card-bg);text-align:center}
-.lz-chip{font-family:var(--f-pixel);font-size:.72rem;letter-spacing:.12em;color:var(--teal);text-transform:uppercase}
-.lz-prev-t{margin:18px 0 4px;color:var(--text-soft)}
-.lz-prev-f{margin:0;font-family:var(--f-display);font-weight:800;font-size:clamp(2.6rem,6vw,4rem);background:var(--accent-gradient);-webkit-background-clip:text;background-clip:text;color:transparent}
-.lz-prev-s{margin:10px 0 0;font-size:.9rem;color:var(--text-dim)}
+.lz-otros{margin-top:12px}
+.lz-nota{margin-top:18px;font-size:.86rem;color:var(--text-dim);max-width:56ch;line-height:1.55}
+.lz-ver{font-family:var(--f-mono);font-size:.82rem;color:var(--text-dim)}
+.btn-lg{padding:15px 26px;font-size:1rem}
+.lz-hero{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(32px,5vw,72px);align-items:center}
+.lz-descarga h1{font-size:clamp(40px,5.2vw,74px);line-height:1;margin:16px 0 20px}
+.lz-grad{background:var(--accent-gradient);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lz-puertas{display:flex;align-items:center;gap:10px;margin-top:26px;font-size:.92rem;color:var(--text-soft)}
+.lz-puertas b{color:var(--text)}
+.lz-shot{perspective:1600px}
+.lz-ventana{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--border-strong);box-shadow:0 40px 90px rgba(0,0,0,.55),0 0 0 1px rgba(164,245,201,.06),0 0 120px rgba(55,214,180,.14);transform:rotateY(-7deg) rotateX(2deg);transition:transform .6s var(--ease, ease)}
+.lz-ventana:hover{transform:none}
+.lz-ventana img{display:block;width:100%;height:auto}
+.lz-h2{font-size:clamp(28px,3.6vw,44px);letter-spacing:-.03em;line-height:1.05;margin:12px 0 36px}
+.lz-trae,.lz-asi,.lz-empezar,.lz-faq{padding:64px 0}
+.lz-cartas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.lz-carta{border:1px solid var(--border);border-radius:var(--radius-lg);padding:26px;background:var(--card-bg);transition:border-color .25s,transform .25s}
+.lz-carta:hover{border-color:var(--accent-border);transform:translateY(-3px)}
+.lz-carta svg{width:34px;height:34px;color:var(--teal);margin-bottom:16px;shape-rendering:crispEdges}
+.lz-carta h3{margin:0 0 8px;font-size:1.08rem}
+.lz-carta p{margin:0;color:var(--text-soft);font-size:.95rem;line-height:1.55}
+.lz-capturas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.lz-capturas figure{margin:0;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);background:var(--card-bg)}
+.lz-capturas img{display:block;width:100%;height:auto;transition:transform .5s}
+.lz-capturas figure:hover img{transform:scale(1.03)}
+.lz-capturas figcaption{padding:12px 16px;font-size:.9rem;font-weight:600;color:var(--text-soft);border-top:1px solid var(--border)}
 .lz-lista{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;counter-reset:p}
-.lz-lista li{counter-increment:p;border:1px solid var(--border);border-radius:var(--radius-md);padding:22px;background:var(--card-bg);display:flex;flex-direction:column;gap:8px}
-.lz-lista li::before{content:counter(p);font-family:var(--f-pixel);color:var(--teal)}
-.lz-lista span{color:var(--text-soft);font-size:.95rem}
-.lz-pasos{padding:0 0 96px}
-.lz-extras{list-style:none;padding:0;margin:28px 0 0;display:flex;flex-wrap:wrap;gap:10px}
-.lz-extras li{border:1px solid var(--border);border-radius:var(--radius-pill);padding:8px 14px;font-size:.88rem;color:var(--text-soft)}
-@media (max-width:860px){.lz-grid,.lz-lista{grid-template-columns:1fr}}
+.lz-lista li{counter-increment:p;border:1px solid var(--border);border-radius:var(--radius-md);padding:24px;background:var(--card-bg);display:flex;flex-direction:column;gap:8px}
+.lz-lista li::before{content:counter(p);font-family:var(--f-pixel);font-size:1.4rem;color:var(--teal)}
+.lz-lista b{font-size:1.05rem}
+.lz-lista span{color:var(--text-soft);font-size:.95rem;line-height:1.5}
+.lz-faq-in{display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);gap:48px;align-items:start}
+.lz-preguntas{display:flex;flex-direction:column;gap:10px}
+.lz-preguntas details{border:1px solid var(--border);border-radius:var(--radius-md);background:var(--card-bg);transition:border-color .2s}
+.lz-preguntas details[open]{border-color:var(--accent-border)}
+.lz-preguntas summary{cursor:pointer;list-style:none;padding:18px 22px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.lz-preguntas summary::-webkit-details-marker{display:none}
+.lz-preguntas summary::after{content:"+";font-family:var(--f-mono);color:var(--teal);font-size:1.2rem;transition:transform .2s}
+.lz-preguntas details[open] summary::after{transform:rotate(45deg)}
+.lz-preguntas details p{margin:0;padding:0 22px 20px;color:var(--text-soft);line-height:1.6}
+.lz-final{padding:40px 0 110px}
+.lz-final-in{text-align:center;border:1px solid var(--accent-border);border-radius:var(--radius-lg);padding:clamp(36px,6vw,64px) 24px;background:radial-gradient(120% 140% at 50% 0%,rgba(55,214,180,.14),transparent 60%),var(--card-bg)}
+.lz-final-in h2{font-size:clamp(28px,3.6vw,46px);letter-spacing:-.03em;margin:0 0 10px}
+.lz-final-in p{color:var(--text-soft);margin:0 auto 26px;max-width:46ch}
+@media (max-width:980px){.lz-hero,.lz-faq-in{grid-template-columns:1fr}.lz-ventana{transform:none}.lz-cartas,.lz-capturas,.lz-lista{grid-template-columns:1fr 1fr}}
+@media (max-width:620px){.lz-cartas,.lz-capturas,.lz-lista{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.lz-ventana,.lz-carta,.lz-capturas img{transition:none;transform:none}}
 </style>
 </head>
 <body>
@@ -84,43 +115,117 @@
   </section>
 
   <section class="page-head lz-descarga" id="lz-descarga">
-    <div class="container lz-grid">
-      <div>
+    <div class="container lz-hero">
+      <div class="lz-hero-txt">
         <p class="eyebrow" data-reveal="up">Launcher oficial · Windows y Mac</p>
-        <h1 data-split>Pulsa JUGAR. Ya estás dentro.</h1>
-        <p data-reveal="up" data-delay="0.1">El launcher de Desafío Xtremo instala el juego con todo lo necesario, lo mantiene al día y te mete en el servidor. Sin instalar mods, sin contraseñas, sin pasos raros.</p>
-        <p class="lz-acciones" data-reveal="up" data-delay="0.2">
-          <a class="btn btn-primary" id="lz-boton" href="/api/launcher/version?descargar">Descargar para Windows</a>
+        <h1>Pulsa JUGAR.<br><span class="lz-grad">Ya estás dentro.</span></h1>
+        <p data-reveal="up" data-delay="0.1">El launcher de Desafío Xtremo instala el juego con todo lo necesario, lo mantiene al día y te lleva directo al servidor. Sin instalar mods, sin buscar versiones, sin pasos raros.</p>
+        <div class="lz-acciones" data-reveal="up" data-delay="0.2">
+          <a class="btn btn-primary btn-lg" id="lz-boton" href="/api/launcher/version?descargar">Descargar para Windows</a>
           <span class="lz-ver" id="lz-ver"></span>
-        </p>
+        </div>
         <p class="lz-acciones lz-otros" id="lz-otros" hidden></p>
-        <p class="lz-nota" id="lz-nota-win">Windows puede avisar de que es de un "editor desconocido": pulsa <b>Más información</b> y después <b>Ejecutar de todas formas</b>.</p>
-        <p class="lz-nota" id="lz-nota-mac" hidden>En Mac, abre el .dmg y arrastra Desafío Xtremo a Aplicaciones. La primera vez macOS dirá que no puede comprobar al desarrollador: ve a <b>Ajustes del Sistema &gt; Privacidad y seguridad</b> y pulsa <b>Abrir igualmente</b>.</p>
+        <p class="lz-nota" id="lz-nota-win">Windows puede avisar de que es de un «editor desconocido»: pulsa <b>Más información</b> y después <b>Ejecutar de todas formas</b>.</p>
+        <p class="lz-nota" id="lz-nota-mac" hidden>Abre el archivo y arrastra Desafío Xtremo a Aplicaciones. La primera vez, macOS te pedirá permiso: ve a <b>Ajustes del Sistema &gt; Privacidad y seguridad</b> y pulsa <b>Abrir igualmente</b>.</p>
+        <p class="lz-puertas"><span class="status-dot"></span>Las puertas del Desafío abren: <b id="lz-previsto">muy pronto</b></p>
       </div>
-      <aside class="lz-previsto" data-reveal="up" data-delay="0.15">
-        <span class="lz-chip">Desafío Xtremo 2</span>
-        <p class="lz-prev-t">Previsto para</p>
-        <p class="lz-prev-f" id="lz-previsto">¿?</p>
-        <p class="lz-prev-s">El launcher ya está disponible. Las puertas del Desafío, todavía no.</p>
-      </aside>
+      <div class="lz-shot" data-reveal="up" data-delay="0.15">
+        <div class="lz-ventana">
+          <img src="/assets/launcher/inicio.jpg" alt="El launcher de Desafío Xtremo: tu perfil, tu skin en 3D, las novedades y quién está jugando" width="1440" height="900" fetchpriority="high">
+        </div>
+      </div>
     </div>
   </section>
 
-  <section class="section lz-pasos" id="lz-pasos">
-    <div class="container">
-      <ol class="lz-lista">
-        <li><b>Instala y abre</b><span>Un instalador de un clic. Java, Minecraft 1.21.11, los mods de rendimiento y nuestro paquete de recursos vienen incluidos.</span></li>
-        <li><b>Elige cómo juegas</b><span><b>Tengo Minecraft</b>: tu cuenta de Microsoft, con tu nombre y tu skin. <b>No tengo Minecraft</b>: eliges un nombre y el launcher inicia sesión por ti.</span></li>
-        <li><b>Pulsa JUGAR</b><span>Entras directamente al servidor, y queda guardado en tu lista de servidores.</span></li>
-      </ol>
-      <ul class="lz-extras">
-        <li>Se actualiza solo, con actualizaciones firmadas.</li>
-        <li>Anuncios del Desafío y estado del servidor en directo.</li>
-        <li>Te avisa en el escritorio cuando se abre el Desafío.</li>
-        <li>Skin propia aunque no tengas Minecraft.</li>
-      </ul>
-    </div>
-  </section>
+  <div id="lz-pasos">
+    <section class="section lz-trae">
+      <div class="container">
+        <p class="eyebrow" data-reveal="up">Todo lo que trae</p>
+        <h2 class="lz-h2" data-reveal="up">Más que un botón de jugar</h2>
+        <div class="lz-cartas">
+          <article class="lz-carta" data-reveal="up">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 2h6v2h2v8h-2v2H9v-2H7V4h2V2zm0 2v8h6V4H9zM4 10h2v2h2v2h8v-2h2v-2h2v2h-2v2h-2v2h-3v2h3v2H8v-2h3v-2H8v-2H6v-2H4v-2z"/></svg>
+            <h3>Chat de voz de serie</h3>
+            <p>Habla con quien tengas cerca. Con un walkie-talkie en la mano, tu equipo te oye aunque esté lejos.</p>
+          </article>
+          <article class="lz-carta" data-reveal="up" data-delay="0.05">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 2h16v2h2v8h-2v4h-2v2h-2v2h-2v2h-4v-2H8v-2H6v-2H4v-4H2V4h2zm2 2v8h2v4h2v2h4v-2h2v-4h2V4zm4 3h4v2h2v2h-2v2h-4v-2H8V9h2z"/></svg>
+            <h3>Juego limpio</h3>
+            <p>Solo abre el juego con lo que trae: nada de rayos X, mods de trampas ni texturas que delaten menas.</p>
+          </article>
+          <article class="lz-carta" data-reveal="up" data-delay="0.1">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 4h4v4H5V4zm10 0h4v4h-4V4zM3 10h8v8H9v-6H5v6H3v-8zm10 0h8v8h-2v-6h-4v6h-2v-8z"/></svg>
+            <h3>Con o sin Minecraft</h3>
+            <p>Entra con tu cuenta de Microsoft o, si no tienes Minecraft, elige un nombre y una skin y a jugar.</p>
+          </article>
+          <article class="lz-carta" data-reveal="up">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13 1h4v2h-2v4h-2v4h6v2h-2v2h-2v2h-2v2h-2v2H9v2H7v-2h2v-4h2v-4H5v-2h2V9h2V7h2V5h2V1z"/></svg>
+            <h3>Siempre al día</h3>
+            <p>Se actualiza solo y te avisa en el escritorio cuando abren las puertas del Desafío o hay novedades.</p>
+          </article>
+          <article class="lz-carta" data-reveal="up" data-delay="0.05">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2 4h20v16H2V4zm2 2v12h16V6H4zm2 2h8v2H6V8zm0 4h12v2H6v-2z"/></svg>
+            <h3>La comunidad, a mano</h3>
+            <p>Quién está jugando, quién lleva más horas, encuestas y reportes, sin salir del launcher.</p>
+          </article>
+          <article class="lz-carta" data-reveal="up" data-delay="0.1">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M3 8h4m0 0V6h4v2M7 8v2h4V8m0 0h10M3 16h10m0 0v-2h4v2m-4 0v2h4v-2m0 0h4"/></svg>
+            <h3>Hecho a tu ordenador</h3>
+            <p>Calidad gráfica en un clic y extras como zoom, gráficos de cine o sonido 3D. Ninguno da ventaja.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section lz-asi">
+      <div class="container">
+        <p class="eyebrow" data-reveal="up">Así se ve</p>
+        <h2 class="lz-h2" data-reveal="up">Todo en su sitio</h2>
+        <div class="lz-capturas">
+          <figure data-reveal="up"><img src="/assets/launcher/comunidad.jpg" alt="Comunidad: quién está jugando, el ranking y las encuestas" width="1440" height="900" loading="lazy"><figcaption>Comunidad</figcaption></figure>
+          <figure data-reveal="up" data-delay="0.05"><img src="/assets/launcher/voz.jpg" alt="Ajustes del chat de voz con prueba de micrófono" width="1440" height="900" loading="lazy"><figcaption>Chat de voz</figcaption></figure>
+          <figure data-reveal="up" data-delay="0.1"><img src="/assets/launcher/extras.jpg" alt="Extras: gráficos de cine, zoom, texturas conectadas y más" width="1440" height="900" loading="lazy"><figcaption>Extras</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section lz-empezar">
+      <div class="container">
+        <p class="eyebrow" data-reveal="up">Empezar</p>
+        <h2 class="lz-h2" data-reveal="up">Tres pasos y estás jugando</h2>
+        <ol class="lz-lista">
+          <li data-reveal="up"><b>Descarga e instala</b><span>Un instalador de un clic. Java, Minecraft y todo lo necesario vienen incluidos.</span></li>
+          <li data-reveal="up" data-delay="0.05"><b>Elige cómo juegas</b><span>Con tu cuenta de Microsoft, o con un nombre si no tienes Minecraft.</span></li>
+          <li data-reveal="up" data-delay="0.1"><b>Pulsa JUGAR</b><span>Entras directo al servidor. Así de fácil.</span></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section lz-faq">
+      <div class="container lz-faq-in">
+        <div>
+          <p class="eyebrow" data-reveal="up">Preguntas</p>
+          <h2 class="lz-h2" data-reveal="up">Lo que suele preguntarse</h2>
+        </div>
+        <div class="lz-preguntas">
+          <details><summary>¿Es obligatorio usar el launcher?</summary><p>No. Puedes entrar con el Minecraft de siempre. El launcher solo te lo pone más fácil: lo instala todo, trae el chat de voz y te avisa de las novedades.</p></details>
+          <details><summary>¿Necesito tener Minecraft?</summary><p>No. Si lo tienes, entras con tu cuenta de Microsoft, con tu nombre y tu skin. Si no, eliges un nombre y puedes ponerte una skin igualmente.</p></details>
+          <details><summary>¿Es seguro?</summary><p>Sí. Cada actualización va firmada por el equipo y el launcher comprueba cada archivo antes de usarlo. Windows y macOS avisan porque no pagamos un certificado de empresa, no porque haya nada raro.</p></details>
+          <details><summary>¿Funciona en Mac?</summary><p>Sí, en los Mac con Apple Silicon (M1 y posteriores) y en los Mac con Intel. La página te ofrece el que toca.</p></details>
+          <details><summary>¿Qué ordenador necesito?</summary><p>Si tu ordenador mueve Minecraft, mueve el launcher. Con la calidad «Baja» funciona en equipos modestos; para los gráficos de cine hace falta una tarjeta gráfica potente.</p></details>
+          <details><summary>¿Me dejará jugar con mis mods?</summary><p>Solo con los que trae el launcher, para que todos juguemos en igualdad. En Ajustes → Extras tienes zoom, gráficos de cine, sonido 3D y más.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="section lz-final">
+      <div class="container lz-final-in" data-reveal="up">
+        <h2>¿Listo para el Desafío?</h2>
+        <p>Descárgalo ahora y te avisamos en cuanto abran las puertas.</p>
+        <a class="btn btn-primary btn-lg" id="lz-boton2" href="/api/launcher/version?descargar">Descargar el launcher</a>
+      </div>
+    </section>
+  </div>
 </main>
 
 <footer class="site-footer">
