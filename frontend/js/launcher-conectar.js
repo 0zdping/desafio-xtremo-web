@@ -23,8 +23,30 @@
   if (!codigo) {
     fetch('/api/launcher/version').then((r) => (r.ok ? r.json() : null)).then((v) => {
       if (!v) return;
-      const mb = v.tamano ? ` · ${(v.tamano / 1048576).toFixed(0)} MB` : '';
-      document.getElementById('lz-ver').textContent = `Versión ${v.version}${mb}`;
+      const mb = (t) => (t ? ` · ${(t / 1048576).toFixed(0)} MB` : '');
+      document.getElementById('lz-ver').textContent = `Versión ${v.version}${mb(v.tamano)}`;
+      // Mac (si esta versión lo tiene): botón principal para Mac si se entra desde un Mac.
+      const mac = v.mac || {};
+      if (!mac.arm64 && !mac.x64) return;
+      const enMac = /Macintosh|Mac OS X/.test(navigator.userAgent);
+      const boton = document.getElementById('lz-boton');
+      const otros = document.getElementById('lz-otros');
+      const enlace = (texto, href, clase) => { const a = document.createElement('a'); a.className = clase; a.href = href; a.textContent = texto; return a; };
+      const enlaces = [];
+      if (enMac) {
+        const principal = mac.arm64 || mac.x64;
+        boton.href = principal.descarga;
+        boton.textContent = mac.arm64 ? 'Descargar para Mac (Apple Silicon)' : 'Descargar para Mac (Intel)';
+        if (mac.arm64 && mac.x64) enlaces.push(enlace('Mac con Intel', mac.x64.descarga, 'btn btn-ghost'));
+        enlaces.push(enlace('Windows', v.descarga, 'btn btn-ghost'));
+        document.getElementById('lz-nota-win').hidden = true;
+        document.getElementById('lz-nota-mac').hidden = false;
+      } else {
+        if (mac.arm64) enlaces.push(enlace('Mac (Apple Silicon)', mac.arm64.descarga, 'btn btn-ghost'));
+        if (mac.x64) enlaces.push(enlace('Mac (Intel)', mac.x64.descarga, 'btn btn-ghost'));
+      }
+      otros.replaceChildren(...enlaces);
+      otros.hidden = !enlaces.length;
     }).catch(() => {});
     fetch('/api/launcher/servidor').then((r) => (r.ok ? r.json() : null)).then((d) => {
       if (d && d.previsto) document.getElementById('lz-previsto').textContent = d.previsto;
