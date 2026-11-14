@@ -1,7 +1,7 @@
 /* ==========================================================================
    admin.js · staff panel (/admin.html), built on app-ui.js.
    Sections: Resumen, Anuncios, Wiki, Equipo, Sanciones, Estadísticas,
-   Uso de recursos, Rangos y permisos. Every mutation is also enforced
+   Capas del launcher (solo owners), Uso de recursos, Rangos y permisos. Every mutation is also enforced
    server-side; the permission checks here only decide what to show.
    ========================================================================== */
 (function () {
@@ -613,6 +613,86 @@
   }
 
   /* =====================================================================
+     CAPAS DEL LAUNCHER (solo owners)
+     ===================================================================== */
+  const CAPA_INFO = {
+    dev: { nombre: 'Capa del Equipo', desc: 'Morada y animada. Para el equipo de desarrollo, el staff y quien elijáis.' },
+  };
+  async function renderCapas(view, alive) {
+    const data = await api('/api/admin/capas');
+    if (!alive()) return;
+    const filas = data.capas || [];
+    app.setCount('capas', filas.length);
+    view.innerHTML = `
+      ${head('Capas del launcher', 'Capas exclusivas que se ven en el juego con el launcher. Se dan por nombre de Minecraft; solo los owners pueden darlas o quitarlas.', `<button class="btn btn-accent btn-sm" data-act="new">${icon('plus')}Dar capa</button>`)}
+      <div class="grid-2">
+        <section class="panel">
+          <h2>${esc(CAPA_INFO.dev.nombre)}</h2>
+          <p class="panel-sub">${esc(CAPA_INFO.dev.desc)} Quien la tenga la verá en la sección Capas del launcher (puede tardar unos 2 minutos).</p>
+        </section>
+      </div>
+      <div class="table-wrap"><table class="table"><thead><tr><th>Jugador</th><th>Capa</th><th class="hide-sm">Dada por</th><th class="hide-sm">Fecha</th><th class="actions"></th></tr></thead><tbody>
+      ${
+        filas.length
+          ? filas
+              .map((f) => `<tr>
+            <td><div class="cell-title"><img class="face" src="${esc(face({ mc_nick: f.nombre }, 64))}" alt="" loading="lazy"><div><b>${esc(f.nombre)}</b></div></div></td>
+            <td><span class="badge">${esc((CAPA_INFO[f.capa] || {}).nombre || f.capa)}</span></td>
+            <td class="muted hide-sm">${esc(f.dado_por || '')}</td>
+            <td class="muted hide-sm">${esc(DX.relTime(f.created_at))}</td>
+            <td class="actions"><button class="icon-btn danger" data-del="${esc(f.nombre)}" data-capa="${esc(f.capa)}" title="Quitar">${icon('trash')}</button></td></tr>`)
+              .join('')
+          : emptyRow(5, 'Nadie tiene todavía una capa exclusiva.')
+      }</tbody></table></div>`;
+    view.querySelector('tbody').addEventListener('click', async (e) => {
+      const del = e.target.closest('[data-del]');
+      if (!del) return;
+      if (!(await DX.confirm(`${del.dataset.del} dejará de llevar la ${(CAPA_INFO[del.dataset.capa] || {}).nombre || 'capa'}.`, { title: '¿Quitar la capa?', okLabel: 'Quitar' }))) return;
+      try {
+        await api(`/api/admin/capas?nombre=${encodeURIComponent(del.dataset.del)}&capa=${encodeURIComponent(del.dataset.capa)}`, { method: 'DELETE' });
+        DX.toast('Capa quitada.');
+        renderCapas(view, alive);
+      } catch (err) {
+        DX.toast(err.message, 'error');
+      }
+    });
+    view.querySelector('[data-act="new"]').addEventListener('click', () => openCapa());
+  }
+
+  function openCapa() {
+    drawer({
+      title: 'Dar capa',
+      body: `
+        <div class="field" style="flex-direction:row;align-items:flex-end;gap:14px">
+          <div style="flex:1" class="field"><label for="c-nick">Nombre de Minecraft</label><input id="c-nick" name="nombre" type="text" maxlength="16" placeholder="Steve123" autocomplete="off"><span class="field-hint">El nombre con el que entra al servidor (con o sin Minecraft comprado).</span></div>
+          <img class="face" id="c-face" style="width:64px;height:64px;border-radius:10px" src="" alt="" hidden>
+        </div>
+        <div class="field"><label for="c-capa">Capa</label><select id="c-capa" name="capa"><option value="dev">${esc(CAPA_INFO.dev.nombre)}</option></select></div>`,
+      onOpen(dr) {
+        const f = dr.form;
+        const img = f.querySelector('#c-face');
+        let t = null;
+        f.elements.nombre.addEventListener('input', () => {
+          clearTimeout(t);
+          t = setTimeout(() => {
+            const n = f.elements.nombre.value.trim();
+            img.hidden = !n;
+            if (n) img.src = `https://vzge.me/face/128/${encodeURIComponent(n)}`;
+          }, 350);
+        });
+      },
+      async onSave(dr) {
+        const f = dr.form;
+        const nombre = f.elements.nombre.value.trim();
+        if (!/^[A-Za-z0-9_]{3,16}$/.test(nombre)) throw new Error('Nombre no válido (3 a 16: letras, números y _).');
+        await api('/api/admin/capas', { method: 'POST', body: { nombre, capa: f.elements.capa.value } });
+        DX.toast(`Capa dada a ${nombre}.`);
+        app.rerender();
+      },
+    });
+  }
+
+  /* =====================================================================
      SANCIONES
      ===================================================================== */
   const SANCTION_TYPES = { ban: 'Ban', mute: 'Mute', kick: 'Kick', warn: 'Warn', other: 'Otro' };
@@ -1040,6 +1120,7 @@
             { id: 'anuncios', label: 'Anuncios', icon: 'news', render: renderAnnouncements, onSub: (s) => s === 'new' && can('announcements.manage') && openAnnouncement(null) },
             { id: 'wiki', label: 'Wiki', icon: 'book', render: renderWiki, onSub: (s) => s === 'new' && can('wiki.manage') && openWikiPage(null) },
             { id: 'equipo', label: 'Equipo', icon: 'users', render: renderTeam, onSub: (s) => s === 'new' && can('team.manage') && openMember(null) },
+            { id: 'capas', label: 'Capas del launcher', icon: 'shield', visible: myRank() === Infinity, render: renderCapas },
           ],
         },
         { title: 'Moderación', items: [{ id: 'sanciones', label: 'Sanciones', icon: 'gavel', visible: can('sanctions.access'), render: renderSanctions, onSub: (s) => s === 'new' && openSanction() }] },
