@@ -64,7 +64,48 @@
             <li><small>Primera vez</small><b>${esc(fecha(d.primeraVez))}</b></li>
           </ul>
         </div>
+      </div>
+      ${htmlCapas(d.capas)}`;
+    animarCapas();
+  }
+
+  // Capas del launcher de Desafío Xtremo (las de Mojang no salen). Cada una es una tira
+  // vertical de la cara delantera, un fotograma cada 100 ms, como en el juego.
+  const CAPAS = {
+    zdping: { titulo: 'Capa de zdping', etq: 'Única', fotogramas: 96 },
+    gabo: { titulo: 'Capa de Gabo020', etq: 'Única', fotogramas: 64 },
+    dev: { titulo: 'Capa del Equipo', etq: 'Exclusiva', fotogramas: 64 },
+    dx: { titulo: 'Capa DX', etq: 'Para todos', fotogramas: 64 },
+  };
+  const ORDEN = ['zdping', 'gabo', 'dev', 'dx'];
+  function htmlCapas(lista) {
+    const capas = ORDEN.filter((id) => Array.isArray(lista) && lista.includes(id));
+    if (!capas.length) return '';
+    return `
+      <div class="jg-capas">
+        <p class="eyebrow">Capas</p>
+        <ul>${capas.map((id) => `
+          <li class="jg-capa ${id}">
+            <span class="jg-capa-img" role="img" aria-label="${esc(CAPAS[id].titulo)}" data-n="${CAPAS[id].fotogramas}" style="background-image:url(/assets/capas/${id}.webp)"></span>
+            <b>${esc(CAPAS[id].titulo)}</b>
+            <small>${esc(CAPAS[id].etq)}</small>
+          </li>`).join('')}
+        </ul>
+        <p class="jg-capas-nota">Se equipan desde el <a href="/launcher">launcher</a>.</p>
       </div>`;
+  }
+  let relojCapas = null;
+  function animarCapas() {
+    clearInterval(relojCapas);
+    const els = [...document.querySelectorAll('.jg-capa-img')];
+    if (!els.length || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    relojCapas = setInterval(() => {
+      const t = Math.floor(Date.now() / 100);
+      for (const el of els) {
+        const n = Number(el.dataset.n);
+        el.style.backgroundPosition = `0 ${((t % n) / (n - 1)) * 100}%`;
+      }
+    }, 100);
   }
 
   async function ranking() {

@@ -17,9 +17,10 @@ const CAPAS = ['dev'];
 const NOMBRE = /^[A-Za-z0-9_]{3,16}$/;
 const soloOwners = (guard) => actorRank(guard.roles) === Infinity;
 
-async function purgar(context) {
+async function purgar(context, nombre) {
   const origin = new URL(context.request.url).origin;
-  await purgeEdgeCache(context, [`${origin}/api/launcher/capas`]);
+  // también el perfil público del jugador, que enseña sus capas
+  await purgeEdgeCache(context, [`${origin}/api/launcher/capas`, `${origin}/api/jugador/${nombre.toLowerCase()}`]);
 }
 
 export const onRequestGet = withQuotaHandling(async ({ request, env }) => {
@@ -45,7 +46,7 @@ export const onRequestPost = withQuotaHandling(async (context) => {
     `INSERT OR IGNORE INTO launcher_capas (nombre, capa, dado_por) VALUES (?, ?, ?)`,
     [nombre, capa, guard.user.username || String(guard.user.id)]
   );
-  await purgar(context);
+  await purgar(context, nombre);
   return jsonResponse({ ok: true }, 201);
 });
 
@@ -59,6 +60,6 @@ export const onRequestDelete = withQuotaHandling(async (context) => {
   const capa = String(p.get('capa') || '');
   if (!NOMBRE.test(nombre) || !CAPAS.includes(capa)) return jsonResponse({ error: 'Datos no válidos.' }, 400);
   await d1Run(env, `DELETE FROM launcher_capas WHERE nombre = ? AND capa = ?`, [nombre, capa]);
-  await purgar(context);
+  await purgar(context, nombre);
   return jsonResponse({ ok: true });
 });

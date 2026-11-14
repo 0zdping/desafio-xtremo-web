@@ -1,7 +1,8 @@
 // GET /api/jugador/<nombre>: perfil público de un jugador (web /jugador.html y launcher).
 // Solo datos públicos: nada de rangos, sanciones ni la conexión real del staff en vanish.
 import { withQuotaHandling, jsonResponse } from '../../../backend/lib/http.js';
-import { d1First } from '../../../backend/lib/db.js';
+import { d1First, d1Select } from '../../../backend/lib/db.js';
+import { capasDe } from '../../../backend/lib/capas.js';
 import { cachedPublicJson } from '../../../backend/lib/edgeCache.js';
 import { NOMBRE_MC } from '../../../backend/lib/launcher.js';
 
@@ -32,6 +33,7 @@ export const onRequestGet = withQuotaHandling(async (context) => {
       primeraVez: j.primera_vez, ultimaVez: j.ultima_vez, minutos: j.minutos, puesto: j.minutos > 0 ? j.puesto : null,
       clan: j.clan_siglas ? { siglas: j.clan_siglas, nombre: j.clan_nombre } : null,
       conectado,
+      capas: await capasDe(context.env, j.nombre, d1Select),
     };
   });
 });
