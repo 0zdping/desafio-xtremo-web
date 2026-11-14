@@ -616,7 +616,7 @@
      CAPAS DEL LAUNCHER (solo owners)
      ===================================================================== */
   const CAPA_INFO = {
-    dev: { nombre: 'Capa del Equipo', desc: 'Morada y animada. Para el equipo de desarrollo, el staff y quien elijáis.' },
+    dev: { nombre: 'Capa del Equipo', desc: 'Para el equipo de desarrollo, el staff y quien elijáis.' },
   };
   async function renderCapas(view, alive) {
     const data = await api('/api/admin/capas');
