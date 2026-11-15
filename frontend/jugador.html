@@ -19,9 +19,21 @@
 <style>
 .jg-buscar{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;max-width:520px}
 .jg-buscar input{flex:1;min-width:180px;background:var(--card-bg);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:12px 14px;color:var(--text);font:inherit}
-.jg-ficha{display:grid;grid-template-columns:220px minmax(0,1fr);gap:40px;align-items:center;margin-top:36px}
-.jg-skin{border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--card-bg);padding:18px;display:flex;justify-content:center}
+.jg-ficha{display:grid;grid-template-columns:320px minmax(0,1fr);gap:40px;align-items:center;margin-top:36px}
+.jg-skin{position:relative;border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 12px 12px;display:flex;flex-direction:column;align-items:center;gap:10px;overflow:hidden;
+  background:radial-gradient(60% 46% at 50% 40%,rgba(55,214,180,.16),transparent 70%),radial-gradient(40% 10% at 50% 82%,rgba(0,0,0,.45),transparent 70%),var(--card-bg)}
 .jg-skin img{width:160px;height:auto;image-rendering:pixelated}
+.jg-skin canvas{display:block;cursor:grab;max-width:100%}
+.jg-skin canvas:active{cursor:grabbing}
+.jg-poses{display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid var(--border)}
+.jg-poses button{all:unset;cursor:pointer;padding:5px 11px;border-radius:999px;font-size:.78rem;font-weight:600;color:var(--text-soft);transition:background .15s,color .15s}
+.jg-poses button:hover{color:var(--text)}
+.jg-poses button.on{background:var(--teal);color:#032019}
+.jg-poses button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.jg-skin-pie{font-size:.8rem;color:var(--text-dim);text-align:center;line-height:1.5}
+.jg-skin-pie b{color:var(--text)}
+.jg-descargar{color:var(--teal);text-decoration:none;font-weight:600;white-space:nowrap}
+.jg-descargar:hover{text-decoration:underline}
 .jg-nombre{font-family:var(--f-display);font-weight:800;font-size:clamp(2rem,5vw,3.2rem);margin:0}
 .jg-estado{font-family:var(--f-pixel);font-size:.75rem;letter-spacing:.1em;color:var(--teal);text-transform:uppercase;margin:6px 0 0}
 .jg-estado.off{color:var(--text-dim)}
@@ -140,6 +152,7 @@
 
 <script src="/js/site.js"></script>
 <script src="/js/motion.js"></script>
+<script src="/js/vendor/skinview3d.bundle.js"></script>
 <script src="/js/jugador.js"></script>
 </body>
 </html>

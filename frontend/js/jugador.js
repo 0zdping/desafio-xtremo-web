@@ -52,7 +52,17 @@
       : `<p class="jg-estado off">Desconectado</p>`;
     r.innerHTML = `
       <div class="jg-ficha">
-        <div class="jg-skin"><img src="https://vzge.me/full/320/${esc(d.uuid)}" alt="Skin de ${esc(d.nombre)}" width="160"></div>
+        <div class="jg-skin" id="jg-skin">
+          <canvas id="jg-3d" aria-label="Skin de ${esc(d.nombre)} en 3D"></canvas>
+          <img class="jg-skin-plana" id="jg-plana" src="https://vzge.me/full/320/${esc(d.uuid)}" alt="Skin de ${esc(d.nombre)}" width="160" hidden>
+          <div class="jg-poses" id="jg-poses" hidden>
+            <button type="button" data-pose="quieto" class="on">Quieto</button>
+            <button type="button" data-pose="andar">Andar</button>
+            <button type="button" data-pose="correr">Correr</button>
+            <button type="button" data-pose="volar">Volar</button>
+          </div>
+          <div class="jg-skin-pie" id="jg-skin-pie" hidden></div>
+        </div>
         <div>
           <p class="jg-nombre">${esc(d.nombre)}</p>
           ${estado}
@@ -67,6 +77,94 @@
       </div>
       ${htmlCapas(d.capas)}`;
     animarCapas();
+    visor3d(d);
+  }
+
+  // ---------------------------------------------------------------- visor 3D
+  // La skin real (la que se le vio en el servidor, o la de Mojang) con la capa que llevaba:
+  // una capa DX se anima como en el juego (fotograma a fotograma desde su tira).
+  let visor = null, relojCapa = null;
+  function visor3d(d) {
+    clearInterval(relojCapa);
+    if (visor) { try { visor.dispose(); } catch { /* */ } visor = null; }
+    const a = d.aspecto;
+    const plana = $('jg-plana'), lienzo = $('jg-3d');
+    if (!a || !a.skin || !window.skinview3d || !window.WebGLRenderingContext) {
+      lienzo.hidden = true; plana.hidden = false;
+      return;
+    }
+    const caja = $('jg-skin');
+    const ancho = Math.min(300, caja.clientWidth - 24 || 260), alto = Math.round(ancho * 1.35);
+    try {
+      visor = new window.skinview3d.SkinViewer({ canvas: lienzo, width: ancho, height: alto, skin: `/api/textura/${a.skin}`, model: a.fina ? 'slim' : 'auto-detect' });
+    } catch {
+      lienzo.hidden = true; plana.hidden = false;
+      return;
+    }
+    visor.zoom = 0.86;
+    visor.fov = 40;
+    visor.controls.enableZoom = false;
+    visor.autoRotate = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    visor.autoRotateSpeed = 0.7;
+    visor.playerWrapper.rotation.y = 0.5;
+    const etiqueta = () => {
+      if (!visor) return;
+      visor.nameTag = new window.skinview3d.NameTagObject(d.nombre, {
+        font: '600 44px Geist, system-ui, sans-serif', textStyle: '#ffffff', backgroundStyle: 'rgba(0,0,0,.32)', margin: [6, 18, 10, 18], height: 1.5,
+      });
+    };
+    if (document.fonts && document.fonts.load) document.fonts.load('600 44px Geist').then(etiqueta, etiqueta); else etiqueta();
+    lienzo.addEventListener('pointerdown', () => { visor.autoRotate = false; });
+    const S = window.skinview3d;
+    const poses = { quieto: () => new S.IdleAnimation(), andar: () => new S.WalkingAnimation(), correr: () => new S.RunningAnimation(), volar: () => new S.FlyingAnimation() };
+    visor.animation = poses.quieto();
+    const botones = [...document.querySelectorAll('#jg-poses button')];
+    let espalda = 'cape';
+    botones.forEach((b) => b.addEventListener('click', () => {
+      botones.forEach((x) => x.classList.toggle('on', x === b));
+      visor.animation = poses[b.dataset.pose]();
+      espalda = b.dataset.pose === 'volar' ? 'elytra' : 'cape';
+      if (capaActual) visor.loadCape(capaActual, { backEquipment: espalda });
+    }));
+    $('jg-poses').hidden = false;
+    let capaActual = null;
+    const pie = [];
+    if (a.dx && CAPAS[a.dx]) {
+      // capa DX animada: tira de texturas completas (256x128 por fotograma)
+      const tira = new Image();
+      const lienzoCapa = document.createElement('canvas');
+      lienzoCapa.width = 256; lienzoCapa.height = 128;
+      const cx = lienzoCapa.getContext('2d');
+      cx.imageSmoothingEnabled = false;
+      tira.onload = () => {
+        const n = CAPAS[a.dx].fotogramas;
+        const pintar = () => {
+          const f = Math.floor(Date.now() / 100) % n;
+          cx.clearRect(0, 0, 256, 128);
+          cx.drawImage(tira, 0, f * 128, 256, 128, 0, 0, 256, 128);
+          capaActual = lienzoCapa;
+          visor.loadCape(lienzoCapa, { backEquipment: espalda });
+        };
+        pintar();
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) relojCapa = setInterval(pintar, 100);
+      };
+      tira.src = `/assets/capas/${a.dx}-textura.webp`;
+      pie.push(`Lleva la <b>${esc(CAPAS[a.dx].titulo)}</b>`);
+    } else if (a.capa) {
+      capaActual = `/api/textura/${a.capa}`;
+      visor.loadCape(capaActual, { backEquipment: espalda });
+      pie.push('Lleva su capa de Minecraft');
+    }
+    if (a.visto) pie.push(`visto ${esc(fecha(a.visto)).toLowerCase()}`);
+    $('jg-skin-pie').innerHTML = pie.join(' · ') || 'Arrastra para girarlo';
+    $('jg-skin-pie').hidden = false;
+    // la skin, para quien la quiera
+    const desc = document.createElement('a');
+    desc.className = 'jg-descargar';
+    desc.href = `/api/textura/${a.skin}`;
+    desc.download = `${d.nombre}.png`;
+    desc.textContent = 'Descargar skin';
+    $('jg-skin-pie').append(document.createTextNode(' '), desc);
   }
 
   // Capas del launcher de Desafío Xtremo (las de Mojang no salen). Cada una es una tira

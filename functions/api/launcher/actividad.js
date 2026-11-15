@@ -18,6 +18,14 @@ function uuidConGuiones(u) {
 }
 
 const texto = (v, max) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null);
+const CAPA_DX = /^[a-z]{1,16}$/;
+/** Solo texturas de Mojang o skins nuestras; cualquier otra cosa, nada. */
+function urlTextura(u) {
+  if (typeof u !== 'string') return null;
+  const m = /^https?:\/\/textures\.minecraft\.net\/texture\/([0-9a-f]{20,80})$/.exec(u);
+  if (m) return `https://textures.minecraft.net/texture/${m[1]}`;
+  return /^https:\/\/media\.desafioxtremo\.site\/skins\/[0-9a-f]{64}\.png$/.test(u) ? u : null;
+}
 
 export const onRequestPost = withQuotaHandling(async (context) => {
   const { request, env } = context;
@@ -32,6 +40,7 @@ export const onRequestPost = withQuotaHandling(async (context) => {
 
   const publico = {};
   const filas = [];
+  const aspectos = [];
   for (const [srv, lista] of Object.entries(datos.servidores).slice(0, 10)) {
     if (!SERVIDOR.test(srv) || !Array.isArray(lista)) continue;
     publico[srv] = [];
@@ -43,6 +52,10 @@ export const onRequestPost = withQuotaHandling(async (context) => {
       // clan: undefined = no se sabe (no se toca); null = sin clan.
       const clanSabido = Object.prototype.hasOwnProperty.call(j, 'c');
       filas.push({ uuid, nombre: j.n, srv, oculto, clanSabido, siglas: texto(j.c, 8), clan: texto(j.cn, 40) });
+      // aspecto: solo si el proxy lo sabe (DX Login 1.5.0+); "" = no tiene esa textura
+      if (Object.prototype.hasOwnProperty.call(j, 's')) {
+        aspectos.push({ uuid, skin: urlTextura(j.s), capa: urlTextura(j.cm), dx: CAPA_DX.test(j.cd || '') ? j.cd : null });
+      }
     }
   }
 
@@ -65,6 +78,19 @@ export const onRequestPost = withQuotaHandling(async (context) => {
     );
     await env.DB.batch(stmts);
     await addUsage(env, 'd1_writes', stmts.length);
+  }
+
+  // Aspecto (perfil 3D de la web). Aparte y sin romper nada si la migración 0019 aún no está.
+  if (aspectos.length) {
+    try {
+      const st = aspectos.map((a) => env.DB.prepare(
+        `UPDATE jugadores SET skin_url = ?2, capa_mojang = ?3, capa_dx = ?4, aspecto_at = datetime('now') WHERE uuid = ?1`
+      ).bind(a.uuid, a.skin, a.capa, a.dx));
+      await env.DB.batch(st);
+      await addUsage(env, 'd1_writes', st.length);
+    } catch (e) {
+      console.warn('aspecto sin guardar (¿falta la migración 0019?)', e && e.message);
+    }
   }
 
   await d1Run(
