@@ -45,13 +45,13 @@ function isCountableView(request) {
 
 const HEAD = `<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#030b0a">
+<meta name="theme-color" content="#090c0c">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..900&family=Geist+Mono:wght@400..700&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/tokens.css">
 <link rel="stylesheet" href="/css/site.css">
 <link rel="stylesheet" href="/css/content.css">`;
@@ -64,6 +64,7 @@ const NAV = `<header class="site-nav">
       <li><a href="/#recursos">El juego</a></li>
       <li><a href="/wiki.html">Wiki</a></li>
       <li><a href="/anuncios.html">Anuncios</a></li>
+      <li><a href="/launcher">Launcher</a></li>
       <li><a href="/#equipo">Equipo</a></li>
     </ul>
     <div class="nav-right">
@@ -80,7 +81,8 @@ const NAV = `<header class="site-nav">
     <a href="/wiki.html"><small>03</small>Wiki</a>
     <a href="/anuncios.html"><small>04</small>Anuncios</a>
     <a href="/#equipo"><small>05</small>Equipo</a>
-    <a href="/invite" target="_blank" rel="noopener"><small>06</small>Discord</a>
+    <a href="/launcher"><small>06</small>Launcher</a>
+    <a href="/invite" target="_blank" rel="noopener"><small>07</small>Discord</a>
   </nav>
   <div class="mobile-menu-account" id="mobile-account"></div>
 </div>`;

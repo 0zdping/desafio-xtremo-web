@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Desafio Xtremo · Un mundo nuevo</title>
 <meta name="description" content="Desafio Xtremo es un evento de Minecraft por equipos hecho por y para jugadores: un juego totalmente distinto dentro de Minecraft. Despiertas solo en una isla, sin nada. Inscripción abierta a cualquiera.">
-<meta name="theme-color" content="#030b0a">
+<meta name="theme-color" content="#090c0c">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Desafio Xtremo · Un mundo nuevo">
 <meta property="og:description" content="Un evento de Minecraft por equipos hecho por y para jugadores. Despiertas solo en una isla, sin nada. ¿Encontrarás a tu clan?">
@@ -23,9 +23,8 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
-<link rel="preload" href="assets/banner.png" as="image">
-<link rel="preload" href="assets/mapa.webp" as="image">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..900&family=Geist+Mono:wght@400..700&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="preload" href="assets/escenas/atardecer.webp" as="image" imagesrcset="assets/escenas/atardecer-s.webp 1100w, assets/escenas/atardecer.webp 1920w" imagesizes="100vw" fetchpriority="high">
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/site.css">
 <link rel="stylesheet" href="css/content.css">
@@ -75,18 +74,17 @@
   <section class="hero" id="inicio" data-scene="pin" aria-label="Portada">
     <div class="hero-sticky">
       <div class="eyelids" aria-hidden="true"><span></span><span></span></div>
-      <div class="hero-map" aria-hidden="true">
-        <div class="hero-map-tilt">
-          <img id="map-hero" src="/assets/mapa.webp" alt="" width="800" height="800" decoding="async" fetchpriority="high">
-          <div class="hero-markers" id="hero-markers"></div>
-        </div>
+      <div class="hero-scenes" id="hero-scenes" aria-hidden="true">
+        <img class="hero-scene is-on" src="/assets/escenas/atardecer.webp" srcset="/assets/escenas/atardecer-s.webp 1100w, /assets/escenas/atardecer.webp 1920w" sizes="100vw" alt="" width="1920" height="1079" decoding="async" fetchpriority="high">
+        <img class="hero-scene" data-src="/assets/escenas/isla.webp" data-srcset="/assets/escenas/isla-s.webp 1400w, /assets/escenas/isla.webp 2560w" sizes="100vw" alt="" width="2560" height="1080" decoding="async">
+        <img class="hero-scene" data-src="/assets/escenas/lobby.webp" data-srcset="/assets/escenas/lobby-s.webp 1100w, /assets/escenas/lobby.webp 1920w" sizes="100vw" alt="" width="1920" height="1079" decoding="async">
       </div>
       <div class="hero-vignette" aria-hidden="true"></div>
 
       <div class="hero-content container">
         <p class="eyebrow hero-eyebrow">Evento de Minecraft por equipos · Temporada 2</p>
         <h1 class="hero-title">
-          <img src="assets/banner.png" alt="Desafio Xtremo: Un mundo nuevo" width="1024" height="138">
+          <img src="assets/banner-1640.webp" alt="Desafio Xtremo: Un mundo nuevo" width="1640" height="221">
         </h1>
         <p class="hero-lead">Despiertas solo, en algún punto de una isla, sin nada. Tu clan está ahí fuera. <strong>Todo lo demás tendrás que ganártelo.</strong></p>
         <div class="hero-actions">
@@ -111,6 +109,7 @@
         <span class="hud-mouse"><span></span></span>
         <span class="hud-label">Desplázate para explorar</span>
       </div>
+      <div class="hud hud-dots" id="hero-dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
     </div>
   </section>
 
@@ -118,9 +117,6 @@
   <div class="ticker" aria-hidden="true">
     <div class="ticker-row" data-dir="1">
       <div class="ticker-track"><span>Despiertas solo</span><i></i><span>Encuentra a tu clan</span><i></i><span>Fabrica desde el inventario</span><i></i><span>Mesas de trabajo por niveles</span><i></i><span>Sobrevive al frío y al calor</span><i></i><span>Sacos de dormir</span><i></i><span>Alarmas de colores</span><i></i><span>Muere, espera y vuelve</span><i></i></div>
-    </div>
-    <div class="ticker-row ticker-row-alt" data-dir="-1">
-      <div class="ticker-track"><span>Un mundo nuevo</span><i></i><span>De jugadores para jugadores</span><i></i><span>Plugin propio</span><i></i><span>Resourcepack propio</span><i></i><span>Hecho desde cero</span><i></i><span>Un mundo nuevo</span><i></i><span>De jugadores para jugadores</span><i></i></div>
     </div>
   </div>
 
@@ -462,6 +458,7 @@
 
   <!-- ============ CTA final ============ -->
   <section class="final-cta" id="unete" data-scene="view">
+    <img class="final-scene" src="/assets/escenas/isla-s.webp" srcset="/assets/escenas/isla-s.webp 1400w, /assets/escenas/isla.webp 2560w" sizes="100vw" alt="" width="2560" height="1080" loading="lazy" decoding="async" aria-hidden="true">
     <div class="container">
       <div class="final-cta-inner">
         <p class="eyebrow" data-reveal="up">Todavía sin fecha</p>

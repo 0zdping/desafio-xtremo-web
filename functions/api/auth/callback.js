@@ -7,6 +7,7 @@ import { safeReturnPath } from '../../../backend/lib/redirect.js';
 import {
   createSession,
   SESSION_COOKIE,
+  SESSION_HINT_COOKIE,
   OAUTH_STATE_COOKIE,
   OAUTH_RETURN_COOKIE,
   sessionMaxAgeSeconds,
@@ -57,6 +58,7 @@ export const onRequestGet = withQuotaHandling(async (context) => {
 
     const headers = new Headers();
     headers.append('Set-Cookie', serializeCookie(SESSION_COOKIE, sessionId, { maxAgeSeconds: sessionMaxAgeSeconds() }));
+    headers.append('Set-Cookie', serializeCookie(SESSION_HINT_COOKIE, '1', { maxAgeSeconds: sessionMaxAgeSeconds(), httpOnly: false }));
     headers.append('Set-Cookie', serializeCookie(OAUTH_STATE_COOKIE, '', { maxAgeSeconds: 0 }));
     headers.append('Set-Cookie', serializeCookie(OAUTH_RETURN_COOKIE, '', { maxAgeSeconds: 0 }));
     // No query string here: cachedPublicJson keys the edge cache by exact

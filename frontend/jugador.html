@@ -5,57 +5,63 @@
 <meta name="description" content="Perfiles y ranking de jugadores de Desafío Xtremo.">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#030b0a">
+<meta name="theme-color" content="#090c0c">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..900&family=Geist+Mono:wght@400..700&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/tokens.css">
 <link rel="stylesheet" href="/css/site.css">
 <link rel="stylesheet" href="/css/content.css">
 <link rel="canonical" href="https://desafioxtremo.site/jugador">
 <style>
 .jg-buscar{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;max-width:520px}
-.jg-buscar input{flex:1;min-width:180px;background:var(--card-bg);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:12px 14px;color:var(--text);font:inherit}
+.jg-buscar input{flex:1;min-width:180px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:12px 14px;color:var(--text);font:inherit;transition:border-color .2s,box-shadow .2s}
+.jg-buscar input:focus{outline:none;border-color:var(--accent-border);box-shadow:0 0 0 3px var(--accent-soft)}
 .jg-ficha{display:grid;grid-template-columns:320px minmax(0,1fr);gap:40px;align-items:center;margin-top:36px}
 .jg-skin{position:relative;border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 12px 12px;display:flex;flex-direction:column;align-items:center;gap:10px;overflow:hidden;
-  background:radial-gradient(60% 46% at 50% 40%,rgba(55,214,180,.16),transparent 70%),radial-gradient(40% 10% at 50% 82%,rgba(0,0,0,.45),transparent 70%),var(--card-bg)}
+  isolation:isolate;background:var(--surface);box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 40px 80px -30px rgba(0,0,0,.8)}
+/* la skin sobre la isla, como en el launcher */
+.jg-skin::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(18,23,23,.15),rgba(18,23,23,.35) 55%,var(--surface) 92%),url(/assets/escenas/isla-s.webp) 50% 30%/cover;opacity:.9}
+.jg-skin::after{content:"";position:absolute;left:50%;top:70%;width:46%;height:18px;transform:translateX(-50%);z-index:-1;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.55),transparent)}
 .jg-skin img{width:160px;height:auto;image-rendering:pixelated}
 .jg-skin canvas{display:block;cursor:grab;max-width:100%}
 .jg-skin canvas:active{cursor:grabbing}
-.jg-poses{display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid var(--border)}
+.jg-poses{display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(9,12,12,.7);border:1px solid var(--border);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .jg-poses button{all:unset;cursor:pointer;padding:5px 11px;border-radius:999px;font-size:.78rem;font-weight:600;color:var(--text-soft);transition:background .15s,color .15s}
 .jg-poses button:hover{color:var(--text)}
-.jg-poses button.on{background:var(--teal);color:#032019}
+.jg-poses button.on{background:var(--accent);color:var(--teal-ink)}
 .jg-poses button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .jg-skin-pie{font-size:.8rem;color:var(--text-dim);text-align:center;line-height:1.5}
 .jg-skin-pie b{color:var(--text)}
 .jg-descargar{color:var(--teal);text-decoration:none;font-weight:600;white-space:nowrap}
 .jg-descargar:hover{text-decoration:underline}
-.jg-nombre{font-family:var(--f-display);font-weight:800;font-size:clamp(2rem,5vw,3.2rem);margin:0}
-.jg-estado{font-family:var(--f-pixel);font-size:.75rem;letter-spacing:.1em;color:var(--teal);text-transform:uppercase;margin:6px 0 0}
+.jg-nombre{font-family:var(--f-display);font-weight:750;letter-spacing:-.04em;font-size:clamp(2rem,5vw,3.2rem);margin:0}
+.jg-estado{font-family:var(--f-mono);font-weight:600;font-size:.75rem;letter-spacing:.1em;color:var(--teal);text-transform:uppercase;margin:6px 0 0}
 .jg-estado.off{color:var(--text-dim)}
 .jg-datos{list-style:none;padding:0;margin:22px 0 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.jg-datos li{border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;background:var(--card-bg)}
-.jg-datos small{display:block;color:var(--text-dim);font-size:.78rem;margin-bottom:4px}
-.jg-datos b{font-size:1.05rem}
+.jg-datos li{border:1px solid var(--border);border-radius:var(--radius-md);padding:16px 18px;background:rgba(18,23,23,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.jg-datos small{display:block;color:var(--text-dim);font-family:var(--f-mono);font-weight:600;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.jg-datos b{font-size:1.2rem;font-weight:700;letter-spacing:-.02em}
 .jg-vacio{margin-top:30px;color:var(--text-soft)}
 .jg-capas{margin-top:40px}
 .jg-capas ul{list-style:none;padding:0;margin:14px 0 0;display:flex;flex-wrap:wrap;gap:14px}
-.jg-capa{width:168px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--card-bg);padding:16px 14px 14px;text-align:center}
+.jg-capa{width:168px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);padding:16px 14px 14px;text-align:center;transition:border-color .2s,transform .2s}
+.jg-capa:hover{border-color:var(--border-strong);transform:translateY(-2px)}
 .jg-capa-img{display:block;width:80px;height:128px;margin:0 auto 12px;background-size:100% auto;background-position:0 0;background-repeat:no-repeat;image-rendering:pixelated;border-radius:3px;box-shadow:0 10px 26px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.06)}
 .jg-capa b{display:block;font-size:.95rem}
-.jg-capa small{display:inline-block;margin-top:6px;font-family:var(--f-pixel);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);border:1px solid var(--border-strong);border-radius:999px;padding:3px 8px}
+.jg-capa small{display:inline-block;margin-top:6px;font-family:var(--f-mono);font-weight:600;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);border:1px solid var(--border-strong);border-radius:999px;padding:3px 8px}
 .jg-capa.dev small{color:#c9a7ff;border-color:rgba(180,140,255,.4)}
 .jg-capa.zdping small{color:#e9e9e9;border-color:rgba(255,255,255,.35)}
 .jg-capa.gabo small{color:#ffd27a;border-color:rgba(255,190,90,.4)}
 .jg-capas-nota{margin-top:12px;color:var(--text-dim);font-size:.85rem}
 .jg-ranking{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:8px;max-width:640px}
-.jg-ranking li a{display:grid;grid-template-columns:40px 32px 1fr auto;gap:12px;align-items:center;border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 14px;background:var(--card-bg);color:inherit;text-decoration:none}
-.jg-ranking li a:hover{border-color:var(--border-strong)}
-.jg-ranking .p{font-family:var(--f-pixel);color:var(--teal)}
+.jg-ranking li a{display:grid;grid-template-columns:40px 32px 1fr auto;gap:12px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:9px 14px;background:var(--surface);color:inherit;text-decoration:none;transition:border-color .2s,background .2s}
+.jg-ranking li a:hover{border-color:var(--border-strong);background:var(--surface-2)}
+.jg-ranking .p{font-family:var(--f-mono);font-weight:600;color:var(--text-dim)}
+.jg-ranking li:nth-child(1) .p{color:#f5c542}.jg-ranking li:nth-child(2) .p{color:#cfd8dc}.jg-ranking li:nth-child(3) .p{color:#e0a46a}
 .jg-ranking img{width:32px;height:32px;image-rendering:pixelated;border-radius:4px}
 .jg-ranking .t{font-family:var(--f-mono);font-size:.88rem;color:var(--text-soft)}
 .jg-sec{padding:0 0 96px}
@@ -100,7 +106,7 @@
 </div>
 
 <main id="main">
-  <section class="page-head">
+  <section class="page-head" data-escena="lobby2">
     <div class="container">
       <p class="eyebrow">Jugadores</p>
       <h1 id="jg-titulo">Busca a un jugador</h1>

@@ -5,13 +5,13 @@
 <meta name="description" content="Descarga el launcher de Desafío Xtremo: pulsa JUGAR y entra.">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#030b0a">
+<meta name="theme-color" content="#090c0c">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..900&family=Geist+Mono:wght@400..700&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/tokens.css">
 <link rel="stylesheet" href="/css/site.css">
 <link rel="stylesheet" href="/css/content.css">
@@ -21,44 +21,48 @@
 .lz-nota{margin-top:18px;font-size:.86rem;color:var(--text-dim);max-width:56ch;line-height:1.55}
 .lz-ver{font-family:var(--f-mono);font-size:.82rem;color:var(--text-dim)}
 .btn-lg{padding:15px 26px;font-size:1rem}
-.lz-hero{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(32px,5vw,72px);align-items:center}
+.lz-hero{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(32px,5vw,72px);align-items:center}
 .lz-descarga h1{font-size:clamp(40px,5.2vw,74px);line-height:1;margin:16px 0 20px}
 .lz-grad{background:var(--accent-gradient);-webkit-background-clip:text;background-clip:text;color:transparent}
 .lz-puertas{display:flex;align-items:center;gap:10px;margin-top:26px;font-size:.92rem;color:var(--text-soft)}
 .lz-puertas b{color:var(--text)}
-.lz-shot{perspective:1600px}
-.lz-ventana{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--border-strong);box-shadow:0 40px 90px rgba(0,0,0,.55),0 0 0 1px rgba(164,245,201,.06),0 0 120px rgba(55,214,180,.14);transform:rotateY(-7deg) rotateX(2deg);transition:transform .6s var(--ease, ease)}
+.lz-shot{position:relative;perspective:1600px;isolation:isolate}
+.lz-shot::before{content:"";position:absolute;inset:-12% -8% -14% -10%;z-index:-1;border-radius:32px;background:url(/assets/escenas/isla-s.webp) center/cover;opacity:.32;filter:saturate(.9) blur(2px);
+  -webkit-mask-image:radial-gradient(closest-side,#000 40%,transparent);mask-image:radial-gradient(closest-side,#000 40%,transparent)}
+.lz-ventana{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--border-strong);box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 50px 100px -20px rgba(0,0,0,.75),0 0 0 1px rgba(0,0,0,.4);transform:rotateY(-6deg) rotateX(2deg);transition:transform .6s var(--ease, ease)}
 .lz-ventana:hover{transform:none}
 .lz-ventana img{display:block;width:100%;height:auto}
 .lz-h2{font-size:clamp(28px,3.6vw,44px);letter-spacing:-.03em;line-height:1.05;margin:12px 0 36px}
 .lz-trae,.lz-asi,.lz-empezar,.lz-faq{padding:64px 0}
 .lz-cartas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-.lz-carta{border:1px solid var(--border);border-radius:var(--radius-lg);padding:26px;background:var(--card-bg);transition:border-color .25s,transform .25s}
-.lz-carta:hover{border-color:var(--accent-border);transform:translateY(-3px)}
-.lz-carta svg{width:34px;height:34px;color:var(--teal);margin-bottom:16px;shape-rendering:crispEdges}
+.lz-carta{border:1px solid var(--border);border-radius:var(--radius-md);padding:24px;background:var(--surface);transition:border-color .25s,transform .25s,background .25s}
+.lz-carta:hover{border-color:rgba(255,255,255,.16);background:var(--surface-2);transform:translateY(-3px)}
+.lz-carta svg{width:40px;height:40px;padding:9px;border-radius:11px;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-border);margin-bottom:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .lz-carta h3{margin:0 0 8px;font-size:1.08rem}
 .lz-carta p{margin:0;color:var(--text-soft);font-size:.95rem;line-height:1.55}
 .lz-capturas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-.lz-capturas figure{margin:0;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);background:var(--card-bg)}
+.lz-capturas figure{margin:0;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border);background:var(--surface)}
 .lz-capturas img{display:block;width:100%;height:auto;transition:transform .5s}
 .lz-capturas figure:hover img{transform:scale(1.03)}
-.lz-capturas figcaption{padding:12px 16px;font-size:.9rem;font-weight:600;color:var(--text-soft);border-top:1px solid var(--border)}
+.lz-capturas figcaption{padding:12px 16px;font-size:.9rem;font-weight:600;color:var(--text);border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:12px}
+.lz-capturas figcaption span{font-weight:400;color:var(--text-dim)}
 .lz-lista{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;counter-reset:p}
-.lz-lista li{counter-increment:p;border:1px solid var(--border);border-radius:var(--radius-md);padding:24px;background:var(--card-bg);display:flex;flex-direction:column;gap:8px}
-.lz-lista li::before{content:counter(p);font-family:var(--f-pixel);font-size:1.4rem;color:var(--teal)}
+.lz-lista li{counter-increment:p;border:1px solid var(--border);border-radius:var(--radius-md);padding:24px;background:var(--surface);display:flex;flex-direction:column;gap:8px}
+.lz-lista li::before{content:"0" counter(p);font-family:var(--f-mono);font-weight:600;font-size:.82rem;letter-spacing:.08em;color:var(--accent);margin-bottom:6px}
 .lz-lista b{font-size:1.05rem}
 .lz-lista span{color:var(--text-soft);font-size:.95rem;line-height:1.5}
 .lz-faq-in{display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);gap:48px;align-items:start}
 .lz-preguntas{display:flex;flex-direction:column;gap:10px}
-.lz-preguntas details{border:1px solid var(--border);border-radius:var(--radius-md);background:var(--card-bg);transition:border-color .2s}
-.lz-preguntas details[open]{border-color:var(--accent-border)}
+.lz-preguntas details{border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);transition:border-color .2s,background .2s}
+.lz-preguntas details[open]{border-color:var(--border-strong);background:var(--surface-2)}
 .lz-preguntas summary{cursor:pointer;list-style:none;padding:18px 22px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:16px}
 .lz-preguntas summary::-webkit-details-marker{display:none}
-.lz-preguntas summary::after{content:"+";font-family:var(--f-mono);color:var(--teal);font-size:1.2rem;transition:transform .2s}
+.lz-preguntas summary::after{content:"+";font-family:var(--f-mono);color:var(--accent);font-size:1.2rem;transition:transform .2s}
 .lz-preguntas details[open] summary::after{transform:rotate(45deg)}
 .lz-preguntas details p{margin:0;padding:0 22px 20px;color:var(--text-soft);line-height:1.6}
 .lz-final{padding:40px 0 110px}
-.lz-final-in{text-align:center;border:1px solid var(--accent-border);border-radius:var(--radius-lg);padding:clamp(36px,6vw,64px) 24px;background:radial-gradient(120% 140% at 50% 0%,rgba(55,214,180,.14),transparent 60%),var(--card-bg)}
+.lz-final-in{position:relative;overflow:hidden;isolation:isolate;text-align:center;border:1px solid var(--border-strong);border-radius:var(--radius-lg);padding:clamp(44px,7vw,80px) 24px;background:var(--surface)}
+.lz-final-in::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(9,12,12,.55),rgba(9,12,12,.85)),url(/assets/escenas/atardecer-s.webp) center 60%/cover}
 .lz-final-in h2{font-size:clamp(28px,3.6vw,46px);letter-spacing:-.03em;margin:0 0 10px}
 .lz-final-in p{color:var(--text-soft);margin:0 auto 26px;max-width:46ch}
 @media (max-width:980px){.lz-hero,.lz-faq-in{grid-template-columns:1fr}.lz-ventana{transform:none}.lz-cartas,.lz-capturas,.lz-lista{grid-template-columns:1fr 1fr}}
@@ -131,7 +135,7 @@
       </div>
       <div class="lz-shot" data-reveal="up" data-delay="0.15">
         <div class="lz-ventana">
-          <img src="/assets/launcher/inicio.jpg" alt="El launcher de Desafío Xtremo: tu perfil, tu skin en 3D, las novedades y quién está jugando" width="1440" height="900" fetchpriority="high">
+          <img src="/assets/launcher/inicio-1.jpg" alt="El launcher 1.0 de Desafío Xtremo: tu skin en 3D sobre la isla, el estado del servidor, las novedades y tu partida" width="1440" height="900" fetchpriority="high">
         </div>
       </div>
     </div>
@@ -144,32 +148,32 @@
         <h2 class="lz-h2" data-reveal="up">Más que un botón de jugar</h2>
         <div class="lz-cartas">
           <article class="lz-carta" data-reveal="up">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 2h6v2h2v8h-2v2H9v-2H7V4h2V2zm0 2v8h6V4H9zM4 10h2v2h2v2h8v-2h2v-2h2v2h-2v2h-2v2h-3v2h3v2H8v-2h3v-2H8v-2H6v-2H4v-2z"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
             <h3>Chat de voz de serie</h3>
             <p>Habla con quien tengas cerca. Con un walkie-talkie en la mano, tu equipo te oye aunque esté lejos.</p>
           </article>
           <article class="lz-carta" data-reveal="up" data-delay="0.05">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 2h16v2h2v8h-2v4h-2v2h-2v2h-2v2h-4v-2H8v-2H6v-2H4v-4H2V4h2zm2 2v8h2v4h2v2h4v-2h2v-4h2V4zm4 3h4v2h2v2h-2v2h-4v-2H8V9h2z"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
             <h3>Juego limpio</h3>
             <p>Solo abre el juego con lo que trae: nada de rayos X, mods de trampas ni texturas que delaten menas.</p>
           </article>
           <article class="lz-carta" data-reveal="up" data-delay="0.1">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 4h4v4H5V4zm10 0h4v4h-4V4zM3 10h8v8H9v-6H5v6H3v-8zm10 0h8v8h-2v-6h-4v6h-2v-8z"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/></svg>
             <h3>Con o sin Minecraft</h3>
             <p>Entra con tu cuenta de Microsoft o, si no tienes Minecraft, elige un nombre y una skin y a jugar.</p>
           </article>
           <article class="lz-carta" data-reveal="up">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13 1h4v2h-2v4h-2v4h6v2h-2v2h-2v2h-2v2h-2v2H9v2H7v-2h2v-4h2v-4H5v-2h2V9h2V7h2V5h2V1z"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"/><path d="M12 8v4l3 2"/></svg>
             <h3>Siempre al día</h3>
             <p>Se actualiza solo y te avisa en el escritorio cuando abren las puertas del Desafío o hay novedades.</p>
           </article>
           <article class="lz-carta" data-reveal="up" data-delay="0.05">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2 4h20v16H2V4zm2 2v12h16V6H4zm2 2h8v2H6V8zm0 4h12v2H6v-2z"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9.5" r="2.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M15 14.5a5 5 0 0 1 6.5 4.8"/></svg>
             <h3>La comunidad, a mano</h3>
             <p>Quién está jugando, quién lleva más horas, encuestas y reportes, sin salir del launcher.</p>
           </article>
           <article class="lz-carta" data-reveal="up" data-delay="0.1">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M3 8h4m0 0V6h4v2M7 8v2h4V8m0 0h10M3 16h10m0 0v-2h4v2m-4 0v2h4v-2m0 0h4"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
             <h3>Hecho a tu ordenador</h3>
             <p>Calidad gráfica en un clic y extras como zoom, gráficos de cine o sonido 3D. Ninguno da ventaja.</p>
           </article>
@@ -182,9 +186,9 @@
         <p class="eyebrow" data-reveal="up">Así se ve</p>
         <h2 class="lz-h2" data-reveal="up">Todo en su sitio</h2>
         <div class="lz-capturas">
-          <figure data-reveal="up"><img src="/assets/launcher/comunidad.jpg" alt="Comunidad: quién está jugando, el ranking y las encuestas" width="1440" height="900" loading="lazy"><figcaption>Comunidad</figcaption></figure>
-          <figure data-reveal="up" data-delay="0.05"><img src="/assets/launcher/voz.jpg" alt="Ajustes del chat de voz con prueba de micrófono" width="1440" height="900" loading="lazy"><figcaption>Chat de voz</figcaption></figure>
-          <figure data-reveal="up" data-delay="0.1"><img src="/assets/launcher/extras.jpg" alt="Extras: gráficos de cine, zoom, texturas conectadas y más" width="1440" height="900" loading="lazy"><figcaption>Extras</figcaption></figure>
+          <figure data-reveal="up"><img src="/assets/launcher/capas-1.jpg" alt="Capas: tu skin en 3D con la capa que elijas del Desafío" width="1280" height="800" loading="lazy"><figcaption>Capas <span>Tu estilo, en 3D</span></figcaption></figure>
+          <figure data-reveal="up" data-delay="0.05"><img src="/assets/launcher/anuncios-1.jpg" alt="Anuncios y cambios del servidor y del launcher" width="1280" height="800" loading="lazy"><figcaption>Novedades <span>Sin salir del launcher</span></figcaption></figure>
+          <figure data-reveal="up" data-delay="0.1"><img src="/assets/launcher/ajustes-1.jpg" alt="Ajustes: tus cuentas, tu skin y Discord" width="1280" height="800" loading="lazy"><figcaption>Ajustes <span>Cuentas, juego y voz</span></figcaption></figure>
         </div>
       </div>
     </section>

@@ -23,11 +23,44 @@
 
   /* ---------------- hero map + markers + HUD ---------------- */
   const hero = document.getElementById('inicio');
-  if (hero && document.getElementById('map-hero')) {
-    const markers = document.getElementById('hero-markers');
-    const mk = (pos, cls, label) =>
-      `<div class="mk ${cls}" style="left:${(pos.x * 100).toFixed(2)}%;top:${(pos.y * 100).toFixed(2)}%"><span class="mk-label">${label}</span><span class="mk-pin"></span></div>`;
-    markers.innerHTML = [LAND.snowWest, LAND.east, LAND.south].map((p) => mk(p, 'mate', '?')).join('') + mk(LAND.me, 'me', 'Tú');
+  if (hero) {
+    /* escenas reales del Desafío: se cargan las siguientes cuando la primera ya está
+       pintada, rotan cada 8 s solo con la portada visible y la pestaña activa */
+    const scenes = Array.from(hero.querySelectorAll('.hero-scene'));
+    const dots = Array.from(document.querySelectorAll('#hero-dots i'));
+    let cur = 0, timer = null, loaded = false, visible = true;
+    const loadRest = () => {
+      if (loaded) return;
+      loaded = true;
+      scenes.forEach((img) => {
+        if (img.dataset.srcset) img.srcset = img.dataset.srcset;
+        if (img.dataset.src) img.src = img.dataset.src;
+      });
+    };
+    const show = (i) => {
+      const next = scenes[i];
+      if (!next || !next.complete || !next.naturalWidth) return;
+      scenes[cur].classList.remove('is-on');
+      dots[cur] && dots[cur].classList.remove('on');
+      cur = i;
+      next.classList.add('is-on');
+      dots[cur] && dots[cur].classList.add('on');
+    };
+    const tick = () => show((cur + 1) % scenes.length);
+    const sync = () => {
+      const run = visible && !document.hidden && !M.reduced && scenes.length > 1;
+      if (run && !timer) timer = setInterval(tick, 8000);
+      if (!run && timer) { clearInterval(timer); timer = null; }
+    };
+    if (scenes.length > 1) {
+      window.addEventListener('load', () => setTimeout(loadRest, 1200), { once: true });
+      if (document.readyState === 'complete') setTimeout(loadRest, 1200);
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver((e) => { visible = e[0].isIntersecting; sync(); }).observe(hero.querySelector('.hero-sticky'));
+      }
+      document.addEventListener('visibilitychange', sync);
+      sync();
+    }
     const hx = document.getElementById('hud-x');
     const hz = document.getElementById('hud-z');
     const baseX = Math.round((LAND.me.x - 0.5) * 3000);

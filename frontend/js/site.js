@@ -206,9 +206,28 @@
   };
 
   /* ---------- session (one request per page) ---------- */
-  DX.me = fetch('/api/auth/me', { credentials: 'include' })
-    .then((r) => (r.ok ? r.json() : { user: null, csrfToken: '' }))
-    .catch(() => ({ user: null, csrfToken: '' }));
+  // Sin la pista de sesión (cookie dx_hay_sesion, la pone el login) no hay a quién preguntar:
+  // cada visita anónima se ahorra una petición a la web. Una vez al día se pregunta igual, por
+  // si la sesión venía de antes de existir la pista (la propia respuesta la deja puesta).
+  const ANON = { user: null, csrfToken: '' };
+  const conPista = /(?:^|;\s*)dx_hay_sesion=1(?:;|$)/.test(document.cookie);
+  let revisar = conPista;
+  if (!conPista) {
+    try {
+      const ultima = Number(localStorage.getItem('dx-me-anon') || 0);
+      if (Date.now() - ultima > 86400000) {
+        revisar = true;
+        localStorage.setItem('dx-me-anon', String(Date.now()));
+      }
+    } catch (e) {
+      revisar = true;
+    }
+  }
+  DX.me = revisar
+    ? fetch('/api/auth/me', { credentials: 'include' })
+        .then((r) => (r.ok ? r.json() : ANON))
+        .catch(() => ANON)
+    : Promise.resolve(ANON);
 
   DX.hasPerm = function (user, key) {
     return !!(user && Array.isArray(user.permissions) && user.permissions.includes(key));
@@ -316,6 +335,8 @@
 (function () {
   const canvas = document.getElementById('dust');
   if (!canvas || !canvas.getContext) return;
+  // 1.0: fondo limpio, sin motas (el canvas sigue en el HTML por compatibilidad)
+  if (getComputedStyle(canvas).display === 'none') return;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   // Phones: skip it. A canvas repainting every frame under blurred layers is
   // the most expensive thing on the page for a purely decorative effect.

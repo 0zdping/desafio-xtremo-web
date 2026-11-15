@@ -915,6 +915,7 @@
     r2_class_a: ['R2 · operaciones clase A', 'este mes'],
     r2_class_b: ['R2 · operaciones clase B', 'este mes'],
     analytics_writes: ['Escrituras de analítica y visitas', 'hoy'],
+    fn_requests: ['Functions · peticiones a la API', 'hoy'],
   };
   async function renderUsage(view, alive) {
     const data = await api('/api/admin/usage');

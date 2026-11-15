@@ -1,6 +1,9 @@
 import { checkQuota, addUsage, QuotaExceededError } from './quota.js';
 
 export const SESSION_COOKIE = 'dx_session';
+// Pista visible para el JS (sin el id de sesión, solo "1"): si no está, la página sabe que no hay
+// sesión y se ahorra la petición a /api/auth/me, que gasta del límite diario de Functions.
+export const SESSION_HINT_COOKIE = 'dx_hay_sesion';
 export const OAUTH_STATE_COOKIE = 'dx_oauth_state';
 export const OAUTH_RETURN_COOKIE = 'dx_oauth_return';
 const SESSION_DAYS = 30;

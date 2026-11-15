@@ -31,6 +31,10 @@ export const QUOTA_LIMITS = {
   // quota but stops at 40% of it, so hostile or just heavy public traffic
   // can never block logins, likes or staff edits for the rest of the day.
   analytics_writes: 40000,
+  // Peticiones a /api/* (Pages Functions: 100.000 al día gratis, se cuentan también las que
+  // salen de la caché del borde). Solo informativo: functions/api/_middleware.js lo cuenta y
+  // nada lo comprueba antes de responder (cortar aquí dejaría la web sin datos).
+  fn_requests: 100000,
 };
 
 /** Resources not listed here reset daily by default. */

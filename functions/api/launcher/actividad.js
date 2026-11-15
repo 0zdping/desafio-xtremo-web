@@ -7,6 +7,7 @@ import { withQuotaHandling, jsonResponse } from '../../../backend/lib/http.js';
 import { d1Select, d1Run } from '../../../backend/lib/db.js';
 import { checkQuota, addUsage, QuotaExceededError } from '../../../backend/lib/quota.js';
 import { purgeEdgeCache } from '../../../backend/lib/edgeCache.js';
+import { publicarEstadoRed } from '../../../backend/lib/estadoRed.js';
 import { firmaServidorValida, NOMBRE_MC, UUID_MC } from '../../../backend/lib/launcher.js';
 import { leerJson } from '../../../backend/lib/launcherHttp.js';
 
@@ -96,5 +97,7 @@ export const onRequestPost = withQuotaHandling(async (context) => {
   );
   const base = new URL(request.url);
   await purgeEdgeCache(context, [new URL('/api/launcher/online', base).toString()]);
+  // la foto estática que leen los launchers (no gasta peticiones de Functions)
+  context.waitUntil(publicarEstadoRed(env));
   return jsonResponse({ ok: true, jugadores: filas.length });
 });

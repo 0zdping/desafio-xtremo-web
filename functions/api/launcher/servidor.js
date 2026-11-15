@@ -5,6 +5,7 @@ import { d1Select, d1Run } from '../../../backend/lib/db.js';
 import { cachedPublicJson, purgeEdgeCache } from '../../../backend/lib/edgeCache.js';
 import { firmaServidorValida } from '../../../backend/lib/launcher.js';
 import { leerJson } from '../../../backend/lib/launcherHttp.js';
+import { publicarEstadoRed } from '../../../backend/lib/estadoRed.js';
 
 export const onRequestGet = withQuotaHandling(async (context) => {
   return cachedPublicJson(context, context.request.url, 60, async () => {
@@ -32,5 +33,6 @@ export const onRequestPost = withQuotaHandling(async (context) => {
     [datos.desafio]
   );
   await purgeEdgeCache(context, [new URL('/api/launcher/servidor', request.url).toString()]);
+  context.waitUntil(publicarEstadoRed(env));
   return jsonResponse({ ok: true });
 });
