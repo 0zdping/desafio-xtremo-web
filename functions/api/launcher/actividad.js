@@ -40,7 +40,6 @@ export const onRequestPost = withQuotaHandling(async (context) => {
 
   const publico = {};
   const filas = [];
-  const aspectos = [];
   for (const [srv, lista] of Object.entries(datos.servidores).slice(0, 10)) {
     if (!SERVIDOR.test(srv) || !Array.isArray(lista)) continue;
     publico[srv] = [];
@@ -51,11 +50,13 @@ export const onRequestPost = withQuotaHandling(async (context) => {
       if (!oculto) publico[srv].push(j.n);
       // clan: undefined = no se sabe (no se toca); null = sin clan.
       const clanSabido = Object.prototype.hasOwnProperty.call(j, 'c');
-      filas.push({ uuid, nombre: j.n, srv, oculto, clanSabido, siglas: texto(j.c, 8), clan: texto(j.cn, 40) });
       // aspecto: solo si el proxy lo sabe (DX Login 1.5.0+); "" = no tiene esa textura
-      if (Object.prototype.hasOwnProperty.call(j, 's')) {
-        aspectos.push({ uuid, skin: urlTextura(j.s), capa: urlTextura(j.cm), dx: CAPA_DX.test(j.cd || '') ? j.cd : null });
-      }
+      const aspectoSabido = Object.prototype.hasOwnProperty.call(j, 's');
+      filas.push({
+        uuid, nombre: j.n, srv, oculto, clanSabido, siglas: texto(j.c, 8), clan: texto(j.cn, 40),
+        aspectoSabido, skin: aspectoSabido ? urlTextura(j.s) : null, capa: aspectoSabido ? urlTextura(j.cm) : null,
+        dx: aspectoSabido && CAPA_DX.test(j.cd || '') ? j.cd : null,
+      });
     }
   }
 
@@ -64,8 +65,10 @@ export const onRequestPost = withQuotaHandling(async (context) => {
     if (!gate.allowed) throw new QuotaExceededError('d1_writes');
     const stmts = filas.map((f) =>
       env.DB.prepare(
-        `INSERT INTO jugadores (uuid, nombre, nombre_lower, ultima_vez, ultima_real, ultimo_servidor, minutos, clan_siglas, clan_nombre)
-         VALUES (?1, ?2, lower(?2), CASE WHEN ?3 THEN NULL ELSE datetime('now') END, datetime('now'), CASE WHEN ?3 THEN NULL ELSE ?4 END, ?5, ?7, ?8)
+        `INSERT INTO jugadores (uuid, nombre, nombre_lower, ultima_vez, ultima_real, ultimo_servidor, minutos, clan_siglas, clan_nombre,
+                                skin_url, capa_mojang, capa_dx, aspecto_at)
+         VALUES (?1, ?2, lower(?2), CASE WHEN ?3 THEN NULL ELSE datetime('now') END, datetime('now'), CASE WHEN ?3 THEN NULL ELSE ?4 END, ?5, ?7, ?8,
+                 ?10, ?11, ?12, CASE WHEN ?9 THEN datetime('now') ELSE NULL END)
          ON CONFLICT(uuid) DO UPDATE SET
            nombre = excluded.nombre, nombre_lower = excluded.nombre_lower,
            ultima_vez = CASE WHEN ?3 THEN jugadores.ultima_vez ELSE datetime('now') END,
@@ -73,24 +76,16 @@ export const onRequestPost = withQuotaHandling(async (context) => {
            ultimo_servidor = CASE WHEN ?3 THEN jugadores.ultimo_servidor ELSE ?4 END,
            minutos = jugadores.minutos + ?5,
            clan_siglas = CASE WHEN ?6 THEN ?7 ELSE jugadores.clan_siglas END,
-           clan_nombre = CASE WHEN ?6 THEN ?8 ELSE jugadores.clan_nombre END`
-      ).bind(f.uuid, f.nombre, f.oculto ? 1 : 0, f.srv, intervalo, f.clanSabido ? 1 : 0, f.siglas, f.clan)
+           clan_nombre = CASE WHEN ?6 THEN ?8 ELSE jugadores.clan_nombre END,
+           skin_url = CASE WHEN ?9 THEN ?10 ELSE jugadores.skin_url END,
+           capa_mojang = CASE WHEN ?9 THEN ?11 ELSE jugadores.capa_mojang END,
+           capa_dx = CASE WHEN ?9 THEN ?12 ELSE jugadores.capa_dx END,
+           aspecto_at = CASE WHEN ?9 THEN datetime('now') ELSE jugadores.aspecto_at END`
+      ).bind(f.uuid, f.nombre, f.oculto ? 1 : 0, f.srv, intervalo, f.clanSabido ? 1 : 0, f.siglas, f.clan,
+        f.aspectoSabido ? 1 : 0, f.skin, f.capa, f.dx)
     );
     await env.DB.batch(stmts);
     await addUsage(env, 'd1_writes', stmts.length);
-  }
-
-  // Aspecto (perfil 3D de la web). Aparte y sin romper nada si la migración 0019 aún no está.
-  if (aspectos.length) {
-    try {
-      const st = aspectos.map((a) => env.DB.prepare(
-        `UPDATE jugadores SET skin_url = ?2, capa_mojang = ?3, capa_dx = ?4, aspecto_at = datetime('now') WHERE uuid = ?1`
-      ).bind(a.uuid, a.skin, a.capa, a.dx));
-      await env.DB.batch(st);
-      await addUsage(env, 'd1_writes', st.length);
-    } catch (e) {
-      console.warn('aspecto sin guardar (¿falta la migración 0019?)', e && e.message);
-    }
   }
 
   await d1Run(
