@@ -138,15 +138,16 @@
       cx.imageSmoothingEnabled = false;
       tira.onload = () => {
         const n = CAPAS[a.dx].fotogramas;
+        const ms = CAPAS[a.dx].ms || 100;
         const pintar = () => {
-          const f = Math.floor(Date.now() / 100) % n;
+          const f = Math.floor(Date.now() / ms) % n;
           cx.clearRect(0, 0, 256, 128);
           cx.drawImage(tira, 0, f * 128, 256, 128, 0, 0, 256, 128);
           capaActual = lienzoCapa;
           visor.loadCape(lienzoCapa, { backEquipment: espalda });
         };
         pintar();
-        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) relojCapa = setInterval(pintar, 100);
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) relojCapa = setInterval(pintar, ms);
       };
       tira.src = `/assets/capas/${a.dx}-textura.webp`;
       pie.push(`Lleva la <b>${esc(CAPAS[a.dx].titulo)}</b>`);
@@ -172,7 +173,7 @@
   const CAPAS = {
     zdping: { titulo: 'Capa de zdping', etq: 'Única', fotogramas: 96 },
     gabo: { titulo: 'Capa de Gabo020', etq: 'Única', fotogramas: 64 },
-    dev: { titulo: 'Capa del Equipo', etq: 'Exclusiva', fotogramas: 64 },
+    dev: { titulo: 'Capa del Equipo', etq: 'Exclusiva', fotogramas: 32, ms: 120 },
     dx: { titulo: 'Capa DX', etq: 'Para todos', fotogramas: 64 },
   };
   const ORDEN = ['zdping', 'gabo', 'dev', 'dx'];
@@ -184,7 +185,7 @@
         <p class="eyebrow">Capas</p>
         <ul>${capas.map((id) => `
           <li class="jg-capa ${id}">
-            <span class="jg-capa-img" role="img" aria-label="${esc(CAPAS[id].titulo)}" data-n="${CAPAS[id].fotogramas}" style="background-image:url(/assets/capas/${id}.webp)"></span>
+            <span class="jg-capa-img" role="img" aria-label="${esc(CAPAS[id].titulo)}" data-n="${CAPAS[id].fotogramas}" data-ms="${CAPAS[id].ms || 100}" style="background-image:url(/assets/capas/${id}.webp)"></span>
             <b>${esc(CAPAS[id].titulo)}</b>
             <small>${esc(CAPAS[id].etq)}</small>
           </li>`).join('')}
@@ -198,12 +199,15 @@
     const els = [...document.querySelectorAll('.jg-capa-img')];
     if (!els.length || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     relojCapas = setInterval(() => {
-      const t = Math.floor(Date.now() / 100);
+      const ahora = Date.now();
       for (const el of els) {
         const n = Number(el.dataset.n);
-        el.style.backgroundPosition = `0 ${((t % n) / (n - 1)) * 100}%`;
+        const f = Math.floor(ahora / Number(el.dataset.ms)) % n;
+        if (el.dataset.f === String(f)) continue;
+        el.dataset.f = f;
+        el.style.backgroundPosition = `0 ${(f / (n - 1)) * 100}%`;
       }
-    }, 100);
+    }, 20);
   }
 
   async function ranking() {
