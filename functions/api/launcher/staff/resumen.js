@@ -2,7 +2,7 @@
 // cuenta de staff con el permiso sanctions.access (el mismo que el panel de la web).
 import { withQuotaHandling, jsonResponse } from '../../../../backend/lib/http.js';
 import { d1Select } from '../../../../backend/lib/db.js';
-import { getUserRolesAndPermissions, hasPermission } from '../../../../backend/lib/permissions.js';
+import { getUserRolesAndPermissions, hasPermission, actorRank } from '../../../../backend/lib/permissions.js';
 import { conLauncher } from '../../../../backend/lib/launcherHttp.js';
 
 export const onRequestGet = withQuotaHandling(async ({ request, env }) => {
@@ -32,7 +32,7 @@ export const onRequestGet = withQuotaHandling(async ({ request, env }) => {
     ultimas24 = ult[0] ? ult[0].n : 0;
   }
   return jsonResponse({
-    rol: roles[0].name, puedeSanciones, staff,
+    rol: roles[0].name, owner: actorRank(roles) === Infinity, puedeSanciones, staff,
     sanciones, activas, ultimas24,
   });
 });
