@@ -1,7 +1,7 @@
 /* ==========================================================================
    admin.js · staff panel (/admin.html), built on app-ui.js.
    Sections: Resumen, Anuncios, Wiki, Equipo, Sanciones, Estadísticas,
-   Capas del launcher (solo owners), Uso de recursos, Rangos y permisos. Every mutation is also enforced
+   Capas del launcher (solo owners), Postulaciones, Uso de recursos, Rangos y permisos. Every mutation is also enforced
    server-side; the permission checks here only decide what to show.
    ========================================================================== */
 (function () {
@@ -693,6 +693,137 @@
   }
 
   /* =====================================================================
+     POSTULACIONES (Staff / Desarrollo)
+     ===================================================================== */
+  const POST_ESTADOS = { pendiente: 'Pendiente', en_revision: 'En revisión', aceptada: 'Aceptada', rechazada: 'Rechazada' };
+  const POST_BADGE = { pendiente: 'badge-accent', en_revision: 'badge-warn', aceptada: '', rechazada: 'badge-danger' };
+  let postFiltro = 'activas';
+  async function renderPostulaciones(view, alive) {
+    const [data, pz] = await Promise.all([api(`/api/admin/postulaciones?estado=${encodeURIComponent(postFiltro)}`), api('/api/admin/postulaciones/puestos')]);
+    if (!alive()) return;
+    const lista = data.postulaciones || [];
+    const c = data.cuentas || {};
+    const porRevisar = (c.pendiente || 0) + (c.en_revision || 0);
+    app.setCount('postulaciones', porRevisar);
+    const nombres = Object.fromEntries((pz.puestos || []).map((p) => [p.slug, p.nombre]));
+    const filtros = [['activas', `Por revisar (${porRevisar})`], ['aceptada', `Aceptadas (${c.aceptada || 0})`], ['rechazada', `Rechazadas (${c.rechazada || 0})`], ['todas', 'Todas']];
+    view.innerHTML = `
+      ${head('Postulaciones', 'Postulaciones al Staff y al Equipo de Desarrollo desde la web. Aceptar una postulación no da ningún rango: dáselo tú en Rangos y permisos.', '<a class="btn btn-ghost btn-sm" href="/postular" target="_blank" rel="noopener">' + icon('ext') + 'Ver la página pública</a>')}
+      <div class="grid-2" style="margin-bottom:22px">${(pz.puestos || [])
+        .map((p) => `<section class="panel">
+          <h2>${esc(p.nombre)} <span class="badge ${p.abierta ? '' : 'badge-danger'}">${p.abierta ? 'Abierta' : 'Cerrada'}</span></h2>
+          <p class="panel-sub">${esc(p.descripcion)} · ${p.preguntas.length} preguntas · espera tras un rechazo: ${Number(p.espera_dias) || 0} días</p>
+          ${pz.puedeGestionar ? `<button class="btn btn-ghost btn-sm" data-puesto="${esc(p.slug)}">${icon('edit')}Editar puesto y preguntas</button>` : ''}
+        </section>`)
+        .join('')}</div>
+      <div class="toolbar"><div class="seg" id="pz-f" role="group" aria-label="Estado">${filtros
+        .map(([k, l]) => `<button type="button" data-f="${k}" aria-pressed="${k === postFiltro}">${esc(l)}</button>`)
+        .join('')}</div></div>
+      <div class="table-wrap"><table class="table"><thead><tr><th>Persona</th><th>Puesto</th><th>Estado</th><th class="hide-sm">Enviada</th></tr></thead><tbody>
+      ${
+        lista.length
+          ? lista
+              .map((x) => `<tr class="clickable" data-id="${x.id}">
+            <td><div class="cell-title"><img class="face" src="${esc(x.mc_nombre ? face({ mc_nick: x.mc_nombre }, 64) : DX.defaultAvatar)}" alt="" loading="lazy"><div><b>${esc(x.username || x.user_id)}</b>${x.mc_nombre ? `<small class="muted"> · ${esc(x.mc_nombre)}</small>` : ''}</div></div></td>
+            <td>${esc(nombres[x.puesto] || x.puesto)}</td>
+            <td><span class="badge ${POST_BADGE[x.estado] || ''}">${esc(POST_ESTADOS[x.estado] || x.estado)}</span></td>
+            <td class="muted hide-sm">${esc(DX.relTime(x.created_at))}</td></tr>`)
+              .join('')
+          : emptyRow(4, postFiltro === 'activas' ? 'No hay postulaciones por revisar.' : 'No hay postulaciones aquí.')
+      }</tbody></table></div>`;
+    view.querySelector('#pz-f').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-f]');
+      if (!b) return;
+      postFiltro = b.dataset.f;
+      renderPostulaciones(view, alive);
+    });
+    view.querySelectorAll('[data-puesto]').forEach((b) => b.addEventListener('click', () => openPuesto(pz.puestos.find((p) => p.slug === b.dataset.puesto))));
+    view.querySelector('tbody').addEventListener('click', (e) => {
+      const tr = e.target.closest('tr[data-id]');
+      if (tr) openPostulacion(lista.find((x) => String(x.id) === tr.dataset.id), nombres);
+    });
+  }
+
+  function openPostulacion(x, nombres) {
+    if (!x) return;
+    drawer({
+      title: `${x.username || x.user_id} · ${nombres[x.puesto] || x.puesto}`,
+      subtitle: `Enviada ${DX.relTime(x.created_at)}${x.mc_nombre ? ` · Minecraft: ${x.mc_nombre}` : ' · sin cuenta de Minecraft vinculada'} · Discord ID ${x.user_id}`,
+      wide: true,
+      body: `
+        ${(x.respuestas || []).map((r) => `<div class="field"><span class="field-label">${esc(r.texto)}</span><div class="panel" style="white-space:pre-wrap;margin:0">${r.respuesta ? esc(r.respuesta) : '<span class="muted">(sin respuesta)</span>'}</div></div>`).join('')}
+        <div class="field"><label for="pz-estado">Estado</label><select id="pz-estado" name="estado">${Object.entries(POST_ESTADOS)
+          .map(([k, v]) => `<option value="${k}" ${k === x.estado ? 'selected' : ''}>${v}</option>`)
+          .join('')}</select></div>
+        <div class="field"><label for="pz-resp">Respuesta para la persona</label><textarea id="pz-resp" name="respuesta" maxlength="1000" placeholder="La verá en la página de postulaciones.">${esc(x.respuesta || '')}</textarea></div>
+        <div class="field"><label for="pz-nota">Nota interna</label><textarea id="pz-nota" name="nota_interna" maxlength="2000" placeholder="Solo la ve quien revisa postulaciones.">${esc(x.nota_interna || '')}</textarea>${x.revisado_por_nombre ? `<span class="field-hint">Último cambio: ${esc(x.revisado_por_nombre)} · ${esc(DX.relTime(x.updated_at))}</span>` : ''}</div>`,
+      async onSave(dr) {
+        const f = dr.form;
+        await api(`/api/admin/postulaciones/${x.id}`, { method: 'PATCH', body: { estado: f.elements.estado.value, respuesta: f.elements.respuesta.value, nota_interna: f.elements.nota_interna.value } });
+        DX.toast('Postulación actualizada.');
+        app.rerender();
+      },
+    });
+  }
+
+  function openPuesto(p) {
+    if (!p) return;
+    const fila = (q) => `<div class="pz-q panel" style="margin:0 0 10px;display:grid;gap:8px">
+        <input type="text" class="input" data-k="texto" maxlength="300" value="${esc(q.texto || '')}" placeholder="Texto de la pregunta">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <select class="input" data-k="tipo" style="width:auto"><option value="corto" ${q.tipo === 'corto' ? 'selected' : ''}>Respuesta corta</option><option value="largo" ${q.tipo !== 'corto' ? 'selected' : ''}>Respuesta larga</option></select>
+          <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-k="obligatoria" ${q.obligatoria !== false ? 'checked' : ''}>Obligatoria</label>
+          <input type="hidden" data-k="id" value="${esc(q.id || '')}">
+          <span style="flex:1"></span>
+          <button type="button" class="icon-btn" data-sube title="Subir" aria-label="Subir">&uarr;</button>
+          <button type="button" class="icon-btn danger" data-quita title="Quitar" aria-label="Quitar">${icon('trash')}</button>
+        </div></div>`;
+    drawer({
+      title: `Puesto: ${p.nombre}`,
+      subtitle: 'Los cambios en las preguntas solo afectan a las postulaciones nuevas.',
+      wide: true,
+      body: `
+        <label style="display:flex;gap:10px;align-items:center;font-weight:600"><input type="checkbox" name="abierta" ${p.abierta ? 'checked' : ''}>Postulaciones abiertas</label>
+        <div class="field"><label for="pp-desc">Descripción del puesto</label><textarea id="pp-desc" name="descripcion" maxlength="500">${esc(p.descripcion)}</textarea></div>
+        <div class="field"><label for="pp-espera">Días de espera tras un rechazo</label><input id="pp-espera" name="espera_dias" type="number" min="0" max="365" value="${Number(p.espera_dias) || 0}"></div>
+        <div class="field"><span class="field-label">Preguntas</span><div id="pp-qs">${p.preguntas.map(fila).join('')}</div>
+        <button type="button" class="btn btn-ghost btn-sm" data-anade style="align-self:flex-start">${icon('plus')}Añadir pregunta</button></div>`,
+      onOpen(dr) {
+        const qs = dr.form.querySelector('#pp-qs');
+        dr.form.querySelector('[data-anade]').addEventListener('click', () => {
+          qs.insertAdjacentHTML('beforeend', fila({ tipo: 'largo', obligatoria: true }));
+          qs.lastElementChild.querySelector('[data-k="texto"]').focus();
+        });
+        qs.addEventListener('click', (e) => {
+          const q = e.target.closest('.pz-q');
+          if (!q) return;
+          if (e.target.closest('[data-quita]')) q.remove();
+          else if (e.target.closest('[data-sube]') && q.previousElementSibling) q.parentElement.insertBefore(q, q.previousElementSibling);
+          else return;
+          dr.form.dispatchEvent(new Event('input'));
+        });
+      },
+      async onSave(dr) {
+        const f = dr.form;
+        const preguntas = Array.from(f.querySelectorAll('.pz-q'))
+          .map((q) => ({
+            id: q.querySelector('[data-k="id"]').value,
+            texto: q.querySelector('[data-k="texto"]').value.trim(),
+            tipo: q.querySelector('[data-k="tipo"]').value,
+            obligatoria: q.querySelector('[data-k="obligatoria"]').checked,
+          }))
+          .filter((q) => q.texto);
+        await api('/api/admin/postulaciones/puestos', {
+          method: 'PUT',
+          body: { slug: p.slug, abierta: f.elements.abierta.checked, descripcion: f.elements.descripcion.value, espera_dias: Number(f.elements.espera_dias.value), preguntas },
+        });
+        DX.toast('Puesto guardado.');
+        app.rerender();
+      },
+    });
+  }
+
+  /* =====================================================================
      SANCIONES
      ===================================================================== */
   const SANCTION_TYPES = { ban: 'Ban', mute: 'Mute', kick: 'Kick', warn: 'Warn', other: 'Otro' };
@@ -945,7 +1076,7 @@
      ===================================================================== */
   let rolesCache = [];
   let permsCache = [];
-  const PERM_GROUPS = { panel: 'Panel', wiki: 'Wiki', announcements: 'Anuncios', team: 'Equipo', sanctions: 'Sanciones', devzone: 'Dev Zone' };
+  const PERM_GROUPS = { panel: 'Panel', wiki: 'Wiki', announcements: 'Anuncios', team: 'Equipo', sanctions: 'Sanciones', devzone: 'Dev Zone', postulaciones: 'Postulaciones' };
   async function renderRoles(view, alive) {
     const [r, p] = await Promise.all([api('/api/admin/roles'), permsCache.length ? { permissions: permsCache } : api('/api/admin/permissions')]);
     if (!alive()) return;
@@ -1124,7 +1255,13 @@
             { id: 'capas', label: 'Capas del launcher', icon: 'shield', visible: myRank() === Infinity, render: renderCapas },
           ],
         },
-        { title: 'Moderación', items: [{ id: 'sanciones', label: 'Sanciones', icon: 'gavel', visible: can('sanctions.access'), render: renderSanctions, onSub: (s) => s === 'new' && openSanction() }] },
+        {
+          title: 'Moderación',
+          items: [
+            { id: 'sanciones', label: 'Sanciones', icon: 'gavel', visible: can('sanctions.access'), render: renderSanctions, onSub: (s) => s === 'new' && openSanction() },
+            { id: 'postulaciones', label: 'Postulaciones', icon: 'file', visible: can('postulaciones.review'), render: renderPostulaciones },
+          ],
+        },
         {
           title: 'Sistema',
           items: [

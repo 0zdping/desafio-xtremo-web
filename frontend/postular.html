@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es" class="no-js">
+<head>
+<title>Postulaciones · Desafio Xtremo</title>
+<meta name="description" content="Postúlate al Staff o al Equipo de Desarrollo de Desafío Xtremo.">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#090c0c">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..900&family=Geist+Mono:wght@400..700&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="stylesheet" href="/css/content.css">
+<style>
+.pz{padding:8px 0 110px}
+.pz-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.pz-card{border:1px solid var(--border);border-radius:var(--radius-md);padding:26px;background:var(--surface);display:flex;flex-direction:column;gap:12px}
+.pz-card h2{margin:0;font-size:1.35rem;letter-spacing:-.02em}
+.pz-card p{margin:0;color:var(--text-soft);line-height:1.6}
+.pz-estado{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim)}
+.pz-estado::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--text-faint)}
+.pz-estado.abierta{color:var(--ok)}.pz-estado.abierta::before{background:var(--ok);box-shadow:0 0 10px var(--ok-glow)}
+.pz-card .btn{align-self:flex-start;margin-top:auto}
+.pz-h{font-size:1.1rem;margin:44px 0 14px;letter-spacing:-.01em}
+.pz-mias{display:flex;flex-direction:column;gap:10px}
+.pz-mia{border:1px solid var(--border);border-radius:var(--radius-md);padding:16px 20px;background:var(--surface);display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
+.pz-mia b{font-size:1rem}.pz-mia small{color:var(--text-dim)}
+.pz-mia .pz-resp{flex-basis:100%;color:var(--text-soft);line-height:1.55;margin:4px 0 0;white-space:pre-wrap}
+.pz-badge{font-family:var(--f-mono);font-size:.76rem;padding:3px 9px;border-radius:999px;border:1px solid var(--border-strong);color:var(--text-soft)}
+.pz-badge.aceptada{color:var(--ok);border-color:rgba(63,217,138,.4)}
+.pz-badge.rechazada{color:var(--danger);border-color:rgba(255,93,93,.4)}
+.pz-badge.en_revision{color:var(--warn);border-color:rgba(240,176,61,.4)}
+.pz-form{border:1px solid var(--border-strong);border-radius:var(--radius-lg);padding:clamp(22px,4vw,36px);background:var(--surface);display:flex;flex-direction:column;gap:20px;max-width:760px}
+.pz-form h2{margin:0;font-size:1.5rem}
+.pz-form .field{display:flex;flex-direction:column;gap:8px}
+.pz-form .field label{font-weight:600;line-height:1.45;font-size:15px;color:var(--text);text-transform:none;letter-spacing:0}
+.pz-form label small{color:var(--text-dim);font-weight:400}
+.pz-form .field textarea{font-family:var(--f-body);font-size:15px}
+.pz-form .field-hint{font-size:.82rem;color:var(--text-dim);align-self:flex-end}
+.pz-acc{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.pz-error{color:var(--danger);font-size:.92rem}
+.pz-nota{font-size:.88rem;color:var(--text-dim);line-height:1.55;margin:0}
+@media (max-width:760px){.pz-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<div class="backdrop" aria-hidden="true"></div>
+<canvas id="dust" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="site-nav">
+  <div class="container">
+    <a href="/" class="nav-logo" aria-label="Desafio Xtremo, inicio"><img src="/assets/wordmark.png" alt="Desafio Xtremo" width="148" height="20"></a>
+    <ul class="nav-links">
+      <li><a href="/">Inicio</a></li>
+      <li><a href="/#recursos">El juego</a></li>
+      <li><a href="/wiki.html">Wiki</a></li>
+      <li><a href="/anuncios.html">Anuncios</a></li>
+      <li><a href="/launcher">Launcher</a></li>
+      <li><a href="/#equipo">Equipo</a></li>
+    </ul>
+    <div class="nav-right">
+      <div id="account-slot"></div>
+      <a href="/invite" target="_blank" rel="noopener" class="btn btn-discord btn-sm nav-cta">Discord</a>
+      <button class="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<div class="mobile-menu" id="mobile-menu">
+  <nav aria-label="Menú móvil">
+    <a href="/"><small>01</small>Inicio</a>
+    <a href="/#recursos"><small>02</small>El juego</a>
+    <a href="/wiki.html"><small>03</small>Wiki</a>
+    <a href="/anuncios.html"><small>04</small>Anuncios</a>
+    <a href="/#equipo"><small>05</small>Equipo</a>
+    <a href="/launcher"><small>06</small>Launcher</a>
+    <a href="/invite" target="_blank" rel="noopener"><small>07</small>Discord</a>
+  </nav>
+  <div class="mobile-menu-account" id="mobile-account"></div>
+</div>
+
+<main id="main">
+  <section class="page-head" data-escena="lobby">
+    <div class="container">
+      <p class="eyebrow">Únete al equipo</p>
+      <h1>Postulaciones</h1>
+      <p>¿Quieres ayudar a que el Desafío funcione? Postúlate al Staff o al Equipo de Desarrollo. Leemos todas las postulaciones y te respondemos aquí mismo.</p>
+    </div>
+  </section>
+  <section class="pz">
+    <div class="container" id="pz-root"><p class="pz-nota">Cargando…</p></div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <img src="/assets/wordmark.png" alt="Desafio Xtremo" width="163" height="22" loading="lazy">
+        <p>Un evento de Minecraft por equipos, hecho por y para jugadores. Proyecto independiente.</p>
+      </div>
+      <div class="footer-col">
+        <h3>Explorar</h3>
+        <ul><li><a href="/#recursos">El juego</a></li><li><a href="/wiki.html">Wiki</a></li><li><a href="/anuncios.html">Anuncios</a></li><li><a href="/#equipo">Equipo</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h3>Comunidad</h3>
+        <ul><li><a href="/invite" target="_blank" rel="noopener">Discord</a></li><li><a href="/postular">Postulaciones</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h3>Servidor</h3>
+        <div class="server-ip"><span class="status-dot"></span><div><p class="server-ip-label">IP del servidor</p><p class="server-ip-value">Próximamente</p></div></div>
+      </div>
+    </div>
+    <p class="footer-giant" aria-hidden="true">DESAFIO XTREMO</p>
+    <div class="footer-bottom">
+      <p>© 2026 Desafio Xtremo. No es un producto oficial de Minecraft. No está aprobado por Mojang ni Microsoft, ni asociado con ellos.</p>
+      <p>Hecho a mano por el equipo.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/site.js"></script>
+<script src="/js/motion.js"></script>
+<script src="/js/postular.js"></script>
+</body>
+</html>
