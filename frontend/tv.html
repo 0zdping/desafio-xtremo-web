@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es" class="no-js">
+<head>
+<title>DX TV · Desafio Xtremo</title>
+<meta name="description" content="DX TV: la retransmisión automática del Desafío Xtremo. Una cámara que salta sola a donde pasa algo, con repeticiones, peleas en directo y 3 minutos de retraso.">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#090c0c">
+<meta property="og:title" content="DX TV · Desafio Xtremo">
+<meta property="og:description" content="La retransmisión automática del Desafío: la cámara salta sola a donde pasa algo.">
+<meta property="og:image" content="https://desafioxtremo.site/assets/tv/vs.webp">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://player.twitch.tv">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..900&family=Geist+Mono:wght@400..700&family=Silkscreen&family=Unbounded:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="stylesheet" href="/css/content.css">
+<style>
+:root{--tv-rojo:#ff4d4d}
+.tv-cabeza{padding-top:clamp(110px,14vh,150px);padding-bottom:24px}
+.tv-cabeza h1{font-size:clamp(38px,5vw,68px);line-height:1;margin:14px 0 14px;letter-spacing:-.03em}
+.tv-grad{background:var(--accent-gradient);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tv-cabeza p.tv-sub{max-width:62ch;color:var(--text-soft);font-size:1.05rem;line-height:1.6;margin:0}
+.tv-estado{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-top:22px;font-size:.92rem;color:var(--text-soft)}
+.tv-pildora{display:inline-flex;align-items:center;gap:8px;padding:7px 14px 7px 12px;border-radius:999px;font-family:var(--f-mono);font-weight:600;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--border-strong);background:var(--surface);color:var(--text-soft)}
+.tv-pildora i{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.8}
+[data-estado="directo"] .tv-pildora{background:var(--tv-rojo);border-color:var(--tv-rojo);color:#fff}
+[data-estado="directo"] .tv-pildora i{background:#fff;animation:tv-latido 1.4s ease-in-out infinite}
+[data-estado="comprobando"] .tv-pildora i{animation:tv-latido .9s ease-in-out infinite}
+@keyframes tv-latido{50%{opacity:.25}}
+.tv-estado b{color:var(--text)}
+.tv-sep{width:4px;height:4px;border-radius:50%;background:var(--border-strong)}
+
+/* pantalla: reproductor + chat */
+.tv-sala{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-top:8px}
+[data-estado="directo"] .tv-sala{grid-template-columns:minmax(0,1fr) 340px}
+.tv-pantalla{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;border:1px solid var(--border-strong);background:#05090a;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 50px 100px -30px rgba(0,0,0,.8)}
+.tv-pantalla #tv-player,.tv-pantalla #tv-player iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.tv-chat{display:none;border-radius:16px;overflow:hidden;border:1px solid var(--border);background:var(--surface);min-height:420px}
+[data-estado="directo"] .tv-chat{display:block}
+.tv-chat iframe{width:100%;height:100%;border:0;display:block}
+.tv-sonido{position:absolute;left:16px;bottom:16px;z-index:3;display:none;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(6,14,13,.82);color:#fff;font:600 .9rem var(--f-body,inherit);cursor:pointer;backdrop-filter:blur(8px)}
+.tv-sonido svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+[data-estado="directo"] .tv-sonido.muestra{display:inline-flex}
+
+/* fuera de emisión: capturas del programa pasando, con el cartel encima */
+.tv-fuera{position:absolute;inset:0;z-index:2;display:none}
+[data-estado="comprobando"] .tv-fuera,[data-estado="fuera"] .tv-fuera{display:block}
+.tv-fuera .tv-foto{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transform:scale(1.04);transition:opacity 1.6s ease,transform 9s linear}
+.tv-fuera .tv-foto.on{opacity:1;transform:scale(1.1)}
+.tv-fuera::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(4,10,10,.92) 0%,rgba(4,10,10,.72) 45%,rgba(4,10,10,.35) 100%)}
+.tv-cartel{position:absolute;z-index:1;left:clamp(20px,5%,56px);top:50%;transform:translateY(-50%);max-width:min(520px,80%)}
+.tv-cartel .tv-pildora{background:rgba(255,255,255,.06)}
+.tv-cartel h2{font-size:clamp(24px,3.4vw,44px);line-height:1.05;margin:16px 0 12px;letter-spacing:-.02em}
+.tv-cartel p{color:var(--text-soft);margin:0 0 20px;line-height:1.55;font-size:clamp(.88rem,1.3vw,1rem)}
+.tv-cartel .tv-acciones{display:flex;flex-wrap:wrap;gap:10px}
+.tv-etiqueta{position:absolute;z-index:1;right:18px;bottom:16px;font-family:var(--f-mono);font-size:.74rem;letter-spacing:.06em;color:rgba(255,255,255,.62);background:rgba(4,10,10,.55);padding:6px 10px;border-radius:8px}
+.tv-cargando{position:absolute;inset:0;z-index:1;display:none;place-items:center;color:var(--text-dim);font-family:var(--f-mono);font-size:.85rem}
+[data-estado="comprobando"] .tv-cartel{opacity:.0}
+.tv-cartel{transition:opacity .5s ease}
+
+/* secciones */
+.tv-bloque{padding:64px 0}
+.tv-h2{font-size:clamp(28px,3.6vw,44px);letter-spacing:-.03em;line-height:1.05;margin:12px 0 36px}
+.tv-cartas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+.tv-carta{border:1px solid var(--border);border-radius:var(--radius-md);padding:24px;background:var(--surface);transition:border-color .25s,transform .25s,background .25s}
+.tv-carta:hover{border-color:rgba(255,255,255,.16);background:var(--surface-2);transform:translateY(-3px)}
+.tv-carta svg{width:40px;height:40px;padding:9px;border-radius:11px;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-border);margin-bottom:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tv-carta h3{margin:0 0 8px;font-size:1.08rem}
+.tv-carta p{margin:0;color:var(--text-soft);font-size:.95rem;line-height:1.55}
+.tv-capturas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.tv-capturas figure{margin:0;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border);background:var(--surface)}
+.tv-capturas img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;transition:transform .5s}
+.tv-capturas figure:hover img{transform:scale(1.03)}
+.tv-capturas figcaption{padding:12px 16px;font-size:.92rem;font-weight:600;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:12px}
+.tv-capturas figcaption span{font-weight:400;color:var(--text-dim)}
+.tv-faq-in{display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);gap:48px;align-items:start}
+.tv-preguntas{display:flex;flex-direction:column;gap:10px}
+.tv-preguntas details{border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);transition:border-color .2s,background .2s}
+.tv-preguntas details[open]{border-color:var(--border-strong);background:var(--surface-2)}
+.tv-preguntas summary{cursor:pointer;list-style:none;padding:18px 22px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.tv-preguntas summary::-webkit-details-marker{display:none}
+.tv-preguntas summary::after{content:"+";font-family:var(--f-mono);color:var(--accent);font-size:1.2rem;transition:transform .2s}
+.tv-preguntas details[open] summary::after{transform:rotate(45deg)}
+.tv-preguntas details p{margin:0;padding:0 22px 20px;color:var(--text-soft);line-height:1.6}
+@media (max-width:1100px){[data-estado="directo"] .tv-sala{grid-template-columns:1fr}.tv-chat{min-height:480px}.tv-cartas{grid-template-columns:1fr 1fr}}
+@media (max-width:980px){.tv-faq-in{grid-template-columns:1fr}}
+@media (max-width:640px){.tv-cartas,.tv-capturas{grid-template-columns:1fr}.tv-etiqueta{display:none}
+  [data-estado="fuera"] .tv-pantalla,[data-estado="comprobando"] .tv-pantalla{aspect-ratio:auto;min-height:440px}
+  .tv-fuera::after{background:linear-gradient(180deg,rgba(4,10,10,.55) 0%,rgba(4,10,10,.88) 55%,rgba(4,10,10,.95) 100%)}
+  .tv-cartel{top:auto;bottom:22px;transform:none;max-width:none;right:20px}}
+@media (prefers-reduced-motion:reduce){.tv-fuera .tv-foto{transition:opacity .01s;transform:none!important}.tv-carta,.tv-capturas img{transition:none;transform:none}[data-estado] .tv-pildora i{animation:none}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<div class="backdrop" aria-hidden="true"></div>
+<canvas id="dust" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="site-nav">
+  <div class="container">
+    <a href="/" class="nav-logo" aria-label="Desafio Xtremo, inicio"><img src="/assets/wordmark.png" alt="Desafio Xtremo" width="148" height="20"></a>
+    <ul class="nav-links">
+      <li><a href="/">Inicio</a></li>
+      <li><a href="/#recursos">El juego</a></li>
+      <li><a href="/wiki.html">Wiki</a></li>
+      <li><a href="/anuncios.html">Anuncios</a></li>
+      <li><a href="/launcher">Launcher</a></li>
+      <li><a href="/tv">DX TV</a></li>
+      <li><a href="/#equipo">Equipo</a></li>
+    </ul>
+    <div class="nav-right">
+      <div id="account-slot"></div>
+      <a href="/invite" target="_blank" rel="noopener" class="btn btn-discord btn-sm nav-cta">Discord</a>
+      <button class="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<div class="mobile-menu" id="mobile-menu">
+  <nav aria-label="Menú móvil">
+    <a href="/"><small>01</small>Inicio</a>
+    <a href="/#recursos"><small>02</small>El juego</a>
+    <a href="/wiki.html"><small>03</small>Wiki</a>
+    <a href="/anuncios.html"><small>04</small>Anuncios</a>
+    <a href="/#equipo"><small>05</small>Equipo</a>
+    <a href="/launcher"><small>06</small>Launcher</a>
+    <a href="/tv"><small>07</small>DX TV</a>
+    <a href="/invite" target="_blank" rel="noopener"><small>08</small>Discord</a>
+  </nav>
+  <div class="mobile-menu-account" id="mobile-account"></div>
+</div>
+
+<main id="main" class="tv" data-estado="comprobando">
+  <section class="tv-cabeza">
+    <div class="container">
+      <p class="eyebrow" data-reveal="up">DX TV · Retransmisión oficial</p>
+      <h1>El Desafío, <span class="tv-grad">en directo.</span></h1>
+      <p class="tv-sub" data-reveal="up" data-delay="0.1">Una cámara que salta sola a donde pasa algo: peleas, asaltos, bajas y los momentos que nadie se quiere perder. Con repeticiones, música y 3 minutos de retraso para que nadie use el directo para encontrar bases.</p>
+      <div class="tv-estado" aria-live="polite">
+        <span class="tv-pildora" id="tv-pildora"><i></i><span id="tv-pildora-txt">Comprobando</span></span>
+        <span id="tv-retraso" hidden>3 minutos de retraso</span>
+        <span class="tv-sep" id="tv-sep" hidden></span>
+        <span id="tv-online" hidden></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="tv-directo">
+    <div class="container">
+      <div class="tv-sala">
+        <div class="tv-pantalla">
+          <div id="tv-player"></div>
+          <div class="tv-fuera" id="tv-fuera" aria-hidden="false">
+            <div class="tv-foto" style="background-image:url(/assets/tv/vs-f.webp)"></div>
+            <div class="tv-foto" style="background-image:url(/assets/tv/rotulo-f.webp)"></div>
+            <div class="tv-foto" style="background-image:url(/assets/tv/espera-f.webp)"></div>
+            <div class="tv-foto" style="background-image:url(/assets/tv/volvemos-f.webp)"></div>
+            <div class="tv-cartel">
+              <span class="tv-pildora"><i></i>Fuera de emisión</span>
+              <h2>DX TV no está emitiendo ahora mismo</h2>
+              <p>Cuando haya directo, aparecerá aquí solo, sin recargar la página. Sigue el canal en Twitch para que te avise en cuanto empiece.</p>
+              <div class="tv-acciones">
+                <a class="btn btn-primary" href="https://www.twitch.tv/desafioxtremo" target="_blank" rel="noopener">Seguir en Twitch</a>
+                <a class="btn btn-ghost" href="https://www.twitch.tv/desafioxtremo/videos" target="_blank" rel="noopener">Emisiones anteriores</a>
+              </div>
+            </div>
+            <span class="tv-etiqueta">Así se ve DX TV · capturas de una prueba</span>
+          </div>
+          <button class="tv-sonido" id="tv-sonido" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M23 9l-6 6M17 9l6 6"/></svg>Activar sonido</button>
+        </div>
+        <div class="tv-chat" id="tv-chat"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tv-bloque">
+    <div class="container">
+      <p class="eyebrow" data-reveal="up">Así funciona</p>
+      <h2 class="tv-h2" data-reveal="up">Un programa de televisión que se hace solo</h2>
+      <div class="tv-cartas">
+        <article class="tv-carta" data-reveal="up">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          <h3>Cámara automática</h3>
+          <p>Sigue a quien está haciendo algo y llega a la pelea antes de que empiece. Planos de cine: por encima del hombro, a dos, desde arriba.</p>
+        </article>
+        <article class="tv-carta" data-reveal="up" data-delay="0.05">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="M13 19l6-6M16 16l4 4M19 21l2-2"/><path d="M9.5 17.5 21 6V3h-3L6.5 14.5"/><path d="M11 19l-6-6M8 16l-4 4M5 21l-2-2"/></svg>
+          <h3>Peleas en directo</h3>
+          <p>Quién contra quién, con la vida de cada uno bajando en pantalla, las bajas al momento y el clan de cada jugador.</p>
+        </article>
+        <article class="tv-carta" data-reveal="up" data-delay="0.1">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg>
+          <h3>Repeticiones</h3>
+          <p>Cada baja se repite a cámara lenta en cuanto hay un momento tranquilo, y lo mejor del día se guarda para el resumen.</p>
+        </article>
+        <article class="tv-carta" data-reveal="up" data-delay="0.15">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <h3>Cuando no hay acción</h3>
+          <p>Quién está jugando, los clanes y lo mejor del día, y una cuenta atrás para volver al directo justo cuando pasa algo.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="tv-bloque">
+    <div class="container">
+      <p class="eyebrow" data-reveal="up">Capturas</p>
+      <h2 class="tv-h2" data-reveal="up">Así se ve</h2>
+      <div class="tv-capturas">
+        <figure data-reveal="up"><img src="/assets/tv/vs-s.webp" srcset="/assets/tv/vs-s.webp 640w, /assets/tv/vs.webp 1280w" sizes="(max-width:640px) 100vw, 50vw" alt="Pelea en directo con la vida de los dos jugadores" loading="lazy" width="1280" height="720"><figcaption>Pelea en directo <span>la vida baja en pantalla</span></figcaption></figure>
+        <figure data-reveal="up" data-delay="0.05"><img src="/assets/tv/rotulo-s.webp" srcset="/assets/tv/rotulo-s.webp 640w, /assets/tv/rotulo.webp 1280w" sizes="(max-width:640px) 100vw, 50vw" alt="Rótulo con el jugador al que sigue la cámara" loading="lazy" width="1280" height="720"><figcaption>A quién sigue la cámara <span>bioma, día y hora</span></figcaption></figure>
+        <figure data-reveal="up"><img src="/assets/tv/espera-s.webp" srcset="/assets/tv/espera-s.webp 640w, /assets/tv/espera.webp 1280w" sizes="(max-width:640px) 100vw, 50vw" alt="Programa de espera con los jugadores conectados" loading="lazy" width="1280" height="720"><figcaption>Quién está jugando <span>cuando no hay acción</span></figcaption></figure>
+        <figure data-reveal="up" data-delay="0.05"><img src="/assets/tv/volvemos-s.webp" srcset="/assets/tv/volvemos-s.webp 640w, /assets/tv/volvemos.webp 1280w" sizes="(max-width:640px) 100vw, 50vw" alt="Lo mejor del día y cuenta atrás para volver al directo" loading="lazy" width="1280" height="720"><figcaption>Lo mejor del día <span>y vuelta al directo</span></figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="tv-bloque">
+    <div class="container tv-faq-in">
+      <div>
+        <p class="eyebrow" data-reveal="up">Preguntas</p>
+        <h2 class="tv-h2" data-reveal="up">Lo que te estarás preguntando</h2>
+      </div>
+      <div class="tv-preguntas">
+        <details><summary>¿Por qué va con 3 minutos de retraso?</summary><p>Para que nadie pueda usar el directo para encontrar la base de otro clan o preparar una emboscada. Lo que ves pasó hace 3 minutos.</p></details>
+        <details><summary>¿Puedo salir en DX TV?</summary><p>Si juegas al Desafío, sí: la cámara elige sola a quién enseñar según lo que está pasando, y reparte el tiempo entre todos. No hace falta hacer nada.</p></details>
+        <details><summary>¿Enseña mi base o mis coordenadas?</summary><p>No. Las coordenadas no salen nunca, y la cámara no entra en tu búnker. Solo se ve un búnker por dentro durante un asalto.</p></details>
+        <details><summary>¿Cuándo emite?</summary><p>Cuando el equipo pone DX TV en marcha. No hay horario fijo: sigue el canal en Twitch y te avisará en cuanto empiece. Si hay directo, esta página lo enseña sola.</p></details>
+        <details><summary>¿Tengo que tener Twitch?</summary><p>No. El directo se ve aquí mismo. Para escribir en el chat sí necesitas una cuenta de Twitch.</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <img src="/assets/wordmark.png" alt="Desafio Xtremo" width="163" height="22" loading="lazy">
+        <p>Un evento de Minecraft por equipos, hecho por y para jugadores. Proyecto independiente.</p>
+      </div>
+      <div class="footer-col">
+        <h3>Explorar</h3>
+        <ul><li><a href="/#recursos">El juego</a></li><li><a href="/wiki.html">Wiki</a></li><li><a href="/anuncios.html">Anuncios</a></li><li><a href="/tv">DX TV</a></li><li><a href="/#equipo">Equipo</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h3>Comunidad</h3>
+        <ul><li><a href="/invite" target="_blank" rel="noopener">Discord</a></li><li><a href="https://www.twitch.tv/desafioxtremo" target="_blank" rel="noopener">Twitch</a></li><li><a href="/postular">Postulaciones</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h3>Servidor</h3>
+        <div class="server-ip"><span class="status-dot"></span><div><p class="server-ip-label">IP del servidor</p><p class="server-ip-value">Próximamente</p></div></div>
+      </div>
+    </div>
+    <p class="footer-giant" aria-hidden="true">DESAFIO XTREMO</p>
+    <div class="footer-bottom">
+      <p>© 2026 Desafio Xtremo. No es un producto oficial de Minecraft. No está aprobado por Mojang ni Microsoft, ni asociado con ellos.</p>
+      <p>Hecho a mano por el equipo.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/site.js"></script>
+<script src="/js/motion.js"></script>
+<script src="/js/tv.js"></script>
+</body>
+</html>

@@ -34,3 +34,13 @@
 
 /css/*
   Cache-Control: no-cache, must-revalidate
+
+# /tv: el reproductor y el chat de Twitch (iframes y el script del reproductor, que dice si hay
+# directo). Se quita la CSP general (frame-src 'none') y se pone esta, igual salvo esas dos cosas.
+/tv
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://player.twitch.tv; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://cdn.discordapp.com https://vzge.me https://visage.surgeplay.com https://media.desafioxtremo.site; media-src 'self' https://media.desafioxtremo.site; connect-src 'self' https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; frame-src https://player.twitch.tv https://www.twitch.tv https://embed.twitch.tv
+
+/tv.html
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://player.twitch.tv; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://cdn.discordapp.com https://vzge.me https://visage.surgeplay.com https://media.desafioxtremo.site; media-src 'self' https://media.desafioxtremo.site; connect-src 'self' https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; frame-src https://player.twitch.tv https://www.twitch.tv https://embed.twitch.tv
