@@ -9,5 +9,8 @@ export async function capasDe(env, nombre, d1Select) {
   for (const [capa, dueno] of Object.entries(CAPAS_PERSONALES)) if (dueno === n) capas.push(capa);
   const filas = await d1Select(env, `SELECT capa FROM launcher_capas WHERE nombre = ? ORDER BY created_at`, [nombre]);
   for (const f of filas) if (!capas.includes(f.capa) && !CAPAS_PERSONALES[f.capa]) capas.push(f.capa);
+  // capas de airdrop (cupones canjeados, DXAirdrops)
+  const deAirdrop = await d1Select(env, `SELECT DISTINCT cosmetico FROM launcher_cosmeticos WHERE nombre = ? AND substr(cosmetico, 1, 5) = 'capa_'`, [nombre]).catch(() => []);
+  for (const f of deAirdrop) if (!capas.includes(f.cosmetico)) capas.push(f.cosmetico);
   return capas;
 }

@@ -10,6 +10,9 @@ export const onRequestGet = withQuotaHandling(async (context) => {
     const filas = await d1Select(context.env, `SELECT nombre, capa FROM launcher_capas ORDER BY capa, nombre`);
     const capas = {};
     for (const f of filas) (capas[f.capa] = capas[f.capa] || []).push(f.nombre);
+    // capas de airdrop (cupones canjeados): mismas reglas que las exclusivas
+    const deAirdrop = await d1Select(context.env, `SELECT DISTINCT cosmetico, nombre FROM launcher_cosmeticos WHERE substr(cosmetico, 1, 5) = 'capa_' ORDER BY cosmetico, nombre`).catch(() => []);
+    for (const f of deAirdrop) (capas[f.cosmetico] = capas[f.cosmetico] || []).push(f.nombre);
     return { capas };
   });
 });
